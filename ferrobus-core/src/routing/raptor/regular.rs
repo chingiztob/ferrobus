@@ -1,6 +1,4 @@
 use fixedbitset::FixedBitSet;
-use hashbrown::HashMap;
-use log::warn;
 use std::collections::VecDeque;
 
 use super::state::{RaptorError, RaptorResult, RaptorState, find_earliest_trip};
@@ -35,10 +33,6 @@ pub fn raptor(
     // Process foot-path transfers from the source.
     let transfers = data.get_stop_transfers(source)?;
     for &(target_stop, duration) in transfers {
-        if target_stop >= data.stops.len() {
-            warn!("Invalid transfer target {target_stop}");
-            continue;
-        }
         let new_time = departure_time.saturating_add(duration);
         // For foot-paths we assume no waiting time (arrival equals boarding).
         if state.update(0, target_stop, new_time, new_time)? {
@@ -49,44 +43,13 @@ pub fn raptor(
     // Main rounds.
     for round in 1..max_rounds {
         let prev_round = round - 1;
-        if state.marked_stops[prev_round].count_ones(..num_stops) == 0 {
+        if state.marked_stops[prev_round].is_clear() {
             break;
         }
 
-        // Mark stops reached in the previous round.
-        let mut is_marked = vec![false; num_stops];
-        for stop in state.marked_stops[prev_round].ones() {
-            is_marked[stop] = true;
-        }
-
-        // Build a queue of routes to relax.
-        let mut route_queue: HashMap<RaptorStopId, usize> =
-            HashMap::with_capacity(data.routes.len() / 4);
-        for (route_id, _route) in data.routes.iter().enumerate() {
-            let stops = data.get_route_stops(route_id)?;
-            let mut best_pos: Option<usize> = None;
-            for (i, &stop) in stops.iter().enumerate() {
-                if is_marked[stop] {
-                    best_pos = Some(i);
-                    break;
-                }
-            }
-            if let Some(pos) = best_pos {
-                route_queue
-                    .entry(route_id)
-                    .and_modify(|existing_pos| {
-                        if pos < *existing_pos {
-                            *existing_pos = pos;
-                        }
-                    })
-                    .or_insert(pos);
-            }
-        }
+        let mut queue = create_route_queue(data, &state.marked_stops[prev_round])?;
         state.marked_stops[prev_round].clear();
 
-        // Process each route in the queue.
-        let mut queue: VecDeque<(RaptorStopId, usize)> = VecDeque::with_capacity(route_queue.len());
-        queue.extend(route_queue.into_iter());
         while let Some((route_id, start_pos)) = queue.pop_front() {
             let stops = data.get_route_stops(route_id)?;
             let mut current_trip_opt = None;
@@ -103,15 +66,17 @@ pub fn raptor(
                     break;
                 }
             }
+
+            // When a target is given, use its best known arrival time for pruning.
+            let target_bound = if let Some(target_stop) = target {
+                state.best_arrival[target_stop]
+            } else {
+                Time::MAX
+            };
+
             if let Some(mut trip_idx) = current_trip_opt {
                 let mut trip = data.get_trip(route_id, trip_idx)?;
 
-                // When a target is given, use its best known arrival time for pruning.
-                let target_bound = if let Some(target_stop) = target {
-                    state.best_arrival[target_stop]
-                } else {
-                    Time::MAX
-                };
                 for (trip_stop_idx, &stop) in stops.iter().enumerate().skip(current_board_pos) {
                     // Check if we can "upgrade" the trip at this stop.
                     let prev_board = state.board_times[prev_round][stop];
@@ -153,44 +118,8 @@ pub fn raptor(
         }
 
         // Process foot-path transfers.
-        let current_marks: Vec<RaptorStopId> = state.marked_stops[round].ones().collect();
-        let mut new_marks = FixedBitSet::with_capacity(num_stops);
-        let target_bound = if let Some(target_stop) = target {
-            state.best_arrival[target_stop]
-        } else {
-            Time::MAX
-        };
-        for stop in current_marks {
-            let current_board = state.board_times[round][stop];
-            let transfers = data.get_stop_transfers(stop)?;
-            for &(target_stop, duration) in transfers {
-                if target_stop >= data.stops.len() {
-                    warn!("Invalid transfer target {target_stop}");
-                    continue;
-                }
-                let new_time = current_board.saturating_add(duration);
-                if new_time >= state.board_times[round][target_stop] || new_time >= target_bound {
-                    continue;
-                }
-                // For transfers, assume arrival equals boarding.
-                if state.update(round, target_stop, new_time, new_time)? {
-                    new_marks.set(target_stop, true);
-                }
-            }
-        }
+        let new_marks = process_foot_paths(data, target, num_stops, &mut state, round)?;
         state.marked_stops[round].union_with(&new_marks);
-
-        // Early exit if target reached and arrival time has improved.
-        // not sure if this is correct
-        /*       if let Some(target_stop) = target {
-            let arrival_time = state.arrival_times[round][target_stop];
-            if arrival_time != Time::MAX && arrival_time < target_bound {
-                return Ok(RaptorResult::SingleTarget {
-                    arrival_time: Some(arrival_time),
-                    transfers_used: prev_round,
-                });
-            }
-        } */
 
         // Check if we should continue with this round
         if let Some(target_stop) = target {
@@ -208,7 +137,7 @@ pub fn raptor(
         }
 
         // If no stops were marked in this round, we can stop.
-        if state.marked_stops[round].count_ones(..num_stops) == 0 {
+        if state.marked_stops[round].is_clear() {
             break;
         }
     }
@@ -223,10 +152,55 @@ pub fn raptor(
             transfers_used: max_transfers,
         })
     } else {
-        // Vec is initialized with Time::MAX so memcpy replaces the valid arrival times
-        // and keeps the rest as Time::MAX.
-        let mut all_targets = vec![Time::MAX; num_stops];
-        all_targets[..num_stops].copy_from_slice(&state.best_arrival[..num_stops]);
-        Ok(RaptorResult::AllTargets(all_targets))
+        Ok(RaptorResult::AllTargets(state.best_arrival))
     }
+}
+
+fn process_foot_paths(
+    data: &PublicTransitData,
+    target: Option<usize>,
+    num_stops: usize,
+    state: &mut RaptorState,
+    round: usize,
+) -> Result<FixedBitSet, RaptorError> {
+    let current_marks: Vec<RaptorStopId> = state.marked_stops[round].ones().collect();
+    let mut new_marks = FixedBitSet::with_capacity(num_stops);
+    let target_bound = if let Some(target_stop) = target {
+        state.best_arrival[target_stop]
+    } else {
+        Time::MAX
+    };
+    for stop in current_marks {
+        let current_board = state.board_times[round][stop];
+        let transfers = data.get_stop_transfers(stop)?;
+        for &(target_stop, duration) in transfers {
+            let new_time = current_board.saturating_add(duration);
+            if new_time >= state.board_times[round][target_stop] || new_time >= target_bound {
+                continue;
+            }
+            // For transfers, assume arrival equals boarding.
+            if state.update(round, target_stop, new_time, new_time)? {
+                new_marks.set(target_stop, true);
+            }
+        }
+    }
+    Ok(new_marks)
+}
+
+fn create_route_queue(
+    data: &PublicTransitData,
+    marked_stops: &FixedBitSet,
+) -> Result<VecDeque<(usize, usize)>, RaptorError> {
+    let mut queue = VecDeque::new();
+
+    for (route_id, _) in data.routes.iter().enumerate() {
+        let stops = data.get_route_stops(route_id)?;
+        if let Some(pos) = stops.iter().position(|&stop| marked_stops.contains(stop)) {
+            queue.push_back((route_id, pos));
+        }
+    }
+
+    queue.make_contiguous();
+
+    Ok(queue)
 }
