@@ -50,6 +50,13 @@ pub fn raptor(
         let mut queue = create_route_queue(data, &state.marked_stops[prev_round])?;
         state.marked_stops[prev_round].clear();
 
+        // When a target is given, use its best known arrival time for pruning.
+        let target_bound = if let Some(target_stop) = target {
+            state.best_arrival[target_stop]
+        } else {
+            Time::MAX
+        };
+
         while let Some((route_id, start_pos)) = queue.pop_front() {
             let stops = data.get_route_stops(route_id)?;
             let mut current_trip_opt = None;
@@ -66,13 +73,6 @@ pub fn raptor(
                     break;
                 }
             }
-
-            // When a target is given, use its best known arrival time for pruning.
-            let target_bound = if let Some(target_stop) = target {
-                state.best_arrival[target_stop]
-            } else {
-                Time::MAX
-            };
 
             if let Some(mut trip_idx) = current_trip_opt {
                 let mut trip = data.get_trip(route_id, trip_idx)?;
@@ -127,7 +127,7 @@ pub fn raptor(
             let target_bound = state.best_arrival[target_stop];
 
             // If the arrival time in this round is worse than our best known time,
-            // there's no point continuing with this round
+            // there's no point continuing
             if arrival_time != Time::MAX && arrival_time > target_bound {
                 return Ok(RaptorResult::SingleTarget {
                     arrival_time: Some(target_bound),
@@ -193,14 +193,12 @@ fn create_route_queue(
 ) -> Result<VecDeque<(usize, usize)>, RaptorError> {
     let mut queue = VecDeque::new();
 
-    for (route_id, _) in data.routes.iter().enumerate() {
+    for route_id in 0..data.routes.len() {
         let stops = data.get_route_stops(route_id)?;
         if let Some(pos) = stops.iter().position(|&stop| marked_stops.contains(stop)) {
             queue.push_back((route_id, pos));
         }
     }
-
-    queue.make_contiguous();
 
     Ok(queue)
 }

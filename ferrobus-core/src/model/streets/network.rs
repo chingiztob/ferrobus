@@ -31,7 +31,7 @@ impl StreetGraph {
     pub(crate) fn nearest_node(&self, point: &Point<f64>) -> Option<(NodeIndex, u32)> {
         self.rtree.nearest_neighbor(point).map(|indexed_point| {
             let distance =
-                (Haversine::distance(*point, *indexed_point.geom()) / WALKING_SPEED).ceil() as u32;
+                (Haversine.distance(*point, *indexed_point.geom()) / WALKING_SPEED).ceil() as u32;
             (indexed_point.data, distance)
         })
     }

@@ -8,8 +8,7 @@ use rayon::prelude::*;
 
 use h3o::{
     CellIndex, LatLng, Resolution,
-    geom::dissolve,
-    geom::{ContainmentMode, TilerBuilder},
+    geom::{ContainmentMode, SolventBuilder, TilerBuilder},
 };
 
 use crate::{Error, Time, TransitModel};
@@ -92,7 +91,10 @@ pub fn calculate_isochrone(
         })
         .collect();
 
-    dissolve(reached_cells).map_err(|e| Error::IsochroneError(e.to_string()))
+    let solvent = SolventBuilder::new().build();
+    solvent
+        .dissolve(reached_cells)
+        .map_err(|e| Error::IsochroneError(e.to_string()))
 }
 
 pub fn bulk_isochrones(
