@@ -1,0 +1,58 @@
+//! Basic types for public transit data model
+
+use geo::Point;
+
+use crate::loading::gtfs::FeedInfo;
+
+/// Type for stop indices
+pub type RaptorStopId = usize;
+
+/// Type for route indices
+pub type RouteId = usize;
+
+/// Type for representing time in seconds from the beginning of the day
+pub type Time = u32;
+
+/// Arrival/departure time at a stop
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StopTime {
+    /// Arrival time in seconds from the beginning of the day
+    pub arrival: Time,
+    /// Departure time in seconds from the beginning of the day
+    pub departure: Time,
+}
+
+/// Public transport route
+#[derive(Debug, Clone)]
+pub struct Route {
+    /// Number of trips on the route
+    pub num_trips: usize,
+    /// Number of stops on the route
+    pub num_stops: usize,
+    /// Index of the start of the stop list in the general array
+    pub stops_start: usize,
+    /// Index of the start of the trip list in the general array
+    pub trips_start: usize,
+}
+
+/// Public transport stop
+#[derive(Debug, Clone)]
+pub struct Stop {
+    /// Unique stop identifier
+    pub stop_id: String,
+    /// Geographic coordinates of the stop
+    pub geometry: Point<f64>,
+    /// Index of the start of the route list in the general array
+    pub routes_start: usize,
+    /// Number of routes through the stop
+    pub routes_len: usize,
+    /// Index of the start of the transfer list in the general array
+    pub transfers_start: usize,
+    /// Number of available transfers
+    pub transfers_len: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct FeedMeta {
+    pub feed_info: FeedInfo,
+}

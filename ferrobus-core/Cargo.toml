@@ -1,0 +1,31 @@
+[package]
+name = "ferrobus_core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = "2.0"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+csv = "1"
+chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
+rstar = "0.12"
+rustworkx-core = "0.16"
+petgraph = "0.7"
+hashbrown = "0.15"
+fixedbitset = "0.5"
+h3o = { version = "0.7.1", features = ["geo"] }
+osm4routing = { git = "https://github.com/rust-transit/osm4routing2.git" }
+geo.workspace = true
+rayon.workspace = true
+libc = { version = "0.2", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "bench_main"
+harness = false

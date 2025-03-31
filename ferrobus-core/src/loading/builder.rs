@@ -1,0 +1,70 @@
+use log::info;
+use std::sync::mpsc;
+
+use super::config::TransitModelConfig;
+use super::gtfs::transit_model_from_gtfs;
+use super::osm::create_street_graph;
+use super::transfers::calculate_transfers;
+use crate::{Error, TransitModel};
+
+/// Creates a transit model based on the provided configuration
+///
+/// # Errors
+///
+/// Returns an error if there are problems reading or processing data
+///
+/// # Panics
+///
+/// Panics on unrecoverable OSM data processing errors
+pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel, Error> {
+    info!(
+        "Processing street data (OSM): {}",
+        config.osm_path.display()
+    );
+
+    let (street_sender, street_receiver) = mpsc::channel();
+
+    // Start OSM data processing in a separate thread
+    let osm_path = config.osm_path.clone();
+    let graph_handle = std::thread::spawn(move || {
+        let result = create_street_graph(osm_path);
+        let _ = street_sender.send(result);
+    });
+
+    info!("Processing public transit data (GTFS)");
+    let transit_data = transit_model_from_gtfs(config)?;
+
+    // Wait for OSM processing to complete
+    let street_graph = street_receiver
+        .recv()
+        .expect("Unrecoverable error while processing OSM data")?;
+
+    // Wait for the thread to finish
+    let _ = graph_handle.join();
+
+    let mut graph = TransitModel::with_transit(street_graph, transit_data);
+
+    calculate_transfers(&mut graph, config.max_transfer_time)?;
+    info!(
+        "Calculated {} transfers between stops",
+        &graph.transit_data.transfers.len()
+    );
+
+    info!("Transit model created successfully");
+    // While processing OSM protobuf data, and during CSV deserialization
+    // large amounts of memory are allocated. This memory is not always
+    // released back to the system. This call will release all free memory
+    // from the tail of the heap back to the system.
+    //
+    // # Safety
+    //
+    // This call is safe to use on linux with glibc implementation
+    // which is checked by the cfg attribute in compile time.
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    unsafe {
+        if libc::malloc_trim(0) == 0 {
+            dbg!("Memory trimming failed");
+        }
+    };
+    Ok(graph)
+}
