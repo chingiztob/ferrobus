@@ -43,9 +43,6 @@ pub fn raptor(
     // Main rounds.
     for round in 1..max_rounds {
         let prev_round = round - 1;
-        if state.marked_stops[prev_round].is_clear() {
-            break;
-        }
 
         let mut queue = create_route_queue(data, &state.marked_stops[prev_round])?;
         state.marked_stops[prev_round].clear();
@@ -117,7 +114,6 @@ pub fn raptor(
             }
         }
 
-        // Process foot-path transfers.
         let new_marks = process_foot_paths(data, target, num_stops, &mut state, round)?;
         state.marked_stops[round].union_with(&new_marks);
 
@@ -144,9 +140,7 @@ pub fn raptor(
 
     // Report final result.
     if let Some(target_stop) = target {
-        let best_time = (0..max_rounds)
-            .filter_map(|r| Some(state.arrival_times[r][target_stop]).filter(|&t| t != Time::MAX))
-            .min();
+        let best_time = Some(state.best_arrival[target_stop]).filter(|&t| t != Time::MAX);
         Ok(RaptorResult::SingleTarget {
             arrival_time: best_time,
             transfers_used: max_transfers,

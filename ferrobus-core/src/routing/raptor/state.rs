@@ -1,7 +1,7 @@
 use fixedbitset::FixedBitSet;
 use thiserror::Error;
 
-use crate::{PublicTransitData, RaptorStopId, RouteId, Time};
+use crate::{PublicTransitData, RouteId, Time};
 
 #[derive(Debug)]
 pub(crate) struct RaptorState {
@@ -40,30 +40,28 @@ impl RaptorState {
         }
     }
 
-    // Updated to accept both the actual arrival time and the boarding time.
     pub(crate) fn update(
         &mut self,
         round: usize,
-        stop: RaptorStopId,
-        new_arrival: Time,
-        new_board: Time,
+        stop: usize,
+        arrival: Time,
+        board: Time,
     ) -> Result<bool, RaptorError> {
         if round >= self.arrival_times.len() || stop >= self.arrival_times[0].len() {
             return Err(RaptorError::MaxTransfersExceeded);
         }
+        // Only update if the new arrival time is better than what we've seen in this round
+        if arrival < self.arrival_times[round][stop] {
+            self.arrival_times[round][stop] = arrival;
+            self.board_times[round][stop] = board;
 
-        // We compare based on the boarding time so that subsequent binary
-        // searches use the correct “time available” value.
-        if new_board < self.board_times[round][stop] {
-            self.arrival_times[round][stop] = new_arrival;
-            self.board_times[round][stop] = new_board;
-            if new_arrival < self.best_arrival[stop] {
-                self.best_arrival[stop] = new_arrival;
+            // Update best_arrival if this is better than any previous round
+            if arrival < self.best_arrival[stop] {
+                self.best_arrival[stop] = arrival;
+                return Ok(true); // Return true ONLY if we made a true improvement
             }
-            Ok(true)
-        } else {
-            Ok(false)
         }
+        Ok(false) // No improvement
     }
 }
 
