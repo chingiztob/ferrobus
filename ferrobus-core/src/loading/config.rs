@@ -11,7 +11,7 @@ pub struct TransitModelConfig {
     /// Maximum transfer time in seconds
     pub max_transfer_time: Time,
     /// Day of week for trips filtering
-    pub day_of_week: String,
+    pub date: Option<chrono::NaiveDate>,
 }
 
 impl Default for TransitModelConfig {
@@ -20,7 +20,7 @@ impl Default for TransitModelConfig {
             max_transfer_time: 1200, // 20 minutes
             osm_path: PathBuf::new(),
             gtfs_dirs: vec![PathBuf::new()],
-            day_of_week: "monday".to_string(),
+            date: None,
         }
     }
 }
@@ -31,7 +31,7 @@ impl TransitModelConfig {
             max_transfer_time,
             osm_path,
             gtfs_dirs: Vec::new(),
-            day_of_week: "monday".to_string(),
+            date: None,
         }
     }
 

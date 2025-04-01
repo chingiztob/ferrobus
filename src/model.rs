@@ -1,4 +1,5 @@
 use ferrobus_core::prelude::*;
+
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
@@ -38,13 +39,13 @@ impl PyTransitModel {
 }
 
 #[pyfunction(name = "create_transit_model")]
-#[pyo3(signature = (osm_path, gtfs_dirs, day_of_week, max_transfer_time = 1800))]
+#[pyo3(signature = (osm_path, gtfs_dirs, date, max_transfer_time = 1800))]
 #[gen_stub_pyfunction]
 pub fn py_create_transit_model(
     py: Python<'_>,
     osm_path: &str,
     gtfs_dirs: Vec<String>,
-    day_of_week: &str,
+    date: Option<chrono::NaiveDate>,
     max_transfer_time: u32,
 ) -> PyResult<PyTransitModel> {
     // Allow Python threads during all blocking operations
@@ -58,7 +59,7 @@ pub fn py_create_transit_model(
         let config = TransitModelConfig {
             osm_path: osm_pathbuf,
             gtfs_dirs: gtfs_pathbufs,
-            day_of_week: day_of_week.to_string(),
+            date,
             max_transfer_time,
         };
 

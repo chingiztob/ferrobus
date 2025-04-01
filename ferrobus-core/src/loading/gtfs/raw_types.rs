@@ -103,6 +103,15 @@ pub struct FeedService {
     pub end_date: String,
 }
 
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+pub struct FeedCalendarDates {
+    pub service_id: String,
+    #[serde(deserialize_with = "deserialize_gtfs_date")]
+    pub date: Option<chrono::NaiveDate>,
+    pub exception_type: String,
+}
+
 #[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 #[allow(clippy::struct_field_names)]

@@ -1,10 +1,13 @@
+use chrono::{Datelike, Weekday};
 use geo::Point;
 use hashbrown::{HashMap, HashSet};
 use log::warn;
 
 use super::{
     parser::{deserialize_gtfs_file, parse_time},
-    raw_types::{FeedInfo, FeedRoute, FeedService, FeedStop, FeedStopTime, FeedTrip},
+    raw_types::{
+        FeedCalendarDates, FeedInfo, FeedRoute, FeedService, FeedStop, FeedStopTime, FeedTrip,
+    },
 };
 use crate::{
     Error,
@@ -18,14 +21,21 @@ use crate::{loading::config::TransitModelConfig, model::transit::types::FeedMeta
 ///
 /// If a `stop_sequence` cannot be parsed as a u32
 pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTransitData, Error> {
-    let (stops, mut trips, mut stop_times, services, feed_info_vec) = load_raw_feed(config)?;
+    let (stops, mut trips, mut stop_times, services, feed_info_vec, calendar_dates) =
+        load_raw_feed(config)?;
 
     let feeds_meta = feed_info_vec
         .into_iter()
         .map(|info| FeedMeta { feed_info: info })
         .collect::<Vec<_>>();
 
-    filter_trips_by_service_day(config, &services, &mut trips, &mut stop_times);
+    filter_trips_by_service_day(
+        config,
+        &services,
+        &mut trips,
+        &mut stop_times,
+        &calendar_dates,
+    );
 
     // Create maps for fast lookup during conversion
     let stop_id_map: HashMap<String, RaptorStopId> = stops
@@ -107,20 +117,25 @@ fn filter_trips_by_service_day(
     services: &[FeedService],
     trips: &mut Vec<FeedTrip>,
     stop_times: &mut Vec<FeedStopTime>,
+    calendar_dates: &[FeedCalendarDates],
 ) {
     // Create set of service_id for the selected day of the week
-    let active_services: HashSet<&str> = services
+    // if date is not provided, return without filtering trips
+    let Some(date) = config.date else { return };
+    let day_of_week = date.weekday();
+
+    // process regular services
+    let mut active_services: HashSet<&str> = services
         .iter()
         .filter_map(|service| {
-            let is_active = match config.day_of_week.as_str() {
-                "monday" => service.monday == "1",
-                "tuesday" => service.tuesday == "1",
-                "wednesday" => service.wednesday == "1",
-                "thursday" => service.thursday == "1",
-                "friday" => service.friday == "1",
-                "saturday" => service.saturday == "1",
-                "sunday" => service.sunday == "1",
-                _ => false,
+            let is_active = match day_of_week {
+                Weekday::Mon => service.monday == "1",
+                Weekday::Tue => service.tuesday == "1",
+                Weekday::Wed => service.wednesday == "1",
+                Weekday::Thu => service.thursday == "1",
+                Weekday::Fri => service.friday == "1",
+                Weekday::Sat => service.saturday == "1",
+                Weekday::Sun => service.sunday == "1",
             };
             if is_active {
                 Some(service.service_id.as_str())
@@ -129,6 +144,19 @@ fn filter_trips_by_service_day(
             }
         })
         .collect();
+
+    // Filter calendar_dates exceptions
+    for calendar_date in calendar_dates {
+        if calendar_date.date == Some(date) {
+            if calendar_date.exception_type == "1" {
+                // Add service if exception type is 1 (service added)
+                active_services.insert(calendar_date.service_id.as_str());
+            } else if calendar_date.exception_type == "2" {
+                // Remove service if exception type is 2 (service removed)
+                active_services.remove(calendar_date.service_id.as_str());
+            }
+        }
+    }
 
     // Filter trips and respective stop_times by day of the week
     trips.retain(|trip| active_services.contains(trip.service_id.as_str()));
@@ -210,6 +238,7 @@ type RawGTFSmodel = (
     Vec<FeedStopTime>,
     Vec<FeedService>,
     Vec<FeedInfo>,
+    Vec<FeedCalendarDates>,
 );
 
 fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSmodel, Error> {
@@ -219,6 +248,7 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSmodel, Error> {
     let mut stop_times: Vec<FeedStopTime> = Vec::new();
     let mut services: Vec<FeedService> = Vec::new();
     let mut feed_info_vec: Vec<FeedInfo> = Vec::new();
+    let mut calendar_dates: Vec<FeedCalendarDates> = Vec::new();
     for dir in &config.gtfs_dirs {
         stops.extend(deserialize_gtfs_file(&dir.join("stops.txt"))?);
         routes.extend(deserialize_gtfs_file(&dir.join("routes.txt"))?);
@@ -226,11 +256,19 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSmodel, Error> {
         stop_times.extend(deserialize_gtfs_file(&dir.join("stop_times.txt"))?);
         services.extend(deserialize_gtfs_file(&dir.join("calendar.txt"))?);
         feed_info_vec.extend(deserialize_gtfs_file(&dir.join("feed_info.txt"))?);
+        calendar_dates.extend(deserialize_gtfs_file(&dir.join("calendar_dates.txt"))?);
     }
     stops.shrink_to_fit();
     routes.shrink_to_fit();
     trips.shrink_to_fit();
     stop_times.shrink_to_fit();
     services.shrink_to_fit();
-    Ok((stops, trips, stop_times, services, feed_info_vec))
+    Ok((
+        stops,
+        trips,
+        stop_times,
+        services,
+        feed_info_vec,
+        calendar_dates,
+    ))
 }

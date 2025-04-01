@@ -150,7 +150,7 @@ pub fn raptor(
     }
 }
 
-fn process_foot_paths(
+pub(crate) fn process_foot_paths(
     data: &PublicTransitData,
     target: Option<usize>,
     num_stops: usize,
@@ -181,7 +181,7 @@ fn process_foot_paths(
     Ok(new_marks)
 }
 
-fn create_route_queue(
+pub(crate) fn create_route_queue(
     data: &PublicTransitData,
     marked_stops: &FixedBitSet,
 ) -> Result<VecDeque<(usize, usize)>, RaptorError> {

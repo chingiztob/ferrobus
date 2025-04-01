@@ -14,18 +14,20 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.24", features = ["extension-module"] }
+pyo3 = { version = "0.24", features = ["extension-module", "chrono"] }
 pyo3-log = "0.12"
 pyo3-stub-gen = "0.7"
 ferrobus_core = { path = "ferrobus-core" }
 geo.workspace = true
 rayon.workspace = true
+chrono.workspace = true
 wkt = "0.12.0"
 serde_json = "1"
 
 [workspace.dependencies]
 geo = "0.30.0"
 rayon = "1.10"
+chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
 
 [profile.release]
 lto = "fat"

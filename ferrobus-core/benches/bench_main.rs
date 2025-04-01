@@ -31,7 +31,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             PathBuf::from("/home/chingiz/Rust/py_rust/cascade/scripts/files/SPB"),
             PathBuf::from("/home/chingiz/Rust/py_rust/cascade/scripts/files/spb-metro"),
         ],
-        ..Default::default()
+        date: chrono::NaiveDate::from_ymd_opt(2025, 4, 10)
     };
 
     let transit_graph = create_transit_model(&config).unwrap();

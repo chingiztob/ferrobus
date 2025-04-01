@@ -1,8 +1,6 @@
-use fixedbitset::FixedBitSet;
-use hashbrown::HashMap;
 use log::warn;
-use std::collections::VecDeque;
 
+use super::regular::{create_route_queue, process_foot_paths};
 use super::state::{RaptorError, RaptorState, find_earliest_trip};
 use crate::{PublicTransitData, RaptorStopId, Time};
 
@@ -46,7 +44,6 @@ pub fn rraptor(
     let max_rounds = max_transfers + 1;
 
     // Retrieve all departure times from the source within the given range.
-    // (You need to implement this helper if it does not already exist.)
     let mut departures =
         data.get_source_departures(source, departure_range.0, departure_range.1)?;
     // Process departures from latest to earliest.
@@ -64,71 +61,53 @@ pub fn rraptor(
 
         // Process foot-path transfers from the source.
         let transfers = data.get_stop_transfers(source)?;
-        for &(t_stop, duration) in transfers {
-            if t_stop >= num_stops {
-                warn!("Invalid transfer target {t_stop}");
+        for &(target_stop, duration) in transfers {
+            if target_stop >= num_stops {
+                warn!("Invalid transfer target {target_stop}");
                 continue;
             }
             let new_time = dep_time.saturating_add(duration);
-            state.update(0, t_stop, new_time, new_time)?;
-            state.marked_stops[0].set(t_stop, true);
+            // For foot-paths we assume no waiting time (arrival equals boarding).
+            if state.update(0, target_stop, new_time, new_time)? {
+                state.marked_stops[0].set(target_stop, true);
+            }
         }
 
         // For rounds 1..max_rounds, first carry over improvements from the previous round.
         for round in 1..max_rounds {
+            let prev_round = round - 1;
             // Carry-over step: if the previous round has a better boarding time, propagate it.
             for stop in 0..num_stops {
-                if state.board_times[round - 1][stop] < state.board_times[round][stop] {
-                    state.arrival_times[round][stop] = state.arrival_times[round - 1][stop];
-                    state.board_times[round][stop] = state.board_times[round - 1][stop];
+                if state.board_times[prev_round][stop] < state.board_times[round][stop] {
+                    state.arrival_times[round][stop] = state.arrival_times[prev_round][stop];
+                    state.board_times[round][stop] = state.board_times[prev_round][stop];
                     state.marked_stops[round].set(stop, true);
                 }
             }
-            if state.marked_stops[round - 1].count_ones(..num_stops) == 0 {
+
+            // If no stops were marked in the previous round, we can break early
+            if state.marked_stops[prev_round].is_clear() {
                 break;
             }
 
-            // Build a set of stops marked in the previous round.
-            let mut is_marked = vec![false; num_stops];
-            for stop in state.marked_stops[round - 1].ones() {
-                is_marked[stop] = true;
-            }
-            // Build a queue of routes that serve any of these stops.
-            let mut route_queue: HashMap<RaptorStopId, usize> =
-                HashMap::with_capacity(data.routes.len() / 4);
-            for (route_id, _route) in data.routes.iter().enumerate() {
-                let stops = data.get_route_stops(route_id)?;
-                let mut best_pos: Option<usize> = None;
-                for (i, &stop) in stops.iter().enumerate() {
-                    if is_marked[stop] {
-                        best_pos = Some(i);
-                        break;
-                    }
-                }
-                if let Some(pos) = best_pos {
-                    route_queue
-                        .entry(route_id)
-                        .and_modify(|existing_pos| {
-                            if pos < *existing_pos {
-                                *existing_pos = pos;
-                            }
-                        })
-                        .or_insert(pos);
-                }
-            }
-            state.marked_stops[round - 1].clear();
+            let mut queue = create_route_queue(data, &state.marked_stops[prev_round])?;
+            state.marked_stops[prev_round].clear();
 
-            // Process each route in the queue.
-            let mut queue: VecDeque<(RaptorStopId, usize)> =
-                VecDeque::with_capacity(route_queue.len());
-            queue.extend(route_queue.into_iter());
+            // When a target is given, use its best known arrival time for pruning.
+            let target_bound = if let Some(target_stop) = target {
+                state.best_arrival[target_stop]
+            } else {
+                Time::MAX
+            };
+
             while let Some((route_id, start_pos)) = queue.pop_front() {
                 let stops = data.get_route_stops(route_id)?;
                 let mut current_trip_opt = None;
                 let mut current_board_pos = 0;
+
                 // Find the earliest trip on this route that is catchable.
                 for (idx, &stop) in stops.iter().enumerate().skip(start_pos) {
-                    let earliest_board = state.board_times[round - 1][stop];
+                    let earliest_board = state.board_times[prev_round][stop];
                     if earliest_board == Time::MAX {
                         continue;
                     }
@@ -139,81 +118,72 @@ pub fn rraptor(
                         break;
                     }
                 }
+
                 if let Some(mut trip_idx) = current_trip_opt {
                     let mut trip = data.get_trip(route_id, trip_idx)?;
-                    // Use target_bound for pruning (if a target is specified).
-                    let target_bound = if let Some(target_stop) = target {
-                        state.best_arrival[target_stop]
-                    } else {
-                        Time::MAX
-                    };
-                    // Process the stops along the route using a while-loop so that updates
-                    // to current_board_pos are used.
-                    let mut idx = current_board_pos;
-                    while idx < stops.len() {
-                        let stop = stops[idx];
-                        let prev_board = state.board_times[round - 1][stop];
-                        if prev_board < trip[idx].departure {
+
+                    for (trip_stop_idx, &stop) in stops.iter().enumerate().skip(current_board_pos) {
+                        // Check if we can "upgrade" the trip at this stop.
+                        let prev_board = state.board_times[prev_round][stop];
+                        if prev_board < trip[trip_stop_idx].departure {
                             if let Some(new_trip_idx) =
-                                find_earliest_trip(data, route_id, idx, prev_board)
+                                find_earliest_trip(data, route_id, trip_stop_idx, prev_board)
                             {
                                 if new_trip_idx != trip_idx {
                                     trip_idx = new_trip_idx;
                                     trip = data.get_trip(route_id, new_trip_idx)?;
-                                    //current_board_pos = idx;
+                                    //current_board_pos = trip_stop_idx;
                                 }
                             }
                         }
-                        let actual_arrival = trip[idx].arrival;
+                        // Separate the times: the actual arrival (when the bus reaches the stop)
+                        // and the boarding time (when the bus departs from the stop).
+                        let actual_arrival = trip[trip_stop_idx].arrival;
+                        // For further connections, use the departure time.
                         let effective_board = if let Some(target_stop) = target {
                             if stop == target_stop {
-                                actual_arrival
+                                actual_arrival // For target, we report arrival.
                             } else {
-                                trip[idx].departure
+                                trip[trip_stop_idx].departure
                             }
                         } else {
-                            trip[idx].departure
+                            trip[trip_stop_idx].departure
                         };
+
+                        // Only update if this effective boarding time is an improvement.
                         if state.update(round, stop, actual_arrival, effective_board)? {
                             state.marked_stops[round].set(stop, true);
                         }
+                        // Prune if we've already exceeded the target bound.
                         if effective_board >= target_bound {
                             break;
                         }
-                        idx += 1;
                     }
                 }
             }
-            // Process foot-path transfers for this round.
-            let current_marks: Vec<RaptorStopId> = state.marked_stops[round].ones().collect();
-            let mut new_marks = FixedBitSet::with_capacity(num_stops);
-            let target_bound = if let Some(target_stop) = target {
-                state.best_arrival[target_stop]
-            } else {
-                Time::MAX
-            };
-            for stop in current_marks {
-                let current_board = state.board_times[round][stop];
-                let transfers = data.get_stop_transfers(stop)?;
-                for &(t_stop, duration) in transfers {
-                    if t_stop >= num_stops {
-                        warn!("Invalid transfer target {t_stop}");
-                        continue;
-                    }
-                    let new_time = current_board.saturating_add(duration);
-                    if new_time >= state.board_times[round][t_stop] || new_time >= target_bound {
-                        continue;
-                    }
-                    if state.update(round, t_stop, new_time, new_time)? {
-                        new_marks.set(t_stop, true);
-                    }
-                }
-            }
+
+            let new_marks = process_foot_paths(data, target, num_stops, &mut state, round)?;
             state.marked_stops[round].union_with(&new_marks);
+
+            // Check if we should continue with this round
+            if let Some(target_stop) = target {
+                let arrival_time = state.arrival_times[round][target_stop];
+                let target_bound = state.best_arrival[target_stop];
+
+                // If the arrival time in this round is worse than our best known time,
+                // there's no point continuing
+                if arrival_time != Time::MAX && arrival_time > target_bound {
+                    break;
+                }
+            }
+
+            // If no stops were marked in this round, we can stop.
+            if state.marked_stops[round].is_clear() {
+                break;
+            }
         }
 
         // After processing rounds for this departure, record the result for the target.
-        // We choose the best (earliest arrival) among all rounds.
         let mut best_arr = Time::MAX;
         let mut best_round = 0;
         if let Some(target_stop) = target {
@@ -225,6 +195,7 @@ pub fn rraptor(
                 }
             }
         }
+
         let journey = RaptorRangeJourney {
             departure_time: dep_time,
             arrival_time: if best_arr == Time::MAX {
