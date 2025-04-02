@@ -6,6 +6,25 @@ use rayon::prelude::*;
 use crate::model::PyTransitModel;
 use crate::routing::PyTransitPoint;
 
+/// Computes a matrix of travel times between
+/// all points in the input set in parallel.
+///
+/// Parameters
+/// ----------
+/// transit_model : TransitModel
+///     The transit model to use for routing.
+/// points : list[TransitPoint]
+///     List of points between which to calculate travel times.
+/// departure_time : int
+///     Time of departure in seconds since midnight.
+/// max_transfers : int
+///     Maximum number of transfers allowed in route planning.
+///
+/// Returns
+/// -------
+/// list[list[Optional[int]]]
+///     A 2D matrix where each cell [i][j] contains the travel time in seconds
+///     from point i to point j, or None if the point is unreachable.
 #[gen_stub_pyfunction]
 #[pyfunction]
 pub fn travel_time_matrix(

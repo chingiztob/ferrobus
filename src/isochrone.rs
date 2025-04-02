@@ -1,3 +1,23 @@
+//! # Isochrone calculations for transit networks
+//!
+//! This module provides highly optimized functions for calculating isochrones
+//! (service-area polygons) in transit networks. Traditional isochrone generation
+//! is computationally expensive due to complex geometric operations. This module
+//! solves this problem using a hexagonal grid system (H3 cells) that can be
+//! rapidly queried and processed.
+//!
+//! ## Workflow
+//!
+//! 1. Create an isochrone index for your area of interest
+//! 2. Use this index to rapidly calculate isochrones from any point
+//!
+//! ```python
+//! # Example Python usage
+//! index = ferrobus.create_isochrone_index(model, area_wkt, 8)
+//! isochrone = ferrobus.calculate_isochrone(model, point, departure_time,
+//!                                          max_transfers, cutoff, index)
+//! ```
+
 use ferrobus_core::prelude::*;
 use geo::Polygon;
 use pyo3::prelude::*;
@@ -7,6 +27,41 @@ use wkt::{ToWkt, TryFromWkt};
 use crate::model::PyTransitModel;
 use crate::routing::PyTransitPoint;
 
+/// # IsochroneIndex
+///
+/// A spatial index structure for highly efficient isochrone calculations in transit networks.
+///
+/// ## Motivation
+///
+/// Traditional isochrone generation involves computationally expensive geometric operations
+/// such as buffering network edges and performing unary unions on complex polygons.
+/// This approach often becomes prohibitively slow for interactive applications or
+/// batch processing multiple isochrones.
+///
+/// `IsochroneIndex` solves this problem by pre-processing the transit network into a
+/// hexagonal grid system (H3 cells) that can be rapidly queried and merged during
+/// isochrone generation. This provides orders-of-magnitude performance improvements
+/// by avoiding expensive geometric operations at query time.
+///
+/// ## Technical approach
+///
+/// Rather than working with precise network geometry during isochrone calculations,
+/// this index:
+///
+/// 1. Discretizes the geographic area into hexagonal cells
+/// 2. Pre-computes network connectivity at cell boundaries
+/// 3. Enables fast cell-based isochrone expansion
+/// 4. Dissolves contiguous cells during final isochrone generation
+///
+/// This approach trades some precision (based on cell resolution) for dramatic
+/// performance improvements, making it practical for interactive applications.
+///
+/// ## Example
+///
+/// ```ignore
+/// let index = create_isochrone_index(&model, area_wkt, 8, 1200)?;
+/// let isochrone = calculate_isochrone(py, &model, &point, departure, 3, 1800, &index)?;
+/// ```
 #[gen_stub_pyclass]
 #[pyclass(name = "IsochroneIndex")]
 pub struct PyIsochroneIndex {
@@ -29,6 +84,37 @@ impl PyIsochroneIndex {
     }
 }
 
+/// Create a spatial index for isochrone calculations
+///
+/// Parameters
+/// ----------
+/// transit_data : TransitModel
+///     The transportation model containing transit network information.
+/// area : str
+///     Geographic area over which to build the isochrone, as a WKT string.
+/// cell_resolution : int
+///     Resolution of hexagonal grid cells (0-255). Higher values create
+///     finer-grained but larger indexes.
+/// max_walking_time : int, default=1200
+///     Maximum time in seconds for walking connections.
+///
+/// Returns
+/// -------
+/// IsochroneIndex
+///     Pre-computed spatial index structure for rapid isochrone calculations.
+///
+/// Raises
+/// ------
+/// ValueError
+///     If the area WKT string cannot be parsed.
+/// RuntimeError
+///     If the isochrone index creation fails for other reasons.
+///
+/// Notes
+/// -----
+/// Creating this index may be compute-intensive but allows for extremely fast
+/// subsequent isochrone calculations, making it ideal for interactive applications
+/// or batch processing multiple isochrones from different starting points.
 #[pyfunction]
 #[pyo3(signature = (transit_data, area, cell_resolution, max_walking_time=1200))]
 #[gen_stub_pyfunction]
@@ -41,6 +127,7 @@ pub fn create_isochrone_index(
     let area = Polygon::try_from_wkt_str(area).map_err(|e| {
         PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Failed to parse area WKT: {e}"))
     })?;
+
     let index = IsochroneIndex::new(
         &transit_data.model,
         &area,
@@ -56,6 +143,35 @@ pub fn create_isochrone_index(
     Ok(PyIsochroneIndex { inner: index })
 }
 
+/// Calculate an isochrone from a single starting point
+///
+/// Computes an accessibility isochrone (travel-time polygon) using the provided
+/// spatial index for rapid calculation.
+///
+/// Parameters
+/// ----------
+/// transit_data : TransitModel
+///     The transit model to use for routing.
+/// start : TransitPoint
+///     Starting location for the isochrone.
+/// departure_time : int
+///     Time of departure in seconds since midnight.
+/// max_transfers : int
+///     Maximum number of transfers allowed in route planning.
+/// cutoff : int
+///     Maximum travel time in seconds to include in the isochrone.
+/// index : IsochroneIndex
+///     Pre-computed isochrone spatial index for the area.
+///
+/// Returns
+/// -------
+/// str
+///     WKT representation of the resulting polygon isochrone.
+///
+/// Raises
+/// ------
+/// RuntimeError
+///     If the isochrone calculation fails.
 #[pyfunction]
 #[gen_stub_pyfunction]
 pub fn calculate_isochrone(
@@ -86,6 +202,37 @@ pub fn calculate_isochrone(
     })
 }
 
+/// Calculate isochrones from multiple starting points in batch mode
+///
+/// This is an optimized bulk version of calculate_isochrone that processes
+/// multiple starting points in parallel, which is significantly faster than
+/// repeated individual calculations.
+///
+/// Parameters
+/// ----------
+/// transit_data : TransitModel
+///     The transit model to use for routing.
+/// starts : list[TransitPoint]
+///     List of starting locations for isochrone calculations.
+/// departure_time : int
+///     Time of departure in seconds since midnight.
+/// max_transfers : int
+///     Maximum number of transfers allowed in route planning.
+/// cutoff : int
+///     Maximum travel time in seconds to include in the isochrones.
+/// index : IsochroneIndex
+///     Pre-computed isochrone spatial index for the area.
+///
+/// Returns
+/// -------
+/// list[str]
+///     List of WKT representations of the resulting isochrones,
+///     matching the order of the input starting points.
+///
+/// Raises
+/// ------
+/// RuntimeError
+///     If the batch isochrone calculation fails.
 #[pyfunction]
 #[gen_stub_pyfunction]
 #[allow(clippy::needless_pass_by_value)]
