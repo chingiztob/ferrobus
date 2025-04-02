@@ -6,9 +6,6 @@
 name: CI
 
 on:
-  push:
-    tags:
-      - '*'
   workflow_dispatch:
 
 permissions:
@@ -23,11 +20,7 @@ jobs:
           - runner: ubuntu-22.04
             target: x86_64
           - runner: ubuntu-22.04
-            target: x86
-          - runner: ubuntu-22.04
             target: aarch64
-          - runner: ubuntu-22.04
-            target: armv7
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -57,8 +50,6 @@ jobs:
             target: x86
           - runner: ubuntu-22.04
             target: aarch64
-          - runner: ubuntu-22.04
-            target: armv7
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -151,23 +142,21 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     needs: [linux, musllinux, windows, macos, sdist]
     permissions:
-      # Use to sign the release artifacts
-      id-token: write
-      # Used to upload release artifacts
-      contents: write
-      # Used to generate artifact attestation
-      attestations: write
+      id-token: write  # Used to sign the release artifacts
+      contents: write  # Used to upload release artifacts
+      attestations: write  # Used to generate artifact attestation
     steps:
       - uses: actions/download-artifact@v4
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: 'wheels-*/*'
-      - name: Publish to PyPI
+      - name: Publish to TestPyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: PyO3/maturin-action@v1
         env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          MATURIN_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
         with:
           command: upload
-          args: --non-interactive --skip-existing wheels-*/*
+          args: --non-interactive --skip-existing --repository-url https://test.pypi.org/legacy/ wheels-*/*
+
