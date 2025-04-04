@@ -12,10 +12,12 @@ classifiers = [
 ]
 dynamic = ["version"]
 license = { text = "MIT OR Apache-2.0" }
-dependencies = ["maturin>=1.8.3"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
+
+[tool.uv]
+dev-dependencies = ["maturin"]
 
 [tool.ruff]
 select = [
@@ -27,5 +29,5 @@ select = [
     "B", # flake8-bugbear
     "Q", # flake8-quotes
 ]
-ignore = ["W293"]  # Ignore blank line contains whitespace
+ignore = ["W293"] # Ignore blank line contains whitespace
 exclude = ["venv"]
