@@ -46,13 +46,37 @@ impl IsochroneIndex {
         cell_resolution: u8,
         max_walking_time: Time,
     ) -> Result<Self, Error> {
-        let grid = create_hex_coverage(area.clone(), cell_resolution)?;
-        let grid_centroids = get_grid_centroids(&grid);
+        let original_grid = create_hex_coverage(area.clone(), cell_resolution)?;
+        let grid_centroids = get_grid_centroids(&original_grid);
 
-        let snapped_centroids: Vec<TransitPoint> = grid_centroids
+        // Create transit points and track which ones are successful
+        let snap_results: Vec<(usize, Result<TransitPoint, Error>)> = grid_centroids
             .par_iter()
-            .map(|point| TransitPoint::new(*point, transit_data, max_walking_time, 5))
-            .collect::<Result<Vec<_>, _>>()?;
+            .enumerate()
+            .map(|(i, point)| {
+                (
+                    i,
+                    TransitPoint::new(*point, transit_data, max_walking_time, 3),
+                )
+            })
+            .collect();
+
+        // Filter to keep only successful transit points and corresponding grid cells
+        let mut grid = Vec::new();
+        let mut snapped_centroids = Vec::new();
+
+        for (idx, result) in snap_results {
+            if let Ok(transit_point) = result {
+                grid.push(original_grid[idx]);
+                snapped_centroids.push(transit_point);
+            }
+        }
+
+        println!(
+            "Snapped {} of {}",
+            snapped_centroids.len(),
+            original_grid.len()
+        );
 
         Ok(Self {
             grid,

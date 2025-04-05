@@ -1,14 +1,17 @@
 use ferrobus_core::prelude::*;
 use pyo3::prelude::*;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
 use crate::model::PyTransitModel;
 use crate::routing::PyTransitPoint;
 
+#[gen_stub_pyclass]
 #[pyclass(name = "RangeRoutingResult")]
 pub struct PyRangeRoutingResult {
     pub inner: RangeRoutingResult,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl PyRangeRoutingResult {
     pub fn median_travel_time(&self) -> Time {
@@ -36,6 +39,7 @@ impl PyRangeRoutingResult {
     }
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction(name = "range_multimodal_routing")]
 #[pyo3(signature = (transit_model, start, end, departure_range, max_transfers=3))]
 pub fn py_range_multimodal_routing(
@@ -61,6 +65,7 @@ pub fn py_range_multimodal_routing(
     Ok(PyRangeRoutingResult { inner: result })
 }
 
+#[gen_stub_pyfunction]
 #[pyfunction(name = "pareto_range_multimodal_routing")]
 #[pyo3(signature = (transit_model, start, end, departure_range, max_transfers=3))]
 pub fn py_pareto_range_multimodal_routing(

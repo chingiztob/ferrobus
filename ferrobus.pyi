@@ -53,6 +53,23 @@ class IsochroneIndex:
         ...
 
 
+class RangeRoutingResult:
+    def median_travel_time(self) -> builtins.int:
+        ...
+
+    def travel_times(self) -> builtins.list[builtins.int]:
+        ...
+
+    def as_json(self) -> builtins.str:
+        ...
+
+    def __repr__(self) -> builtins.str:
+        ...
+
+    def __str__(self) -> builtins.str:
+        ...
+
+
 class TransitModel:
     r"""
     # TransitModel
@@ -246,7 +263,7 @@ def calculate_percent_access_isochrone(transit_data:TransitModel, start:TransitP
     Raises
     ------
     RuntimeError
-        If the calculation fails.
+        If isochrone calculation fails.
     
     Notes
     -----
@@ -444,6 +461,12 @@ def find_routes_one_to_many(transit_model:TransitModel, start_point:TransitPoint
     -----
     This function releases the GIL during computation to allow other Python threads to run.
     """
+    ...
+
+def pareto_range_multimodal_routing(transit_model:TransitModel, start:TransitPoint, end:TransitPoint, departure_range:tuple[builtins.int, builtins.int], max_transfers:builtins.int=3) -> RangeRoutingResult:
+    ...
+
+def range_multimodal_routing(transit_model:TransitModel, start:TransitPoint, end:TransitPoint, departure_range:tuple[builtins.int, builtins.int], max_transfers:builtins.int=3) -> RangeRoutingResult:
     ...
 
 def travel_time_matrix(transit_model:TransitModel, points:typing.Sequence[TransitPoint], departure_time:builtins.int, max_transfers:builtins.int) -> builtins.list[builtins.list[typing.Optional[builtins.int]]]:
