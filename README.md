@@ -1,18 +1,18 @@
 # Ferrobus: Multimodal transit routing library
 
-Ferrobus is a fast Python library that provides multimodal
-transit routing capabilities, designed for geospatial analysis workflows.
+Ferrobus is a Python library providing efficient multimodal transit routing capabilities for geospatial analysis workflows. Built with a Rust core, it delivers strong performance while maintaining a straightforward Python interface.
 
-Ferrobus is fully implemented in Rust, which makes it extremely fast.
-This also allows for zero-dependency installation, and
-unlike R5 or OpenTripPlanner, Ferrobus does not require Java.
+Unlike alternatives such as R5 or OpenTripPlanner, Ferrobus doesn't require Java and installs without external dependencies, making it easier to integrate into existing workflows and use in tightly controlled environments.
+
+Core routing functionality is based on RAPTOR (Round-based Public Transit Optimized Router) algotihm developed
+by Microsoft Research. For details, see [Microsoft's research paper](https://www.microsoft.com/en-us/research/wp-content/uploads/2012/01/raptor_alenex.pdf).
 
 ## Functionality
 
-- **Routing**: Find optimal paths combining walking and public transit
+- **Routing**: Find optimal paths combining walking and public transit based on the RAPTOR
 - **Isochrone generation**: Create travel-time polygons using a hexagonal grid system
 - **Travel time matrices**: Compute travel times between multiple points
-- **Batch processing**: Process multiple routes or isochrones efficiently
+- **Batch processing**: Process multiple routes or isochrones efficiently with parallel processing
 - **Time-range routing**: Find journeys across a range of departure times
 
 ```python

@@ -20,7 +20,7 @@ pub mod model;
 pub mod range_routing;
 pub mod routing;
 
-/// # Ferrobus: Multimodal transit routing library
+/// Ferrobus: Multimodal transit routing library
 ///
 /// Ferrobus is a fast Python library that provides multimodal
 /// transit routing capabilities, designed for geospatial analysis workflows.
@@ -29,7 +29,8 @@ pub mod routing;
 /// This also allows for zero-dependency installation, as it does not require any external
 /// libraries or packages. Unlike R5 or OpenTripPlanner, Ferrobus does not require Java.
 ///
-/// ## Functionality
+/// Functionality
+/// =============
 ///
 /// - **Routing**: Find optimal paths combining walking and public transit
 /// - **Isochrone generation**: Create travel-time polygons using a hexagonal grid system
@@ -37,29 +38,33 @@ pub mod routing;
 /// - **Batch processing**: Process multiple routes or isochrones efficiently
 /// - **Time-range routing**: Find journeys across a range of departure times
 ///
-/// ```python
-/// # Create a transit model
-/// model = ferrobus.create_transit_model("streets.osm.pbf", ["gtfs_data"], None)
+/// Example
+/// =======
 ///
-/// # Create transit points
-/// origin = ferrobus.create_transit_point(52.52, 13.40, model)
-/// destination = ferrobus.create_transit_point(52.53, 13.42, model)
+/// .. code-block:: python
 ///
-/// # Find route
-/// departure_time = 8 * 3600  # 8:00 AM in seconds since midnight
-/// route = ferrobus.find_route(model, origin, destination, departure_time)
+///    # Create a transit model
+///    model = ferrobus.create_transit_model("streets.osm.pbf", ["gtfs_data"], None)
 ///
-/// # Generate an isochrone
-/// index = ferrobus.create_isochrone_index(model, area_wkt, 8)
-/// isochrone = ferrobus.calculate_isochrone(model, origin, departure_time,
-///                                          2, 1800, index)
+///    # Create transit points
+///    origin = ferrobus.create_transit_point(52.52, 13.40, model)
+///    destination = ferrobus.create_transit_point(52.53, 13.42, model)
 ///
-/// # Calculate a travel time matrix
-/// points = [origin, destination, point3, point4]
-/// matrix = ferrobus.travel_time_matrix(model, points, departure_time, 3)
-/// ```
+///    # Find route
+///    departure_time = 8 * 3600  # 8:00 AM in seconds since midnight
+///    route = ferrobus.find_route(model, origin, destination, departure_time)
 ///
-/// ## Implementation details
+///    # Generate an isochrone
+///    index = ferrobus.create_isochrone_index(model, area_wkt, 8)
+///    isochrone = ferrobus.calculate_isochrone(model, origin, departure_time,
+///                                             2, 1800, index)
+///
+///    # Calculate a travel time matrix
+///    points = [origin, destination, point3, point4]
+///    matrix = ferrobus.travel_time_matrix(model, points, departure_time, 3)
+///
+/// Implementation details
+/// =======================
 ///
 /// The library uses several techniques to enable efficient routing:
 /// - Parallel processing for batch operations

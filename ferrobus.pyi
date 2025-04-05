@@ -60,6 +60,9 @@ class RangeRoutingResult:
     def travel_times(self) -> builtins.list[builtins.int]:
         ...
 
+    def departure_times(self) -> builtins.list[builtins.int]:
+        ...
+
     def as_json(self) -> builtins.str:
         ...
 

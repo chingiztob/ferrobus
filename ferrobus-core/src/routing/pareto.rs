@@ -52,7 +52,15 @@ impl RangeRoutingResult {
     }
 
     pub fn travel_times(&self) -> Vec<Time> {
-        self.journeys.iter().map(|j| j.travel_time).collect()
+        let mut journeys = self.journeys.clone();
+        journeys.sort_by_key(|j| j.departure_time);
+        journeys.iter().map(|j| j.travel_time).collect()
+    }
+
+    pub fn departure_times(&self) -> Vec<Time> {
+        let mut times: Vec<Time> = self.journeys.iter().map(|j| j.departure_time).collect();
+        times.sort_unstable();
+        times
     }
 
     pub fn median_travel_time(&self) -> Time {

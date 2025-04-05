@@ -22,6 +22,10 @@ impl PyRangeRoutingResult {
         self.inner.travel_times()
     }
 
+    pub fn departure_times(&self) -> Vec<Time> {
+        self.inner.departure_times()
+    }
+
     pub fn as_json(&self) -> PyResult<String> {
         serde_json::to_string(&self.inner).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
