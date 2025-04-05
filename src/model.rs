@@ -28,7 +28,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pyme
 #[gen_stub_pyclass]
 #[pyclass(name = "TransitModel")]
 pub struct PyTransitModel {
-    pub model: TransitModel,
+    pub(crate) model: TransitModel,
 }
 
 #[gen_stub_pymethods]
@@ -96,9 +96,9 @@ impl PyTransitModel {
 /// Notes
 /// -----
 /// The function releases the GIL during processing to allow other Python threads to continue execution.
+#[gen_stub_pyfunction]
 #[pyfunction(name = "create_transit_model")]
 #[pyo3(signature = (osm_path, gtfs_dirs, date, max_transfer_time = 1800))]
-#[gen_stub_pyfunction]
 pub fn py_create_transit_model(
     py: Python<'_>,
     osm_path: &str,

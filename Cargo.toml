@@ -14,7 +14,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.24", features = ["extension-module", "chrono"] }
+pyo3 = { version = "0.24", features = ["chrono"] }
 pyo3-log = "0.12"
 pyo3-stub-gen = "0.7"
 ferrobus_core = { path = "ferrobus-core" }

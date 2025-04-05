@@ -112,7 +112,7 @@ class TransitPoint:
     ```python
     # Create a transit point at specific coordinates
     point = ferrobus.create_transit_point(
-        lat=52.5200, 
+        lat=52.5200,
         lon=13.4050,
         transit_model=model,
         max_walking_time=900,  # Maximum walking time in seconds
@@ -123,7 +123,7 @@ class TransitPoint:
     route = ferrobus.find_route(model, start_point, end_point, departure_time)
     ```
     
-    The max_walking_time parameter controls how far the point can connect to the transit 
+    The max_walking_time parameter controls how far the point can connect to the transit
     network, while max_nearest_stops limits the number of stops considered during routing.
     """
     def new(self, lat:builtins.float, lon:builtins.float, transit_model:TransitModel, max_walking_time:builtins.int, max_nearest_stops:builtins.int) -> TransitPoint:
@@ -248,121 +248,7 @@ def create_isochrone_index(transit_data:TransitModel, area:builtins.str, cell_re
     """
     ...
 
-def create_transit_point(lat:builtins.float, lon:builtins.float, transit_model:TransitModel, max_walking_time:builtins.int, max_nearest_stops:builtins.int) -> TransitPoint:
-    r"""
-    Create a transit point at specified geographic coordinates
-    
-    Creates a location entity connected to the transit network that can be used
-    as an origin or destination in routing operations.
-    
-    Parameters
-    ----------
-    lat : float
-        Latitude coordinate of the point.
-    lon : float
-        Longitude coordinate of the point.
-    transit_model : TransitModel
-        The transit model to which the point should be connected.
-    max_walking_time : int, default=1200
-        Maximum walking time in seconds this point can connect to the network.
-    max_nearest_stops : int, default=10
-        Maximum number of nearby transit stops to consider for connections.
-    
-    Returns
-    -------
-    TransitPoint
-        A location point connected to the transit network.
-    
-    Raises
-    ------
-    ValueError
-        If the coordinates are invalid or unreachable in the transit network.
-    
-    See Also
-    --------
-    TransitPoint : For more details about transit points.
-    """
-    ...
-
-def find_route(transit_model:TransitModel, start_point:TransitPoint, end_point:TransitPoint, departure_time:builtins.int, max_transfers:builtins.int) -> typing.Any:
-    r"""
-    Find an optimal route between two points in a transit network
-    
-    Calculates the fastest route between two points using a multimodal approach
-    that combines walking and public transit. The algorithm considers all possible
-    transit connections as well as direct walking paths.
-    
-    Parameters
-    ----------
-    transit_model : TransitModel
-        The transit model to use for routing.
-    start_point : TransitPoint
-        Starting location for the route.
-    end_point : TransitPoint
-        Destination location for the route.
-    departure_time : int
-        Time of departure in seconds since midnight.
-    max_transfers : int, default=3
-        Maximum number of transfers allowed in route planning.
-    
-    Returns
-    -------
-    dict or None
-        A dictionary containing route details including:
-        - travel_time_seconds: Total travel time
-        - walking_time_seconds: Total walking time
-        - transit_time_seconds: Time spent on transit (if used)
-        - transfers: Number of transfers made (if transit used)
-        - used_transit: Whether transit was used or just walking
-        Returns None if the destination is unreachable.
-    
-    Raises
-    ------
-    RuntimeError
-        If the route calculation fails.
-    """
-    ...
-
-def find_routes_one_to_many(transit_model:TransitModel, start_point:TransitPoint, end_points:typing.Sequence[TransitPoint], departure_time:builtins.int, max_transfers:builtins.int) -> builtins.list[typing.Any]:
-    r"""
-    Find routes from one point to multiple destinations
-    
-    Efficiently calculates routes from a single starting point to multiple
-    destination points in a single operation. This is significantly faster 
-    than performing separate routing calculations for each destination.
-    
-    Parameters
-    ----------
-    transit_model : TransitModel
-        The transit model to use for routing.
-    start_point : TransitPoint
-        Starting location for all routes.
-    end_points : list[TransitPoint]
-        List of destination points.
-    departure_time : int
-        Time of departure in seconds since midnight.
-    max_transfers : int, default=3
-        Maximum number of transfers allowed in route planning.
-    
-    Returns
-    -------
-    list[dict or None]
-        List of routing results in the same order as the input end_points.
-        Each result is either a dictionary with route details or None if
-        the destination is unreachable.
-    
-    Raises
-    ------
-    RuntimeError
-        If the batch routing calculation fails.
-    
-    Notes
-    -----
-    This function releases the GIL during computation to allow other Python threads to run.
-    """
-    ...
-
-def py_create_transit_model(osm_path:builtins.str, gtfs_dirs:typing.Sequence[builtins.str], date:typing.Optional[datetime.date], max_transfer_time:builtins.int) -> TransitModel:
+def create_transit_model(osm_path:builtins.str, gtfs_dirs:typing.Sequence[builtins.str], date:typing.Optional[datetime.date], max_transfer_time:builtins.int=1800) -> TransitModel:
     r"""
     Create a unified transit model from OSM and GTFS data
     
@@ -403,9 +289,123 @@ def py_create_transit_model(osm_path:builtins.str, gtfs_dirs:typing.Sequence[bui
     """
     ...
 
+def create_transit_point(lat:builtins.float, lon:builtins.float, transit_model:TransitModel, max_walking_time:builtins.int=1200, max_nearest_stops:builtins.int=10) -> TransitPoint:
+    r"""
+    Create a transit point at specified geographic coordinates
+    
+    Creates a location entity connected to the transit network that can be used
+    as an origin or destination in routing operations.
+    
+    Parameters
+    ----------
+    lat : float
+        Latitude coordinate of the point.
+    lon : float
+        Longitude coordinate of the point.
+    transit_model : TransitModel
+        The transit model to which the point should be connected.
+    max_walking_time : int, default=1200
+        Maximum walking time in seconds this point can connect to the network.
+    max_nearest_stops : int, default=10
+        Maximum number of nearby transit stops to consider for connections.
+    
+    Returns
+    -------
+    TransitPoint
+        A location point connected to the transit network.
+    
+    Raises
+    ------
+    ValueError
+        If the coordinates are invalid or unreachable in the transit network.
+    
+    See Also
+    --------
+    TransitPoint : For more details about transit points.
+    """
+    ...
+
+def find_route(transit_model:TransitModel, start_point:TransitPoint, end_point:TransitPoint, departure_time:builtins.int, max_transfers:builtins.int=3) -> typing.Any:
+    r"""
+    Find an optimal route between two points in a transit network
+    
+    Calculates the fastest route between two points using a multimodal approach
+    that combines walking and public transit. The algorithm considers all possible
+    transit connections as well as direct walking paths.
+    
+    Parameters
+    ----------
+    transit_model : TransitModel
+        The transit model to use for routing.
+    start_point : TransitPoint
+        Starting location for the route.
+    end_point : TransitPoint
+        Destination location for the route.
+    departure_time : int
+        Time of departure in seconds since midnight.
+    max_transfers : int, default=3
+        Maximum number of transfers allowed in route planning.
+    
+    Returns
+    -------
+    dict or None
+        A dictionary containing route details including:
+        - travel_time_seconds: Total travel time
+        - walking_time_seconds: Total walking time
+        - transit_time_seconds: Time spent on transit (if used)
+        - transfers: Number of transfers made (if transit used)
+        - used_transit: Whether transit was used or just walking
+        Returns None if the destination is unreachable.
+    
+    Raises
+    ------
+    RuntimeError
+        If the route calculation fails.
+    """
+    ...
+
+def find_routes_one_to_many(transit_model:TransitModel, start_point:TransitPoint, end_points:typing.Sequence[TransitPoint], departure_time:builtins.int, max_transfers:builtins.int=3) -> builtins.list[typing.Any]:
+    r"""
+    Find routes from one point to multiple destinations
+    
+    Efficiently calculates routes from a single starting point to multiple
+    destination points in a single operation. This is significantly faster
+    than performing separate routing calculations for each destination.
+    
+    Parameters
+    ----------
+    transit_model : TransitModel
+        The transit model to use for routing.
+    start_point : TransitPoint
+        Starting location for all routes.
+    end_points : list[TransitPoint]
+        List of destination points.
+    departure_time : int
+        Time of departure in seconds since midnight.
+    max_transfers : int, default=3
+        Maximum number of transfers allowed in route planning.
+    
+    Returns
+    -------
+    list[dict or None]
+        List of routing results in the same order as the input end_points.
+        Each result is either a dictionary with route details or None if
+        the destination is unreachable.
+    
+    Raises
+    ------
+    RuntimeError
+        If the batch routing calculation fails.
+    
+    Notes
+    -----
+    This function releases the GIL during computation to allow other Python threads to run.
+    """
+    ...
+
 def travel_time_matrix(transit_model:TransitModel, points:typing.Sequence[TransitPoint], departure_time:builtins.int, max_transfers:builtins.int) -> builtins.list[builtins.list[typing.Optional[builtins.int]]]:
     r"""
-    Computes a matrix of travel times between 
+    Computes a matrix of travel times between
     all points in the input set in parallel.
     
     Parameters
@@ -422,7 +422,7 @@ def travel_time_matrix(transit_model:TransitModel, points:typing.Sequence[Transi
     Returns
     -------
     list[list[Optional[int]]]
-        A 2D matrix where each cell [i][j] contains the travel time in seconds 
+        A 2D matrix where each cell [i][j] contains the travel time in seconds
         from point i to point j, or None if the point is unreachable.
     """
     ...

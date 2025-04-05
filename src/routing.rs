@@ -123,8 +123,8 @@ impl PyTransitPoint {
 /// See Also
 /// --------
 /// TransitPoint : For more details about transit points.
-#[pyfunction]
 #[gen_stub_pyfunction]
+#[pyfunction]
 #[pyo3(signature = (lat, lon, transit_model, max_walking_time=1200, max_nearest_stops=10))]
 pub fn create_transit_point(
     lat: f64,
@@ -196,8 +196,8 @@ pub(crate) fn optional_result_to_py(py: Python<'_>, result: Option<&MultiModalRe
 /// ------
 /// RuntimeError
 ///     If the route calculation fails.
-#[pyfunction]
 #[gen_stub_pyfunction]
+#[pyfunction]
 #[pyo3(signature = (transit_model, start_point, end_point, departure_time, max_transfers=3))]
 pub fn find_route(
     py: Python<'_>,
@@ -255,8 +255,8 @@ pub fn find_route(
 /// Notes
 /// -----
 /// This function releases the GIL during computation to allow other Python threads to run.
-#[pyfunction]
 #[gen_stub_pyfunction]
+#[pyfunction]
 #[pyo3(signature = (transit_model, start_point, end_points, departure_time, max_transfers=3))]
 pub fn find_routes_one_to_many(
     py: Python<'_>,
