@@ -1,7 +1,10 @@
 use fixedbitset::FixedBitSet;
 use std::collections::VecDeque;
 
-use super::state::{RaptorError, RaptorResult, RaptorState, find_earliest_trip};
+use crate::routing::raptor::common::{
+    RaptorError, RaptorResult, RaptorState, find_earliest_trip, find_earliest_trip_at_stop,
+    get_target_bound, validate_raptor_inputs,
+};
 use crate::{PublicTransitData, RaptorStopId, Time};
 
 #[allow(clippy::too_many_lines)]
@@ -12,14 +15,8 @@ pub fn raptor(
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<RaptorResult, RaptorError> {
-    // Validate inputs.
-    data.validate_stop(source)?;
-    if let Some(target_stop) = target {
-        data.validate_stop(target_stop)?;
-    }
-    if departure_time > 86400 * 2 {
-        return Err(RaptorError::InvalidTime);
-    }
+    // Validate inputs using the common function
+    validate_raptor_inputs(data, source, target, departure_time)?;
 
     let num_stops = data.stops.len();
     let max_rounds = max_transfers + 1;
@@ -48,30 +45,20 @@ pub fn raptor(
         state.marked_stops[prev_round].clear();
 
         // When a target is given, use its best known arrival time for pruning.
-        let target_bound = if let Some(target_stop) = target {
-            state.best_arrival[target_stop]
-        } else {
-            Time::MAX
-        };
+        let target_bound = get_target_bound(&state, target);
 
         while let Some((route_id, start_pos)) = queue.pop_front() {
             let stops = data.get_route_stops(route_id)?;
-            let mut current_trip_opt = None;
-            let mut current_board_pos = 0;
-            // Use the board_times (not arrival_times) from the previous round.
-            for (idx, &stop) in stops.iter().enumerate().skip(start_pos) {
-                let earliest_board = state.board_times[prev_round][stop];
-                if earliest_board == Time::MAX {
-                    continue;
-                }
-                if let Some(trip_idx) = find_earliest_trip(data, route_id, idx, earliest_board) {
-                    current_trip_opt = Some(trip_idx);
-                    current_board_pos = idx;
-                    break;
-                }
-            }
 
-            if let Some(mut trip_idx) = current_trip_opt {
+            // Use shared function to find earliest trip
+            if let Some((trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
+                data,
+                route_id,
+                stops,
+                &state.board_times[prev_round],
+                start_pos,
+            )? {
+                let mut trip_idx = trip_idx;
                 let mut trip = data.get_trip(route_id, trip_idx)?;
 
                 for (trip_stop_idx, &stop) in stops.iter().enumerate().skip(current_board_pos) {

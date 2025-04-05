@@ -1,11 +1,13 @@
-mod range_raptor;
-mod regular;
-mod state;
-mod traced_raptor;
-mod traced_state;
+// RAPTOR (Round-bAsed Public Transit Optimized Router) implementations
 
-pub(crate) use range_raptor::{RaptorRangeJourney, rraptor};
+pub mod common;
+pub mod range;
+pub mod regular;
+pub mod traced;
+
+// Re-export main interfaces
+pub(crate) use common::{RaptorError, RaptorResult};
+pub(crate) use range::{RaptorRangeJourney, rraptor};
 pub(crate) use regular::raptor;
-pub(crate) use state::{RaptorError, RaptorResult};
 
-pub use traced_raptor::{Journey, JourneyLeg, TracedRaptorResult, traced_raptor};
+pub use traced::{Journey, JourneyLeg, TracedRaptorResult, traced_raptor};

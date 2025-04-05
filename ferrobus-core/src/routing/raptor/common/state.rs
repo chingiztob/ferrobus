@@ -4,14 +4,14 @@ use thiserror::Error;
 use crate::{PublicTransitData, RouteId, Time};
 
 #[derive(Debug)]
-pub(crate) struct RaptorState {
+pub struct RaptorState {
     // For each round and stop, we now store both the journey’s arrival time
     // and the effective boarding time (usually the trip’s departure time).
-    pub(crate) arrival_times: Vec<Vec<Time>>,
-    pub(crate) board_times: Vec<Vec<Time>>,
-    pub(crate) marked_stops: Vec<FixedBitSet>,
+    pub arrival_times: Vec<Vec<Time>>,
+    pub board_times: Vec<Vec<Time>>,
+    pub marked_stops: Vec<FixedBitSet>,
     // For reporting the final journey arrival time.
-    pub(crate) best_arrival: Vec<Time>,
+    pub best_arrival: Vec<Time>,
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -30,8 +30,36 @@ pub enum RaptorError {
     InvalidJourney,
 }
 
+/// Common validation and setup for RAPTOR algorithms
+pub fn validate_raptor_inputs(
+    data: &PublicTransitData,
+    source: usize,
+    target: Option<usize>,
+    departure_time: Time,
+) -> Result<(), RaptorError> {
+    // Validate inputs
+    data.validate_stop(source)?;
+    if let Some(target_stop) = target {
+        data.validate_stop(target_stop)?;
+    }
+    if departure_time > 86400 * 2 {
+        return Err(RaptorError::InvalidTime);
+    }
+
+    Ok(())
+}
+
+/// Get the target pruning bound for early termination
+pub fn get_target_bound(state: &RaptorState, target: Option<usize>) -> Time {
+    if let Some(target_stop) = target {
+        state.best_arrival[target_stop]
+    } else {
+        Time::MAX
+    }
+}
+
 impl RaptorState {
-    pub(crate) fn new(num_stops: usize, max_rounds: usize) -> Self {
+    pub fn new(num_stops: usize, max_rounds: usize) -> Self {
         RaptorState {
             arrival_times: vec![vec![Time::MAX; num_stops]; max_rounds],
             board_times: vec![vec![Time::MAX; num_stops]; max_rounds],
@@ -42,7 +70,7 @@ impl RaptorState {
         }
     }
 
-    pub(crate) fn update(
+    pub fn update(
         &mut self,
         round: usize,
         stop: usize,
@@ -68,7 +96,7 @@ impl RaptorState {
 }
 
 // When searching for a trip, we now use the board_times value from the previous round.
-pub(crate) fn find_earliest_trip(
+pub fn find_earliest_trip(
     data: &PublicTransitData,
     route_id: RouteId,
     stop_idx: usize,
@@ -93,6 +121,68 @@ pub(crate) fn find_earliest_trip(
         }
     }
     result
+}
+
+/// Find the earliest trip at a given stop on a route
+/// Returns (`trip_idx`, `board_pos`) if found, None otherwise
+pub fn find_earliest_trip_at_stop(
+    data: &PublicTransitData,
+    route_id: usize,
+    stops: &[usize],
+    board_times: &[Time],
+    start_pos: usize,
+) -> Result<Option<(usize, usize)>, RaptorError> {
+    let mut current_trip_opt = None;
+    let mut current_board_pos = 0;
+
+    // Find the earliest trip on this route that is catchable
+    for (idx, &stop) in stops.iter().enumerate().skip(start_pos) {
+        let earliest_board = board_times[stop];
+        if earliest_board == Time::MAX {
+            continue;
+        }
+        if let Some(trip_idx) = find_earliest_trip(data, route_id, idx, earliest_board) {
+            current_trip_opt = Some((trip_idx, idx));
+            current_board_pos = idx;
+            break;
+        }
+    }
+
+    Ok(current_trip_opt.map(|(idx, _)| (idx, current_board_pos)))
+}
+
+/// Process foot paths for a given round
+pub fn process_common_foot_paths(
+    data: &PublicTransitData,
+    target: Option<usize>,
+    marked_stops: &FixedBitSet,
+    board_times: &[Time],
+    best_arrival: &[Time],
+) -> Result<Vec<(usize, usize, Time)>, RaptorError> {
+    let current_marks: Vec<usize> = marked_stops.ones().collect();
+    let mut transfers = Vec::new();
+
+    let target_bound = if let Some(target_stop) = target {
+        best_arrival[target_stop]
+    } else {
+        Time::MAX
+    };
+
+    for stop in current_marks {
+        let current_board = board_times[stop];
+        let stop_transfers = data.get_stop_transfers(stop)?;
+
+        for &(target_stop, duration) in stop_transfers {
+            let new_time = current_board.saturating_add(duration);
+            if new_time >= board_times[target_stop] || new_time >= target_bound {
+                continue;
+            }
+
+            transfers.push((stop, target_stop, new_time));
+        }
+    }
+
+    Ok(transfers)
 }
 
 /// Result of the RAPTOR algorithm.

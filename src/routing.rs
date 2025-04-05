@@ -294,33 +294,66 @@ pub fn find_routes_one_to_many(
     Ok(py_results)
 }
 
+/// Find a detailed journey between two points in a transit network
+///
+/// Calculates a detailed multimodal route between two points, including walking
+/// and public transit segments. The result is returned as a GeoJSON string
+/// containing the full journey details.
+///
+/// Parameters
+/// ----------
+/// transit_model : TransitModel
+///     The transit model to use for routing.
+/// start_point : TransitPoint
+///     Starting location for the journey.
+/// end_point : TransitPoint
+///     Destination location for the journey.
+/// departure_time : int
+///     Time of departure in seconds since midnight.
+/// max_transfers : int, default=3
+///     Maximum number of transfers allowed in route planning.
+///
+/// Returns
+/// -------
+/// str
+///     A GeoJSON string representing the detailed journey, including all route
+///     segments and properties such as travel time and transfer details. Returns
+///     "null" if no route is found.
+///
+/// Raises
+/// ------
+/// RuntimeError
+///     If the journey calculation fails.
 #[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(signature = (transit_model, start_point, end_point, departure_time, max_transfers=3))]
 pub fn detailed_journey(
-    // py: Python<'_>,
+    py: Python<'_>,
     transit_model: &PyTransitModel,
     start_point: &PyTransitPoint,
     end_point: &PyTransitPoint,
     departure_time: Time,
     max_transfers: usize,
-) -> PyResult<String> {
-    let result = traced_multimodal_routing(
-        &transit_model.model,
-        &start_point.inner,
-        &end_point.inner,
-        departure_time,
-        max_transfers,
-    )
-    .map_err(|e| {
-        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Route calculation failed: {e}"))
-    })?;
+) -> PyResult<Option<String>> {
+    py.allow_threads(|| {
+        let result = traced_multimodal_routing(
+            &transit_model.model,
+            &start_point.inner,
+            &end_point.inner,
+            departure_time,
+            max_transfers,
+        )
+        .map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Route calculation failed: {e}"
+            ))
+        })?;
 
-    let geojson_result = if let Some(result) = result {
-        result.to_geojson_string(&transit_model.model.transit_data)
-    } else {
-        return Ok("null".to_string());
-    };
-
-    Ok(geojson_result)
+        if let Some(result) = result {
+            return Ok(Some(
+                result.to_geojson_string(&transit_model.model.transit_data),
+            ));
+        }
+        Ok(None)
+    })
 }

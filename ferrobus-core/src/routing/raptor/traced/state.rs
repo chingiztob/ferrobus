@@ -1,6 +1,6 @@
 use fixedbitset::FixedBitSet;
 
-use crate::routing::raptor::state::RaptorError;
+use crate::routing::raptor::common::RaptorError;
 use crate::{RaptorStopId, Time};
 
 /// Records how we arrived at a particular stop in a particular round
@@ -45,6 +45,7 @@ impl TracedRaptorState {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     pub fn update(
         &mut self,
         round: usize,
@@ -77,5 +78,14 @@ impl TracedRaptorState {
         }
 
         Ok(updated)
+    }
+
+    /// Get the target bound for pruning
+    pub fn get_target_bound(&self, target: Option<usize>) -> Time {
+        if let Some(target_stop) = target {
+            self.best_arrival[target_stop]
+        } else {
+            Time::MAX
+        }
     }
 }

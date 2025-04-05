@@ -1,7 +1,6 @@
-use crate::{
-    Error, PublicTransitData, RaptorStopId, Time, model::TransitPoint, routing::raptor::Journey,
-};
 use geo::Point;
+use geojson::{Feature, FeatureCollection, Geometry, Value as GeoJsonValue};
+use serde_json::{Map, Value as JsonValue};
 
 use crate::{
     MAX_CANDIDATE_STOPS, TransitModel,
@@ -9,6 +8,10 @@ use crate::{
         multimodal_routing::{TransitCandidate, is_walking_better},
         raptor::{TracedRaptorResult, traced_raptor},
     },
+};
+
+use crate::{
+    Error, PublicTransitData, RaptorStopId, Time, model::TransitPoint, routing::raptor::Journey,
 };
 
 /// Represents a walking leg outside the transit network
@@ -125,7 +128,8 @@ impl DetailedJourney {
     }
 
     /// Creates a multimodal journey with transit
-    pub fn with_transit(
+    #[allow(clippy::too_many_arguments)]
+    fn with_transit(
         start: &TransitPoint,
         end: &TransitPoint,
         transit_data: &PublicTransitData,
@@ -214,8 +218,6 @@ impl DetailedJourney {
         }
     }
 }
-use geojson::{Feature, FeatureCollection, Geometry, Value as GeoJsonValue};
-use serde_json::{Map, Value as JsonValue};
 
 impl DetailedJourney {
     /// Convert the journey to a `GeoJSON` `FeatureCollection`
@@ -239,7 +241,7 @@ impl DetailedJourney {
                         departure_time,
                         arrival_time,
                     } => {
-                        features.push(self.transit_leg_to_feature(
+                        features.push(DetailedJourney::transit_leg_to_feature(
                             transit_data,
                             *route_id,
                             *trip_id,
@@ -283,9 +285,9 @@ impl DetailedJourney {
         }
     }
 
-    /// Convert a transit leg to a GeoJSON Feature
+    /// Convert a transit leg to a `GeoJSON` Feature
+    #[allow(clippy::too_many_arguments)]
     fn transit_leg_to_feature(
-        &self,
         transit_data: &PublicTransitData,
         route_id: usize,
         trip_id: usize,

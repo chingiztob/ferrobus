@@ -10,7 +10,9 @@ use model::{PyTransitModel, py_create_transit_model};
 use range_routing::{
     PyRangeRoutingResult, py_pareto_range_multimodal_routing, py_range_multimodal_routing,
 };
-use routing::{PyTransitPoint, create_transit_point, find_route, find_routes_one_to_many, detailed_journey};
+use routing::{
+    PyTransitPoint, create_transit_point, detailed_journey, find_route, find_routes_one_to_many,
+};
 
 pub mod isochrone;
 pub mod matrix;
