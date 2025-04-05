@@ -2,7 +2,8 @@ use pyo3::prelude::*;
 use pyo3_stub_gen::define_stub_info_gatherer;
 
 use isochrone::{
-    PyIsochroneIndex, calculate_bulk_isochrones, calculate_isochrone, create_isochrone_index,
+    PyIsochroneIndex, calculate_bulk_isochrones, calculate_isochrone,
+    calculate_percent_access_isochrone, create_isochrone_index,
 };
 use matrix::travel_time_matrix;
 use model::{PyTransitModel, py_create_transit_model};
@@ -81,6 +82,7 @@ fn ferrobus(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(create_isochrone_index, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_isochrone, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_bulk_isochrones, m)?)?;
+    m.add_function(wrap_pyfunction!(calculate_percent_access_isochrone, m)?)?;
 
     m.add_class::<PyRangeRoutingResult>()?;
     m.add_function(wrap_pyfunction!(py_range_multimodal_routing, m)?)?;

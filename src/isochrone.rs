@@ -19,10 +19,13 @@
 //! ```
 
 use ferrobus_core::prelude::*;
-use geo::Polygon;
+use geo::{Coord, Geometry, LineString, Polygon};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 use wkt::{ToWkt, TryFromWkt};
+
+use geojson::{Feature, FeatureCollection};
+use serde_json::map::Map;
 
 use crate::model::PyTransitModel;
 use crate::routing::PyTransitPoint;
@@ -264,5 +267,109 @@ pub fn calculate_bulk_isochrones(
         let result = isochrones.iter().map(|i| i.to_wkt().to_string()).collect();
 
         Ok(result)
+    })
+}
+
+/// Calculate percentage-based accessibility across multiple departure times
+///
+/// Computes how frequently each cell in the area is accessible across a range
+/// of departure times, producing a heat map of transit reliability.
+///
+/// Parameters
+/// ----------
+/// transit_data : TransitModel
+///     The transit model to use for routing.
+/// start : TransitPoint
+///     Starting location for the isochrone.
+/// departure_range : tuple(int, int)
+///     Range of departure times to sample (start_time, end_time) in seconds.
+/// sample_interval : int
+///     Time interval between samples in seconds.
+/// max_transfers : int
+///     Maximum number of transfers allowed in route planning.
+/// cutoff : int
+///     Maximum travel time in seconds to include in the isochrone.
+/// index : IsochroneIndex
+///     Pre-computed isochrone spatial index for the area.
+///
+/// Returns
+/// -------
+/// str
+///     GeoJSON FeatureCollection string containing polygons for each grid cell
+///     with properties indicating the percentage of sampled times the cell
+///     was accessible.
+///
+/// Raises
+/// ------
+/// RuntimeError
+///     If isochrone calculation fails.
+///
+/// Notes
+/// -----
+/// This function is useful for analyzing transit reliability and service
+/// frequency across different times of day.
+#[pyfunction]
+#[gen_stub_pyfunction]
+#[allow(clippy::too_many_arguments)]
+pub fn calculate_percent_access_isochrone(
+    py: Python<'_>,
+    transit_data: &PyTransitModel,
+    start: &PyTransitPoint,
+    departure_range: (Time, Time),
+    sample_interval: Time,
+    max_transfers: usize,
+    cutoff: Time,
+    index: &PyIsochroneIndex,
+) -> PyResult<String> {
+    py.allow_threads(|| {
+        let percent_access = ferrobus_core::algo::isochrone::calculate_percent_access_isochrone(
+            &transit_data.model,
+            &start.inner,
+            departure_range,
+            sample_interval,
+            max_transfers,
+            cutoff,
+            &index.inner,
+        )
+        .map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to calculate isochrone: {e}"
+            ))
+        })?;
+
+        let mut features = vec![];
+
+        // Create a MultiPolygon for each cell and assign the percentage access
+        for (cell, percentage) in &percent_access {
+            let mut properties = Map::new();
+            let boundary: LineString = cell
+                .boundary()
+                .iter()
+                .map(|lat_lng| Coord {
+                    x: lat_lng.lng(),
+                    y: lat_lng.lat(),
+                })
+                .collect();
+
+            let polygon: Geometry = Polygon::new(boundary, vec![]).into();
+            properties.insert("percent_access".to_owned(), (*percentage).into());
+
+            features.push(Feature {
+                geometry: Some(geojson::Geometry::from(&polygon)),
+                properties: Some(properties),
+                id: None,
+                bbox: None,
+                foreign_members: None,
+            });
+        }
+
+        let collection = geojson::GeoJson::FeatureCollection(FeatureCollection {
+            features,
+            bbox: None,
+            foreign_members: None,
+        })
+        .to_string();
+
+        Ok(collection)
     })
 }

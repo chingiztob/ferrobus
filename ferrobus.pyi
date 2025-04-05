@@ -212,6 +212,49 @@ def calculate_isochrone(transit_data:TransitModel, start:TransitPoint, departure
     """
     ...
 
+def calculate_percent_access_isochrone(transit_data:TransitModel, start:TransitPoint, departure_range:tuple[builtins.int, builtins.int], sample_interval:builtins.int, max_transfers:builtins.int, cutoff:builtins.int, index:IsochroneIndex) -> builtins.str:
+    r"""
+    Calculate percentage-based accessibility across multiple departure times
+    
+    Computes how frequently each cell in the area is accessible across a range
+    of departure times, producing a heat map of transit reliability.
+    
+    Parameters
+    ----------
+    transit_data : TransitModel
+        The transit model to use for routing.
+    start : TransitPoint
+        Starting location for the isochrone.
+    departure_range : tuple(int, int)
+        Range of departure times to sample (start_time, end_time) in seconds.
+    sample_interval : int
+        Time interval between samples in seconds.
+    max_transfers : int
+        Maximum number of transfers allowed in route planning.
+    cutoff : int
+        Maximum travel time in seconds to include in the isochrone.
+    index : IsochroneIndex
+        Pre-computed isochrone spatial index for the area.
+    
+    Returns
+    -------
+    str
+        GeoJSON FeatureCollection string containing polygons for each grid cell
+        with properties indicating the percentage of sampled times the cell
+        was accessible.
+    
+    Raises
+    ------
+    RuntimeError
+        If the calculation fails.
+    
+    Notes
+    -----
+    This function is useful for analyzing transit reliability and service
+    frequency across different times of day.
+    """
+    ...
+
 def create_isochrone_index(transit_data:TransitModel, area:builtins.str, cell_resolution:builtins.int, max_walking_time:builtins.int) -> IsochroneIndex:
     r"""
     Create a spatial index for isochrone calculations
