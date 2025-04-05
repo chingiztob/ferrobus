@@ -10,7 +10,7 @@ use model::{PyTransitModel, py_create_transit_model};
 use range_routing::{
     PyRangeRoutingResult, py_pareto_range_multimodal_routing, py_range_multimodal_routing,
 };
-use routing::{PyTransitPoint, create_transit_point, find_route, find_routes_one_to_many};
+use routing::{PyTransitPoint, create_transit_point, find_route, find_routes_one_to_many, detailed_journey};
 
 pub mod isochrone;
 pub mod matrix;
@@ -75,6 +75,7 @@ fn ferrobus(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_route, m)?)?;
     m.add_function(wrap_pyfunction!(find_routes_one_to_many, m)?)?;
     m.add_function(wrap_pyfunction!(create_transit_point, m)?)?;
+    m.add_function(wrap_pyfunction!(detailed_journey, m)?)?;
 
     m.add_function(wrap_pyfunction!(travel_time_matrix, m)?)?;
 

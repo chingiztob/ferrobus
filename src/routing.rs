@@ -4,7 +4,7 @@ use pyo3::types::PyDict;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
 use crate::model::PyTransitModel;
-use ferrobus_core::prelude::*;
+use ferrobus_core::{prelude::*, routing::detailed_itinerary::traced_multimodal_routing};
 
 /// # TransitPoint
 ///
@@ -292,4 +292,35 @@ pub fn find_routes_one_to_many(
         .collect();
 
     Ok(py_results)
+}
+
+#[gen_stub_pyfunction]
+#[pyfunction]
+#[pyo3(signature = (transit_model, start_point, end_point, departure_time, max_transfers=3))]
+pub fn detailed_journey(
+    // py: Python<'_>,
+    transit_model: &PyTransitModel,
+    start_point: &PyTransitPoint,
+    end_point: &PyTransitPoint,
+    departure_time: Time,
+    max_transfers: usize,
+) -> PyResult<String> {
+    let result = traced_multimodal_routing(
+        &transit_model.model,
+        &start_point.inner,
+        &end_point.inner,
+        departure_time,
+        max_transfers,
+    )
+    .map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Route calculation failed: {e}"))
+    })?;
+
+    let geojson_result = if let Some(result) = result {
+        result.to_geojson_string(&transit_model.model.transit_data)
+    } else {
+        return Ok("null".to_string());
+    };
+
+    Ok(geojson_result)
 }

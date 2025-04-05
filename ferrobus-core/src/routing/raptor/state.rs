@@ -26,6 +26,8 @@ pub enum RaptorError {
     InvalidTime,
     #[error("Maximum transfers exceeded")]
     MaxTransfersExceeded,
+    #[error("Invalid jorney")]
+    InvalidJourney,
 }
 
 impl RaptorState {

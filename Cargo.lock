@@ -448,6 +448,7 @@ dependencies = [
  "csv",
  "fixedbitset",
  "geo",
+ "geojson",
  "h3o",
  "hashbrown",
  "libc",
@@ -458,6 +459,7 @@ dependencies = [
  "rstar",
  "rustworkx-core",
  "serde",
+ "serde_json",
  "thiserror 2.0.12",
 ]
 

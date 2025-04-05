@@ -1,0 +1,81 @@
+use fixedbitset::FixedBitSet;
+
+use crate::routing::raptor::state::RaptorError;
+use crate::{RaptorStopId, Time};
+
+/// Records how we arrived at a particular stop in a particular round
+#[derive(Debug, Clone)]
+pub enum Predecessor {
+    None,
+    Source,
+    Transit {
+        route_id: usize,
+        trip_id: usize,
+        from_stop: RaptorStopId,
+        departure_time: Time,
+    },
+    Transfer {
+        from_stop: RaptorStopId,
+        departure_time: Time,
+        duration: Time,
+    },
+}
+
+pub struct TracedRaptorState {
+    pub arrival_times: Vec<Vec<Time>>,
+    pub board_times: Vec<Vec<Time>>,
+    pub best_arrival: Vec<Time>,
+    pub marked_stops: Vec<FixedBitSet>,
+    pub predecessors: Vec<Vec<Predecessor>>, // New field for tracing
+}
+
+impl TracedRaptorState {
+    pub fn new(num_stops: usize, max_rounds: usize) -> Self {
+        let arrival_times = vec![vec![Time::MAX; num_stops]; max_rounds + 1];
+        let board_times = vec![vec![Time::MAX; num_stops]; max_rounds + 1];
+        let marked_stops = vec![FixedBitSet::with_capacity(num_stops); max_rounds + 1];
+        let predecessors = vec![vec![Predecessor::None; num_stops]; max_rounds + 1];
+
+        Self {
+            arrival_times,
+            board_times,
+            best_arrival: vec![Time::MAX; num_stops],
+            marked_stops,
+            predecessors,
+        }
+    }
+
+    pub fn update(
+        &mut self,
+        round: usize,
+        stop: RaptorStopId,
+        arrival: Time,
+        board: Time,
+        predecessor: Predecessor,
+    ) -> Result<bool, RaptorError> {
+        if stop >= self.arrival_times[round].len() {
+            return Err(RaptorError::InvalidStop);
+        }
+
+        let mut updated = false;
+
+        // Update arrival time if better
+        if arrival < self.arrival_times[round][stop] {
+            self.arrival_times[round][stop] = arrival;
+            self.predecessors[round][stop] = predecessor.clone();
+            updated = true;
+        }
+
+        // Update boarding time if better
+        if board < self.board_times[round][stop] {
+            self.board_times[round][stop] = board;
+        }
+
+        // Update best known arrival time
+        if arrival < self.best_arrival[stop] {
+            self.best_arrival[stop] = arrival;
+        }
+
+        Ok(updated)
+    }
+}

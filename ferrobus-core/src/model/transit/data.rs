@@ -144,4 +144,25 @@ impl PublicTransitData {
         let end = start + self.stops[stop_idx].routes_len;
         &self.stop_routes[start..end]
     }
+
+    /// Get the location of a transit stop by ID
+    /// Get the location of a transit stop by ID
+    pub fn transit_stop_location(&self, stop_id: RaptorStopId) -> geo::Point<f64> {
+        if stop_id < self.stops.len() {
+            // Return the geometry directly as it's already a Point<f64>
+            self.stops[stop_id].geometry
+        } else {
+            // Default coordinates if stop ID is invalid
+            geo::Point::new(0.0, 0.0)
+        }
+    }
+
+    /// Get the name of a transit stop by ID
+    pub fn transit_stop_name(&self, stop_id: RaptorStopId) -> Option<String> {
+        if stop_id < self.stops.len() {
+            Some(self.stops[stop_id].stop_id.clone())
+        } else {
+            None
+        }
+    }
 }

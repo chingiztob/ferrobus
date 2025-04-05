@@ -115,6 +115,24 @@ impl TransitPoint {
     pub fn walking_time_to(&self, other: &TransitPoint) -> Option<Time> {
         self.walking_paths.get(&other.node_id).copied()
     }
+
+    /// Get the location of a transit stop by ID
+    pub fn transit_stop_location(
+        &self,
+        transit_data: &PublicTransitData,
+        stop_id: RaptorStopId,
+    ) -> geo::Point<f64> {
+        transit_data.transit_stop_location(stop_id)
+    }
+
+    /// Get the name of a transit stop by ID
+    pub fn transit_stop_name(
+        &self,
+        transit_data: &PublicTransitData,
+        stop_id: RaptorStopId,
+    ) -> Option<String> {
+        transit_data.transit_stop_name(stop_id)
+    }
 }
 
 #[cfg(test)]
