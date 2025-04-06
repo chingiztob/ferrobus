@@ -1,0 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
+
+code, pre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  line-height: 1.7;
+}

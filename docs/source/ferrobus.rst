@@ -46,7 +46,63 @@ Examples
    print(f"Travel time: {route['travel_time_seconds'] / 60:.1f} minutes")
    print(f"Number of transfers: {route['num_transfers']}")
 
-.. automodule:: ferrobus
+API Reference
+-------------
+
+Core Functions
+^^^^^^^^^^^^^
+
+Routing Functions
+^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    ferrobus.find_route
+    ferrobus.find_routes_one_to_many
+    ferrobus.pareto_range_multimodal_routing
+    ferrobus.range_multimodal_routing
+    ferrobus.detailed_journey
+
+Isochrone and Matrix Functions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    ferrobus.calculate_isochrone
+    ferrobus.calculate_bulk_isochrones
+    ferrobus.calculate_percent_access_isochrone
+    ferrobus.travel_time_matrix
+
+Utility Functions
+^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    ferrobus.create_transit_model
+    ferrobus.create_transit_point
+    ferrobus.create_isochrone_index
+
+Classes
+^^^^^^^
+
+.. autoclass:: ferrobus.TransitPoint
     :members:
-    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: ferrobus.TransitModel
+    :members:
+    :show-inheritance:
+
+.. autoclass:: ferrobus.RangeRoutingResult
+    :members:
+    :show-inheritance:
+
+.. autoclass:: ferrobus.IsochroneIndex
+    :members:
     :show-inheritance:

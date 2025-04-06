@@ -41,6 +41,7 @@ autosummary_imported_members = True
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 html_favicon = "_static/favicon.ico"
+html_css_files = ["custom.css"]
 
 html_theme_options = {
     "logo": {
@@ -52,4 +53,6 @@ html_theme_options = {
     "repository_provider": "github",
     "repository_url": "https://github.com/chingiztob/ferrobus",
     "use_repository_button": True,
+    "pygment_dark_style": "monokai",
+    "pygment_light_style": "tango",
 }

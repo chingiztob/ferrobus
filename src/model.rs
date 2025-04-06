@@ -3,7 +3,7 @@ use ferrobus_core::prelude::*;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
-/// # TransitModel
+/// TransitModel
 ///
 /// A unified transit model that integrates both the street network (OSM) and
 /// public transit schedules (GTFS) for multimodal routing.
@@ -12,19 +12,19 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pyme
 /// the complete graph representation of both networks with interconnections
 /// between transit stops and the street network.
 ///
-/// ## Core components
+/// Core components:
 ///
 /// - Street network for walking/access paths
 /// - Transit stops, routes and schedules
 /// - Transfer connections between stops
 /// - Spatial indices for efficient lookups
 ///
-/// ## Example
+/// Example:
 ///
-/// ```ignore
-/// let model = create_transit_model("path/to/osm.pbf", vec!["path/to/gtfs"], None, 1800)?;
-/// let transit_point = create_transit_point(lat, lon, &model, 1200, 10)?;
-/// ```
+/// .. code-block:: python
+///
+///     model = create_transit_model("path/to/osm.pbf", ["path/to/gtfs"], None, 1800)
+///     transit_point = create_transit_point(lat, lon, model, 1200, 10)
 #[gen_stub_pyclass]
 #[pyclass(name = "TransitModel")]
 pub struct PyTransitModel {
