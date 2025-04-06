@@ -39,4 +39,4 @@ License
 
 This package is open source and licensed under the MIT OR Apache-2.0 license. 
 OpenStreetMap's open data license requires that derivative works provide proper attribution.
- For more details, see the `OpenStreetMap copyright page <https://www.openstreetmap.org/copyright/>`_.
+For more details, see the `OpenStreetMap copyright page <https://www.openstreetmap.org/copyright/>`_.

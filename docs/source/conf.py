@@ -40,13 +40,16 @@ autosummary_imported_members = True
 
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
+html_favicon = "_static/favicon.ico"
 
 html_theme_options = {
-    "github_url": "https://github.com/chingiztob/ferrobus",
     "logo": {
-        "image_light": "_static/ferrobus_logo.png",
-        "image_dark": "_static/ferrobus_logo_dark.png",
+        "image_light": "_static/logo_light.svg",
+        "image_dark": "_static/logo_dark.svg",
     },
     "navigation_depth": 2,
     "secondary_sidebar_items": ["page-toc", "edit-this-page"],
+    "repository_provider": "github",
+    "repository_url": "https://github.com/chingiztob/ferrobus",
+    "use_repository_button": True,
 }

@@ -10,16 +10,16 @@ Supported Python versions are **CPython 3.8 and later, including free-threaded 3
 Installation
 ------------
 
-To install Ferrobus, simply run:
+To install Ferrobus, run:
 
 .. code-block:: bash
 
    pip install ferrobus
 
-This will install pre-built binaries for all major platforms, so no compilation is required.
+This will install pre-built binaries for all major platforms from PyPI.
 
 Quick Usage
-----------
+-----------
 
 Here's a simple example to get you started:
 
@@ -62,7 +62,7 @@ Here's a simple example to get you started:
    print(f"Number of transfers: {route['num_transfers']}")
 
 Key Features
------------
+------------
 
 Ferrobus provides several powerful features for transit analysis:
 
