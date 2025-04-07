@@ -93,7 +93,7 @@ impl PyTransitModel {
 /// Create a unified transit model from OSM and GTFS data
 ///
 /// This function builds a complete multimodal transportation model by:
-/// 
+///
 /// - Processing OpenStreetMap data to create the street network
 /// - Loading GTFS transit schedules into RAPTOR model
 /// - Connecting transit stops to the street network

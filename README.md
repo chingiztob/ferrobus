@@ -119,7 +119,7 @@ isochrone = ferrobus.calculate_isochrone(
 
 ## Documentation
 
-For more detailed information, see the [full documentation](https://ferrobus.readthedocs.io/) which includes:
+For more detailed information, see the [full documentation](https://ferrobus.readthedocs.io/):
 
 ## License
 
