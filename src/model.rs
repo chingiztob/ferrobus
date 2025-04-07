@@ -34,14 +34,44 @@ pub struct PyTransitModel {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyTransitModel {
+    /// Get total stop count of all feeds in the model
     pub fn stop_count(&self) -> usize {
         self.model.stop_count()
     }
 
+    /// Get total route count of all feeds in the model
     pub fn route_count(&self) -> usize {
         self.model.route_count()
     }
 
+    /// Get information about the GTFS feeds in the transit model
+    ///
+    /// Returns a summary of the GTFS feeds included in the transit model, such as
+    /// feed names, versions, and other metadata. The output is formatted as a JSON
+    /// string, similar to the GTFS `feed_info.txt`.
+    ///
+    /// Returns
+    /// -------
+    /// str
+    ///     A JSON string containing information about the GTFS feeds.
+    ///
+    /// Example
+    /// -------
+    /// .. code-block:: python
+    ///
+    ///     info = model.feeds_info()
+    ///     print(json.loads(info))
+    ///     # Example output:
+    ///     # [
+    ///     #     {
+    ///     #         "feed_publisher_name": "City Transit",
+    ///     #         "feed_publisher_url": "http://citytransit.example.com",
+    ///     #         "feed_lang": "en",
+    ///     #         "feed_start_date": "2025-01-01",
+    ///     #         "feed_end_date": "2025-12-31",
+    ///     #         "feed_version": "2025.04"
+    ///     #     }
+    ///     # ]
     pub fn feeds_info(&self) -> String {
         self.model.feeds_info()
     }
@@ -63,10 +93,11 @@ impl PyTransitModel {
 /// Create a unified transit model from OSM and GTFS data
 ///
 /// This function builds a complete multimodal transportation model by:
-/// 1. Processing OpenStreetMap data to create the street network
-/// 2. Loading GTFS transit schedules
-/// 3. Connecting transit stops to the street network
-/// 4. Creating transfer connections between nearby stops
+/// 
+/// - Processing OpenStreetMap data to create the street network
+/// - Loading GTFS transit schedules into RAPTOR model
+/// - Connecting transit stops to the street network
+/// - Creating transfer connections between nearby stops
 ///
 /// The resulting model enables multimodal routing, isochrone generation,
 /// and travel time matrix calculations.

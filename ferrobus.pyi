@@ -7,11 +7,12 @@ import typing
 
 class IsochroneIndex:
     r"""
-    # IsochroneIndex
+    IsochroneIndex
     
     A spatial index structure for highly efficient isochrone calculations in transit networks.
     
-    ## Motivation
+    Motivation
+    ==========
     
     Traditional isochrone generation involves computationally expensive geometric operations
     such as buffering network edges and performing unary unions on complex polygons.
@@ -23,7 +24,8 @@ class IsochroneIndex:
     isochrone generation. This provides orders-of-magnitude performance improvements
     by avoiding expensive geometric operations at query time.
     
-    ## Technical approach
+    Technical approach
+    ==================
     
     Rather than working with precise network geometry during isochrone calculations,
     this index:
@@ -36,12 +38,13 @@ class IsochroneIndex:
     This approach trades some precision (based on cell resolution) for dramatic
     performance improvements, making it practical for interactive applications.
     
-    ## Example
+    Example
+    =======
     
-    ```ignore
-    let index = create_isochrone_index(&model, area_wkt, 8, 1200)?;
-    let isochrone = calculate_isochrone(py, &model, &point, departure, 3, 1800, &index)?;
-    ```
+    .. code-block:: python
+    
+        index = create_isochrone_index(model, area_wkt, 8, 1200);
+        isochrone = calculate_isochrone(py, model, point, departure, 3, 1800, index);
     """
     def len(self) -> builtins.int:
         ...
@@ -75,7 +78,7 @@ class RangeRoutingResult:
 
 class TransitModel:
     r"""
-    # TransitModel
+    TransitModel
     
     A unified transit model that integrates both the street network (OSM) and
     public transit schedules (GTFS) for multimodal routing.
@@ -84,19 +87,19 @@ class TransitModel:
     the complete graph representation of both networks with interconnections
     between transit stops and the street network.
     
-    ## Core components
+    Core components:
     
     - Street network for walking/access paths
     - Transit stops, routes and schedules
     - Transfer connections between stops
     - Spatial indices for efficient lookups
     
-    ## Example
+    Example:
     
-    ```ignore
-    let model = create_transit_model("path/to/osm.pbf", vec!["path/to/gtfs"], None, 1800)?;
-    let transit_point = create_transit_point(lat, lon, &model, 1200, 10)?;
-    ```
+    .. code-block:: python
+    
+        model = create_transit_model("path/to/osm.pbf", ["path/to/gtfs"], None, 1800)
+        transit_point = create_transit_point(lat, lon, model, 1200, 10)
     """
     def stop_count(self) -> builtins.int:
         ...
@@ -116,35 +119,38 @@ class TransitModel:
 
 class TransitPoint:
     r"""
-    # TransitPoint
+    TransitPoint
+    ============
     
     A geographic location connected to the transit network with pre-calculated access paths
     to nearby transit stops and the street network.
     
-    ## Purpose
+    Purpose
+    -------
     
     TransitPoint serves as the fundamental origin/destination entity for all routing operations.
     Each point maintains a list of nearby transit stops with walking times, enabling efficient
     multimodal journey planning without recomputing access paths for every query.
     
-    ## Usage
+    Usage
+    -----
     
-    ```python
-    # Create a transit point at specific coordinates
-    point = ferrobus.create_transit_point(
-        lat=52.5200,
-        lon=13.4050,
-        transit_model=model,
-        max_walking_time=900,  # Maximum walking time in seconds
-        max_nearest_stops=5    # Maximum number of nearby stops to consider
-    )
+    .. code-block:: python
     
-    # Use the point for routing
-    route = ferrobus.find_route(model, start_point, end_point, departure_time)
-    ```
+        # Create a transit point at specific coordinates
+        point = ferrobus.create_transit_point(
+            lat=52.5200,
+            lon=13.4050,
+            transit_model=model,
+            max_walking_time=900,  # Maximum walking time in seconds
+            max_nearest_stops=5    # Maximum number of nearby stops to consider
+        )
     
-    The max_walking_time parameter controls how far the point can connect to the transit
-    network, while max_nearest_stops limits the number of stops considered during routing.
+        # Use the point for routing
+        route = ferrobus.find_route(model, start_point, end_point, departure_time)
+    
+    The ``max_walking_time`` parameter controls how far the point can connect to the transit
+    network, while ``max_nearest_stops`` limits the number of stops considered during routing.
     """
     def new(self, lat:builtins.float, lon:builtins.float, transit_model:TransitModel, max_walking_time:builtins.int, max_nearest_stops:builtins.int) -> TransitPoint:
         ...

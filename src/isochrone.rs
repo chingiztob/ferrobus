@@ -30,11 +30,7 @@ use serde_json::map::Map;
 use crate::model::PyTransitModel;
 use crate::routing::PyTransitPoint;
 
-/// # IsochroneIndex
-///
 /// A spatial index structure for highly efficient isochrone calculations in transit networks.
-///
-/// ## Motivation
 ///
 /// Traditional isochrone generation involves computationally expensive geometric operations
 /// such as buffering network edges and performing unary unions on complex polygons.
@@ -45,8 +41,6 @@ use crate::routing::PyTransitPoint;
 /// hexagonal grid system (H3 cells) that can be rapidly queried and merged during
 /// isochrone generation. This provides orders-of-magnitude performance improvements
 /// by avoiding expensive geometric operations at query time.
-///
-/// ## Technical approach
 ///
 /// Rather than working with precise network geometry during isochrone calculations,
 /// this index:
@@ -59,12 +53,23 @@ use crate::routing::PyTransitPoint;
 /// This approach trades some precision (based on cell resolution) for dramatic
 /// performance improvements, making it practical for interactive applications.
 ///
-/// ## Example
+/// Example
+/// -------
 ///
-/// ```ignore
-/// let index = create_isochrone_index(&model, area_wkt, 8, 1200)?;
-/// let isochrone = calculate_isochrone(py, &model, &point, departure, 3, 1800, &index)?;
-/// ```
+/// .. code-block:: python
+///
+///     index = create_isochrone_index(model, area_wkt, 8, 1200);
+///     isochrone = calculate_isochrone(py, model, point, departure, 3, 1800, index);
+///
+///     # The resulting isochrone is a WKT string representing the polygon
+///     print(isochrone)
+///     >>> MULTIPOLYGON ((...))
+///
+/// References
+/// ----------
+///
+/// For more information about the H3 hexagonal grid system used in this module,
+/// see the `H3 documentation <https://h3geo.org/>`_.
 #[gen_stub_pyclass]
 #[pyclass(name = "IsochroneIndex")]
 pub struct PyIsochroneIndex {
@@ -74,14 +79,39 @@ pub struct PyIsochroneIndex {
 #[gen_stub_pymethods]
 #[pymethods]
 impl PyIsochroneIndex {
+    /// Get the number of cells in the isochrone index
+    ///
+    /// Returns the total number of hexagonal cells stored in the isochrone index.
+    ///
+    /// Returns
+    /// -------
+    /// int
+    ///     The number of cells in the index.
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
+    /// Check if the isochrone index is empty
+    ///
+    /// Determines whether the isochrone index contains any cells.
+    ///
+    /// Returns
+    /// -------
+    /// bool
+    ///     True if the index is empty, False otherwise.
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 
+    /// Get the resolution of the isochrone index
+    ///
+    /// Returns the resolution of the hexagonal grid used in the isochrone index.
+    /// Higher resolutions correspond to smaller hexagonal cells.
+    ///
+    /// Returns
+    /// -------
+    /// int
+    ///     The resolution of the hexagonal grid (0-15).
     pub fn resolution(&self) -> u8 {
         self.inner.resolution()
     }

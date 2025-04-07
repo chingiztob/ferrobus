@@ -49,9 +49,6 @@ Examples
 API Reference
 -------------
 
-Core Functions
-^^^^^^^^^^^^^
-
 Routing Functions
 ^^^^^^^^^^^^^^^^^
 
@@ -89,20 +86,20 @@ Utility Functions
     ferrobus.create_isochrone_index
 
 Classes
-^^^^^^^
-
-.. autoclass:: ferrobus.TransitPoint
-    :members:
-    :show-inheritance:
+-------
 
 .. autoclass:: ferrobus.TransitModel
     :members:
-    :show-inheritance:
+    :undoc-members:
+
+.. autoclass:: ferrobus.TransitPoint
+    :members:
+    :undoc-members:
 
 .. autoclass:: ferrobus.RangeRoutingResult
     :members:
-    :show-inheritance:
+    :undoc-members:
 
 .. autoclass:: ferrobus.IsochroneIndex
     :members:
-    :show-inheritance:
+    :undoc-members:

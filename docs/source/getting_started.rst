@@ -31,9 +31,9 @@ Here's a simple example to get you started:
 
    # Create a transit model from GTFS and OSM data
    model = ferrobus.create_transit_model(
-       osm_path="path/to/city.osm.pbf",
-       gtfs_dirs=["path/to/gtfs_data"],
-       date=datetime.date.today()
+       osm_path="path/to/city.osm.pbf", # OSM pbf file, preferably filtered by region and tag
+       gtfs_dirs=["path/to/gtfs_data", "path/to/another_gtfs"], # feeds, operating in the same region
+       date=datetime.date.today() # date to use when filtering GTFS data / None for all dates
    )
 
    # Create origin and destination points
@@ -61,16 +61,5 @@ Here's a simple example to get you started:
    # Print the results
    print(f"Travel time: {route['travel_time_seconds'] / 60:.1f} minutes")
    print(f"Number of transfers: {route['num_transfers']}")
-
-Key Features
-------------
-
-Ferrobus provides several powerful features for transit analysis:
-
-- **Multimodal routing**: Combine walking and public transit
-- **Time-dependent routing**: Account for transit schedules
-- **Isochrone generation**: Create travel-time polygons
-- **Travel time matrices**: Compute travel times between multiple points
-- **Pareto-optimal routes**: Find multiple optimal routes over time ranges
 
 For detailed examples, see the :doc:`demo` notebook and the :doc:`ferrobus` API documentation.

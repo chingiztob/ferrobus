@@ -6,38 +6,35 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pyme
 use crate::model::PyTransitModel;
 use ferrobus_core::{prelude::*, routing::detailed_itinerary::traced_multimodal_routing};
 
-/// # TransitPoint
-///
 /// A geographic location connected to the transit network with pre-calculated access paths
 /// to nearby transit stops and the street network.
-///
-/// ## Purpose
 ///
 /// TransitPoint serves as the fundamental origin/destination entity for all routing operations.
 /// Each point maintains a list of nearby transit stops with walking times, enabling efficient
 /// multimodal journey planning without recomputing access paths for every query.
 ///
-/// ## Usage
+/// Example
+/// -------
 ///
-/// ```python
-/// # Create a transit point at specific coordinates
-/// point = ferrobus.create_transit_point(
-///     lat=52.5200,
-///     lon=13.4050,
-///     transit_model=model,
-///     max_walking_time=900,  # Maximum walking time in seconds
-///     max_nearest_stops=5    # Maximum number of nearby stops to consider
-/// )
+/// .. code-block:: python
 ///
-/// # Use the point for routing
-/// route = ferrobus.find_route(model, start_point, end_point, departure_time)
-/// ```
+///     # Create a transit point at specific coordinates
+///     point = ferrobus.create_transit_point(
+///         lat=52.5200,
+///         lon=13.4050,
+///         transit_model=model,
+///         max_walking_time=900,  # Maximum walking time in seconds
+///         max_nearest_stops=5    # Maximum number of nearby stops to consider
+///     )
 ///
-/// The max_walking_time parameter controls how far the point can connect to the transit
-/// network, while max_nearest_stops limits the number of stops considered during routing.
+///     # Use the point for routing
+///     route = ferrobus.find_route(model, start_point, end_point, departure_time)
+///
+/// The ``max_walking_time`` parameter controls how far the point can connect to the transit
+/// network, while ``max_nearest_stops`` limits the number of stops considered during routing.
 #[gen_stub_pyclass]
 #[pyclass(name = "TransitPoint")]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PyTransitPoint {
     pub inner: TransitPoint,
 }
@@ -196,6 +193,24 @@ pub(crate) fn optional_result_to_py(py: Python<'_>, result: Option<&MultiModalRe
 /// ------
 /// RuntimeError
 ///     If the route calculation fails.
+///
+/// Example
+/// -------
+/// .. code-block:: python
+///
+///     result = ferrobus.find_route(model, start_point, end_point, departure_time, max_transfers)
+///     if result is not None:
+///         print(result)
+///         # Example output:
+///         # {
+///         #     "travel_time_seconds": 1800,
+///         #     "walking_time_seconds": 300,
+///         #     "transit_time_seconds": 1500,
+///         #     "transfers": 1,
+///         #     "used_transit": True
+///         # }
+///     else:
+///         print("No route found")
 #[gen_stub_pyfunction]
 #[pyfunction]
 #[pyo3(signature = (transit_model, start_point, end_point, departure_time, max_transfers=3))]
@@ -246,6 +261,63 @@ pub fn find_route(
 ///     List of routing results in the same order as the input end_points.
 ///     Each result is either a dictionary with route details or None if
 ///     the destination is unreachable.
+///
+/// Example
+/// -------
+/// .. code-block:: python
+///
+///     # Create a transit model
+///     model = ferrobus.create_transit_model(
+///         gtfs_dirs=["path/to/you_feed"],
+///         osm_path="path/to/street_network.osm.pbf"
+///     )
+///
+///     start_point = ferrobus.create_transit_point(
+///         lat=52.5200,
+///         lon=13.4050,
+///         transit_model=model,
+///         max_walking_time=900,
+///         max_nearest_stops=5
+///     )
+///     end_point1 = ferrobus.create_transit_point(
+///         lat=52.5300,
+///         lon=13.4100,
+///         transit_model=model,
+///         max_walking_time=900,
+///         max_nearest_stops=5
+///     )
+///     end_point2 = ferrobus.create_transit_point(
+///         lat=52.5400,
+///         lon=13.4200,
+///         transit_model=model,
+///         max_walking_time=900,
+///         max_nearest_stops=5
+///     )
+///
+///     # Find routes
+///     results = ferrobus.find_routes_one_to_many(
+///         model, start_point, [end_point1, end_point2], departure_time=3600, max_transfers = 3
+///     )
+///     for result in results:
+///         if result is not None:
+///             print(result)
+///             # Example output for one destination:
+///             # [{
+///             #     "travel_time_seconds": 1800,
+///             #     "walking_time_seconds": 300,
+///             #     "transit_time_seconds": 1500,
+///             #     "transfers": 1,
+///             #     "used_transit": True
+///             # },
+///             # {
+///             #     "travel_time_seconds": 2100,
+///             #     "walking_time_seconds": 300,
+///             #     "transit_time_seconds": 1800,
+///             #     "transfers": 2,
+///             #     "used_transit": True
+///             # }]
+///         else:
+///             print("No route found")
 ///
 /// Raises
 /// ------

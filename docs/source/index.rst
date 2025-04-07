@@ -3,12 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Ferrobus documentation
-=======================
-
-
-Introduction
-------------
+Ferrobus |version|
+==================
 
 Ferrobus is a Python library providing efficient multimodal transit routing capabilities for geospatial analysis workflows. Built with a Rust core, it delivers strong performance while maintaining a straightforward Python interface.
 

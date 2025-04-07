@@ -74,6 +74,7 @@ pub mod routing;
 #[pymodule]
 fn ferrobus(m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
+    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
 
     m.add_class::<PyTransitModel>()?;
     m.add_class::<PyTransitPoint>()?;
