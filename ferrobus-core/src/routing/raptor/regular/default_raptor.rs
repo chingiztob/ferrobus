@@ -57,7 +57,7 @@ pub fn raptor(
                 stops,
                 &state.board_times[prev_round],
                 start_pos,
-            )? {
+            ) {
                 let mut trip_idx = trip_idx;
                 let mut trip = data.get_trip(route_id, trip_idx)?;
 

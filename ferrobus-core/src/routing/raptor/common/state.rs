@@ -131,7 +131,7 @@ pub fn find_earliest_trip_at_stop(
     stops: &[usize],
     board_times: &[Time],
     start_pos: usize,
-) -> Result<Option<(usize, usize)>, RaptorError> {
+) -> std::option::Option<(usize, usize)> {
     let mut current_trip_opt = None;
     let mut current_board_pos = 0;
 
@@ -148,41 +148,7 @@ pub fn find_earliest_trip_at_stop(
         }
     }
 
-    Ok(current_trip_opt.map(|(idx, _)| (idx, current_board_pos)))
-}
-
-/// Process foot paths for a given round
-pub fn process_common_foot_paths(
-    data: &PublicTransitData,
-    target: Option<usize>,
-    marked_stops: &FixedBitSet,
-    board_times: &[Time],
-    best_arrival: &[Time],
-) -> Result<Vec<(usize, usize, Time)>, RaptorError> {
-    let current_marks: Vec<usize> = marked_stops.ones().collect();
-    let mut transfers = Vec::new();
-
-    let target_bound = if let Some(target_stop) = target {
-        best_arrival[target_stop]
-    } else {
-        Time::MAX
-    };
-
-    for stop in current_marks {
-        let current_board = board_times[stop];
-        let stop_transfers = data.get_stop_transfers(stop)?;
-
-        for &(target_stop, duration) in stop_transfers {
-            let new_time = current_board.saturating_add(duration);
-            if new_time >= board_times[target_stop] || new_time >= target_bound {
-                continue;
-            }
-
-            transfers.push((stop, target_stop, new_time));
-        }
-    }
-
-    Ok(transfers)
+    current_trip_opt.map(|(idx, _)| (idx, current_board_pos))
 }
 
 /// Result of the RAPTOR algorithm.

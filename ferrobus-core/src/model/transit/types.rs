@@ -33,6 +33,8 @@ pub struct Route {
     pub stops_start: usize,
     /// Index of the start of the trip list in the general array
     pub trips_start: usize,
+    /// Route ID
+    pub route_id: String,
 }
 
 /// Public transport stop

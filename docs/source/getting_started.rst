@@ -42,7 +42,7 @@ Here's a simple example to get you started:
        longitude=30.22,
        transit_model=model
    )
-   
+
    destination = ferrobus.create_transit_point(
        latitude=59.97,
        longitude=30.50,

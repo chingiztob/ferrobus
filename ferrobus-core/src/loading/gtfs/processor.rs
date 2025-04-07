@@ -44,10 +44,9 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
         .map(|(idx, stop)| (stop.stop_id.clone(), idx))
         .collect();
 
-    let trip_id_map: HashMap<&str, usize> = trips
+    let trip_id_map: HashMap<&str, &str> = trips
         .iter()
-        .enumerate()
-        .map(|(idx, trip)| (trip.trip_id.as_str(), idx))
+        .map(|trip| (trip.trip_id.as_str(), trip.route_id.as_str()))
         .collect();
 
     // Map from trip_id to vec of stop times
@@ -169,7 +168,7 @@ fn filter_trips_by_service_day(
 
 fn process_trip_stop_times(
     stop_id_map: &HashMap<String, usize>,
-    trip_id_map: &HashMap<&str, usize>,
+    trip_id_map: &HashMap<&str, &str>,
     trip_stop_times: &HashMap<String, Vec<FeedStopTime>>,
 ) -> (Vec<StopTime>, Vec<usize>, Vec<Route>) {
     let mut stop_times_vec = Vec::new();
@@ -177,27 +176,44 @@ fn process_trip_stop_times(
     let mut routes_vec = Vec::new();
 
     for (trip_id, stop_list) in trip_stop_times {
-        let stops_start = route_stops.len();
-        let trips_start = stop_times_vec.len();
-        let num_stops = stop_list.len();
+        // Check if trip exists in trip_id_map before processing it
+        if let Some(&route_id) = trip_id_map.get(trip_id.as_str()) {
+            let stops_start = route_stops.len();
+            let trips_start = stop_times_vec.len();
 
-        for stop_time in stop_list {
-            if let Some(&stop_idx) = stop_id_map.get(&stop_time.stop_id) {
-                route_stops.push(stop_idx);
-                stop_times_vec.push(StopTime {
-                    arrival: parse_time(&stop_time.arrival_time),
-                    departure: parse_time(&stop_time.departure_time),
-                });
+            // Pre-filter stops that exist in the stop_id_map
+            let mut valid_stops = 0;
+
+            for stop_time in stop_list {
+                if let Some(&stop_idx) = stop_id_map.get(&stop_time.stop_id) {
+                    route_stops.push(stop_idx);
+                    stop_times_vec.push(StopTime {
+                        arrival: parse_time(&stop_time.arrival_time),
+                        departure: parse_time(&stop_time.departure_time),
+                    });
+                    valid_stops += 1;
+                } else {
+                    warn!(
+                        "Stop ID {} not found in stop_id_map, skipping",
+                        stop_time.stop_id
+                    );
+                }
             }
-        }
 
-        if let Some(&_route_idx) = trip_id_map.get(trip_id.as_str()) {
-            routes_vec.push(Route {
-                num_trips: 1,
-                num_stops,
-                stops_start,
-                trips_start,
-            });
+            // Only add route if it has at least one valid stop
+            if valid_stops > 0 {
+                routes_vec.push(Route {
+                    num_trips: 1,
+                    num_stops: valid_stops, // Use actual count of processed stops
+                    stops_start,
+                    trips_start,
+                    route_id: route_id.to_owned(),
+                });
+            } else {
+                warn!("Trip {trip_id} has no valid stops, skipping route creation");
+            }
+        } else {
+            warn!("Trip {trip_id} not found in trip_id_map, skipping");
         }
     }
 

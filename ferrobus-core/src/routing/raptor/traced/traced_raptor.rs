@@ -36,6 +36,7 @@ pub struct Journey {
     pub transfers_count: usize,
 }
 
+#[allow(unused)]
 pub enum TracedRaptorResult {
     SingleTarget(Option<Journey>),
     AllTargets(Vec<Option<Journey>>),

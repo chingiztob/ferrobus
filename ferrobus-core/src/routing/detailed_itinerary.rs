@@ -334,6 +334,7 @@ impl DetailedJourney {
         }
 
         coordinates.push(vec![to_location.x(), to_location.y()]);
+        let route_id = &transit_data.routes[route_id].route_id;
 
         // Create properties for the feature
         let mut properties = Map::new();
@@ -342,7 +343,7 @@ impl DetailedJourney {
             JsonValue::String("transit".to_string()),
         );
         properties.insert("leg_index".to_string(), JsonValue::Number(leg_idx.into()));
-        properties.insert("route_id".to_string(), JsonValue::Number(route_id.into()));
+        properties.insert("route_id".to_string(), JsonValue::String(route_id.into()));
         properties.insert("trip_id".to_string(), JsonValue::Number(trip_id.into()));
         properties.insert("from_name".to_string(), JsonValue::String(from_name));
         properties.insert("to_name".to_string(), JsonValue::String(to_name));
