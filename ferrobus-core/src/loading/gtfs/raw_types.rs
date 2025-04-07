@@ -43,7 +43,7 @@ pub struct FeedRoute {
     pub route_text_color: String,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default)]
 #[serde(default)]
 pub struct FeedStopTime {
     pub trip_id: String,

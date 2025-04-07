@@ -166,32 +166,48 @@ fn filter_trips_by_service_day(
     stop_times.retain(|stop_time| active_trips.contains(stop_time.trip_id.as_str()));
 }
 
-fn process_trip_stop_times(
+fn process_trip_stop_times<'a>(
     stop_id_map: &HashMap<String, usize>,
     trip_id_map: &HashMap<&str, &str>,
-    trip_stop_times: &HashMap<String, Vec<FeedStopTime>>,
+    trip_stop_times: &'a HashMap<String, Vec<FeedStopTime>>,
 ) -> (Vec<StopTime>, Vec<usize>, Vec<Route>) {
+    // Group trips by route id using references (avoiding cloning of the trip lists).
+    let mut routes_map: HashMap<String, Vec<&'a [FeedStopTime]>> = HashMap::new();
+    for (trip_id, feed_stop_times) in trip_stop_times {
+        if let Some(&route_id) = trip_id_map.get(trip_id.as_str()) {
+            routes_map
+                .entry(route_id.to_owned())
+                .or_default()
+                .push(feed_stop_times.as_slice());
+        } else {
+            warn!("Trip {trip_id} not found in trip_id_map, skipping");
+        }
+    }
+
     let mut stop_times_vec = Vec::new();
     let mut route_stops = Vec::new();
     let mut routes_vec = Vec::new();
 
-    for (trip_id, stop_list) in trip_stop_times {
-        // Check if trip exists in trip_id_map before processing it
-        if let Some(&route_id) = trip_id_map.get(trip_id.as_str()) {
+    // Process each route group.
+    for (route_id, trips) in routes_map {
+        // Group trips by their stop count.
+        let mut groups_by_length: HashMap<usize, Vec<&'a [FeedStopTime]>> = HashMap::new();
+        for ts in trips {
+            groups_by_length.entry(ts.len()).or_default().push(ts);
+        }
+
+        // Process each subgroup (each distinct stop count).
+        for (num_stops, mut group) in groups_by_length {
+            // Sort trips by departure time at the first stop.
+            group.sort_by_key(|ts| parse_time(&ts[0].departure_time));
+
+            // Use the first trip as representative for the stop order.
+            let representative = group[0];
             let stops_start = route_stops.len();
-            let trips_start = stop_times_vec.len();
-
-            // Pre-filter stops that exist in the stop_id_map
-            let mut valid_stops = 0;
-
-            for stop_time in stop_list {
+            // Build the route's stop sequence.
+            for stop_time in representative {
                 if let Some(&stop_idx) = stop_id_map.get(&stop_time.stop_id) {
                     route_stops.push(stop_idx);
-                    stop_times_vec.push(StopTime {
-                        arrival: parse_time(&stop_time.arrival_time),
-                        departure: parse_time(&stop_time.departure_time),
-                    });
-                    valid_stops += 1;
                 } else {
                     warn!(
                         "Stop ID {} not found in stop_id_map, skipping",
@@ -200,23 +216,28 @@ fn process_trip_stop_times(
                 }
             }
 
-            // Only add route if it has at least one valid stop
-            if valid_stops > 0 {
-                routes_vec.push(Route {
-                    num_trips: 1,
-                    num_stops: valid_stops, // Use actual count of processed stops
-                    stops_start,
-                    trips_start,
-                    route_id: route_id.to_owned(),
-                });
-            } else {
-                warn!("Trip {trip_id} has no valid stops, skipping route creation");
+            // Record the starting index for this subgroup's trips.
+            let trips_start = stop_times_vec.len();
+            let valid_trip_count = group.len();
+            // Append each trip’s stop times (converted to our internal StopTime type).
+            for ts in group {
+                for stop_time in ts {
+                    stop_times_vec.push(StopTime {
+                        arrival: parse_time(&stop_time.arrival_time),
+                        departure: parse_time(&stop_time.departure_time),
+                    });
+                }
             }
-        } else {
-            warn!("Trip {trip_id} not found in trip_id_map, skipping");
+            // Create a Route entry for this subgroup.
+            routes_vec.push(Route {
+                num_trips: valid_trip_count,
+                num_stops,
+                stops_start,
+                trips_start,
+                route_id: route_id.clone(),
+            });
         }
     }
-
     (stop_times_vec, route_stops, routes_vec)
 }
 
