@@ -454,7 +454,7 @@ dependencies = [
  "libc",
  "log",
  "osm4routing",
- "petgraph",
+ "petgraph 0.8.1",
  "rayon",
  "rstar",
  "rustworkx-core",
@@ -1056,6 +1056,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "petgraph"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a98c6720655620a521dcc722d0ad66cd8afd5d86e34a89ef691c50b7b24de06"
+dependencies = [
+ "fixedbitset",
+ "hashbrown",
+ "indexmap",
+ "serde",
+]
+
+[[package]]
 name = "plotters"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1477,7 +1489,7 @@ dependencies = [
  "indexmap",
  "ndarray",
  "num-traits",
- "petgraph",
+ "petgraph 0.7.1",
  "priority-queue",
  "rand",
  "rand_pcg",

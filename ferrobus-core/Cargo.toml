@@ -12,7 +12,7 @@ csv = "1"
 chrono.workspace = true
 rstar = "0.12"
 rustworkx-core = "0.16"
-petgraph = "0.7"
+petgraph = "0.8"
 hashbrown = "0.15"
 fixedbitset = "0.5"
 h3o = { version = "0.8", features = ["geo"] }
