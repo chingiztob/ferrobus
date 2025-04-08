@@ -28,7 +28,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         max_transfer_time: 1200, // 20 minutes max transfer time
         osm_path: PathBuf::from("/home/chingiz/Rust/osm/roads_SZ.pbf"),
         gtfs_dirs: vec![
-            PathBuf::from("/home/chingiz/Rust/py_rust/cascade/scripts/files/SPB"),
+            PathBuf::from("/home/chingiz/Rust/py_rust/cascade/scripts/files/SPB2"),
             PathBuf::from("/home/chingiz/Rust/py_rust/cascade/scripts/files/spb-metro"),
         ],
         date: chrono::NaiveDate::from_ymd_opt(2025, 4, 10),

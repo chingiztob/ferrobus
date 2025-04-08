@@ -1,20 +1,17 @@
 use geo::{LineString, Point, line_string};
 use geojson::{Feature, FeatureCollection, Geometry};
-use serde_json::{Map, Value as JsonValue, json};
+use serde_json::json;
 
 use crate::{
-    MAX_CANDIDATE_STOPS, TransitModel,
+    Error, MAX_CANDIDATE_STOPS, PublicTransitData, RaptorStopId, Time, TransitModel,
+    model::TransitPoint,
     routing::{
-        multimodal_routing::{TransitCandidate, is_walking_better},
-        raptor::{TracedRaptorResult, traced_raptor},
+        multimodal_routing::TransitCandidate,
+        raptor::{Journey, JourneyLeg, TracedRaptorResult, traced_raptor},
     },
 };
 
-use crate::{
-    Error, PublicTransitData, RaptorStopId, Time, model::TransitPoint, routing::raptor::Journey,
-};
-
-/// Represents a walking leg outside the transit network
+/// Represents a walking leg outside the transit network.
 #[derive(Debug, Clone)]
 pub struct WalkingLeg {
     pub from_location: Point<f64>,
@@ -27,34 +24,52 @@ pub struct WalkingLeg {
 }
 
 impl WalkingLeg {
-    /// Convert a walking leg to a `GeoJSON` Feature
-    fn to_feature(&self, leg_type: &str) -> Feature {
-        let leg = self;
-        // Create a LineString for the walking path
+    /// Create a new walking leg.
+    pub fn new(
+        from_location: Point<f64>,
+        to_location: Point<f64>,
+        from_name: String,
+        to_name: String,
+        departure_time: Time,
+        duration: Time,
+    ) -> Self {
+        Self {
+            from_location,
+            to_location,
+            from_name,
+            to_name,
+            departure_time,
+            arrival_time: departure_time + duration,
+            duration,
+        }
+    }
 
+    /// Convert the walking leg to a `GeoJSON` Feature using the `json!` macro.
+    ///
+    /// # Panics
+    /// This function will panic if `Feature::from_json_value` fails to parse the JSON value.
+    pub fn to_feature(&self, leg_type: &str) -> Feature {
         let coordinates = line_string![
-            (x: leg.from_location.x(), y: leg.from_location.y()),
-            (x: leg.to_location.x(), y: leg.to_location.y()),
+            (x: self.from_location.x(), y: self.from_location.y()),
+            (x: self.to_location.x(), y: self.to_location.y()),
         ];
-
         let value = json!({
             "type": "Feature",
             "geometry": Geometry::new((&coordinates).into()),
             "properties": {
                 "leg_type": leg_type,
-                "from_name": leg.from_name,
-                "to_name": leg.to_name,
-                "departure_time": leg.departure_time,
-                "arrival_time": leg.arrival_time,
-                "duration": leg.duration,
+                "from_name": self.from_name,
+                "to_name": self.to_name,
+                "departure_time": self.departure_time,
+                "arrival_time": self.arrival_time,
+                "duration": self.duration,
             }
         });
-
         Feature::from_json_value(value).unwrap()
     }
 }
 
-/// Represents a complete journey with first/last mile connections
+/// Represents a complete journey with first/last mile connections.
 #[derive(Debug, Clone)]
 pub struct DetailedJourney {
     pub access_leg: Option<WalkingLeg>,
@@ -69,27 +84,23 @@ pub struct DetailedJourney {
 }
 
 impl DetailedJourney {
-    /// Creates a walking-only journey
+    /// Creates a walking-only journey.
     pub fn walking_only(
         start: &TransitPoint,
         end: &TransitPoint,
         departure_time: Time,
         walking_time: Time,
     ) -> Self {
-        let arrival_time = departure_time + walking_time;
-
-        let walking_leg = WalkingLeg {
-            from_location: start.geometry,
-            to_location: end.geometry,
-            from_name: String::new(),
-            to_name: String::new(),
+        let walk_leg = WalkingLeg::new(
+            start.geometry,
+            end.geometry,
+            String::new(),
+            String::new(),
             departure_time,
-            arrival_time,
-            duration: walking_time,
-        };
-
+            walking_time,
+        );
         Self {
-            access_leg: Some(walking_leg),
+            access_leg: Some(walk_leg),
             transit_journey: None,
             egress_leg: None,
             total_time: walking_time,
@@ -97,13 +108,13 @@ impl DetailedJourney {
             transit_time: None,
             transfers: 0,
             departure_time,
-            arrival_time,
+            arrival_time: departure_time + walking_time,
         }
     }
 
-    /// Creates a multimodal journey with transit
+    /// Creates a multimodal journey with transit.
     #[allow(clippy::too_many_arguments)]
-    fn with_transit(
+    pub fn with_transit(
         start: &TransitPoint,
         end: &TransitPoint,
         transit_data: &PublicTransitData,
@@ -118,115 +129,90 @@ impl DetailedJourney {
         let transit_arrival = transit_journey.arrival_time;
         let final_arrival = transit_arrival + egress_time;
 
-        // Get stop locations and names from transit data
-        let access_stop_location = transit_data.stops[access_stop].geometry;
-        let egress_stop_location = transit_data.stops[egress_stop].geometry;
-        let access_stop_name = transit_data.stops[access_stop].stop_id.clone();
-        let egress_stop_name = transit_data.stops[egress_stop].stop_id.clone();
+        let access_stop_info = &transit_data.stops[access_stop];
+        let egress_stop_info = &transit_data.stops[egress_stop];
 
-        // Create access walking leg
-        let access_leg = WalkingLeg {
-            from_location: start.geometry,
-            to_location: access_stop_location,
-            from_name: String::new(),
-            to_name: access_stop_name,
+        let access_leg = WalkingLeg::new(
+            start.geometry,
+            access_stop_info.geometry,
+            String::new(),
+            access_stop_info.stop_id.clone(),
             departure_time,
-            arrival_time: transit_departure,
-            duration: access_time,
-        };
+            access_time,
+        );
+        let egress_leg = WalkingLeg::new(
+            egress_stop_info.geometry,
+            end.geometry,
+            egress_stop_info.stop_id.clone(),
+            String::new(),
+            transit_arrival,
+            egress_time,
+        );
 
-        // Create egress walking leg
-        let egress_leg = WalkingLeg {
-            from_location: egress_stop_location,
-            to_location: end.geometry,
-            from_name: egress_stop_name,
-            to_name: String::new(),
-            departure_time: transit_arrival,
-            arrival_time: final_arrival,
-            duration: egress_time,
-        };
-
-        let transit_time = transit_arrival - transit_departure;
-        let walking_time = access_time + egress_time;
-        let total_time = final_arrival - departure_time;
         let transfer_count = transit_journey.transfers_count;
 
         Self {
             access_leg: Some(access_leg),
             transit_journey: Some(transit_journey),
             egress_leg: Some(egress_leg),
-            total_time,
-            walking_time,
-            transit_time: Some(transit_time),
+            total_time: final_arrival - departure_time,
+            walking_time: access_time + egress_time,
+            transit_time: Some(transit_arrival - transit_departure),
             transfers: transfer_count,
             departure_time,
             arrival_time: final_arrival,
         }
     }
-}
 
-impl DetailedJourney {
-    /// Convert the journey to a `GeoJSON` `FeatureCollection`
+    /// Converts the complete journey to a `GeoJSON` `FeatureCollection`.
     pub fn to_geojson(&self, transit_data: &PublicTransitData) -> FeatureCollection {
         let mut features = Vec::new();
 
-        // Process access leg (walking to transit)
         if let Some(access) = &self.access_leg {
             features.push(access.to_feature("access_walk"));
         }
-
-        // Process transit journey
         if let Some(transit) = &self.transit_journey {
             for (idx, leg) in transit.legs.iter().enumerate() {
-                match leg {
-                    crate::routing::raptor::JourneyLeg::Transit {
+                let feature = match leg {
+                    JourneyLeg::Transit {
                         route_id,
                         trip_id,
                         from_stop,
-                        to_stop,
                         departure_time,
+                        to_stop,
                         arrival_time,
-                    } => {
-                        features.push(DetailedJourney::transit_leg_to_feature(
-                            transit_data,
-                            *route_id,
-                            *trip_id,
-                            *from_stop,
-                            *to_stop,
-                            *departure_time,
-                            *arrival_time,
-                            idx,
-                        ));
-                    }
-                    crate::routing::raptor::JourneyLeg::Transfer {
+                    } => Self::transit_leg_feature(
+                        transit_data,
+                        *route_id,
+                        *trip_id,
+                        *from_stop,
+                        *to_stop,
+                        *departure_time,
+                        *arrival_time,
+                        idx,
+                    ),
+                    JourneyLeg::Transfer {
                         from_stop,
-                        to_stop,
                         departure_time,
+                        to_stop,
                         arrival_time,
                         duration,
-                    } => {
-                        features.push(DetailedJourney::transfer_leg_to_feature(
-                            transit_data,
-                            *from_stop,
-                            *to_stop,
-                            *departure_time,
-                            *arrival_time,
-                            *duration,
-                            idx,
-                        ));
+                    } => Self::transfer_leg_feature(
+                        transit_data,
+                        *from_stop,
+                        *to_stop,
+                        *departure_time,
+                        *arrival_time,
+                        *duration,
+                        idx,
+                    ),
+                    JourneyLeg::Waiting { at_stop, duration } => {
+                        Self::waiting_leg_feature(transit_data, *at_stop, *duration)
                     }
-                    crate::routing::raptor::JourneyLeg::Waiting { at_stop, duration } => {
-                        features.push(DetailedJourney::waiting_leg_to_feature(
-                            transit_data,
-                            *at_stop,
-                            *duration,
-                        ));
-                    }
-                }
+                };
+                features.push(feature);
             }
         }
-
-        // Process egress leg (walking from transit)
         if let Some(egress) = &self.egress_leg {
             features.push(egress.to_feature("egress_walk"));
         }
@@ -238,9 +224,14 @@ impl DetailedJourney {
         }
     }
 
-    /// Convert a transit leg to a `GeoJSON` Feature
+    /// Converts the journey to a `GeoJSON` string.
+    pub fn to_geojson_string(&self, transit_data: &PublicTransitData) -> String {
+        serde_json::to_string(&self.to_geojson(transit_data)).unwrap_or_default()
+    }
+
+    /// Converts a transit leg to a `GeoJSON` Feature.
     #[allow(clippy::too_many_arguments)]
-    fn transit_leg_to_feature(
+    fn transit_leg_feature(
         transit_data: &PublicTransitData,
         route_id: usize,
         trip_id: usize,
@@ -250,67 +241,53 @@ impl DetailedJourney {
         arrival_time: Time,
         leg_idx: usize,
     ) -> Feature {
-        // Get stop coordinates
-        let from_location = transit_data.transit_stop_location(from_stop);
-        let to_location = transit_data.transit_stop_location(to_stop);
-
-        // Get stop names
+        let from_loc = transit_data.transit_stop_location(from_stop);
+        let to_loc = transit_data.transit_stop_location(to_stop);
         let from_name = transit_data
             .transit_stop_name(from_stop)
             .unwrap_or_default();
         let to_name = transit_data.transit_stop_name(to_stop).unwrap_or_default();
 
-        // Create intermediate points by getting all stops between from_stop and to_stop on this route
-        let mut coordinates = Vec::new();
-        coordinates.push((from_location.x(), from_location.y()));
-
-        // Try to get all stops for this route
+        let mut coords = vec![(from_loc.x(), from_loc.y())];
         if let Ok(route_stops) = transit_data.get_route_stops(route_id) {
-            let from_idx = route_stops.iter().position(|&s| s == from_stop);
-            let to_idx = route_stops.iter().position(|&s| s == to_stop);
-
-            if let (Some(start_idx), Some(end_idx)) = (from_idx, to_idx) {
-                // Determine direction (forward or backward along route)
-                let range: Vec<usize> = if start_idx < end_idx {
+            if let (Some(start_idx), Some(end_idx)) = (
+                route_stops.iter().position(|&s| s == from_stop),
+                route_stops.iter().position(|&s| s == to_stop),
+            ) {
+                let range: Vec<_> = if start_idx < end_idx {
                     (start_idx + 1..end_idx).collect()
                 } else {
                     (end_idx + 1..start_idx).rev().collect()
                 };
-
-                // Add intermediate stops
                 for idx in range {
-                    let stop_id = route_stops[idx];
-                    let stop_loc = transit_data.transit_stop_location(stop_id);
-                    coordinates.push((stop_loc.x(), stop_loc.y()));
+                    let stop_loc = transit_data.transit_stop_location(route_stops[idx]);
+                    coords.push((stop_loc.x(), stop_loc.y()));
                 }
             }
         }
-
-        coordinates.push((to_location.x(), to_location.y()));
-        let linestring: LineString = coordinates.into();
-        let route_id = &transit_data.routes[route_id].route_id;
+        coords.push((to_loc.x(), to_loc.y()));
+        let line: LineString<_> = coords.into();
 
         let value = json!({
             "type": "Feature",
-            "geometry": Geometry::new((&linestring).into()),
+            "geometry": Geometry::new((&line).into()),
             "properties": {
                 "leg_type": "transit",
                 "leg_index": leg_idx,
-                "route_id": route_id,
+                "route_id": transit_data.routes[route_id].route_id,
                 "trip_id": trip_id,
                 "from_name": from_name,
                 "to_name": to_name,
                 "departure_time": departure_time,
                 "arrival_time": arrival_time,
-                "duration": (arrival_time - departure_time),
+                "duration": arrival_time - departure_time,
             }
         });
-
         Feature::from_json_value(value).unwrap()
     }
 
-    /// Convert a transfer leg to a `GeoJSON` Feature
-    fn transfer_leg_to_feature(
+    /// Converts a transfer leg to a `GeoJSON` Feature.
+    fn transfer_leg_feature(
         transit_data: &PublicTransitData,
         from_stop: RaptorStopId,
         to_stop: RaptorStopId,
@@ -319,26 +296,18 @@ impl DetailedJourney {
         duration: Time,
         leg_idx: usize,
     ) -> Feature {
-        // Get stop coordinates
-        let from_location = transit_data.transit_stop_location(from_stop);
-        let to_location = transit_data.transit_stop_location(to_stop);
-
-        // Get stop names
+        let from_loc = transit_data.transit_stop_location(from_stop);
+        let to_loc = transit_data.transit_stop_location(to_stop);
         let from_name = transit_data
             .transit_stop_name(from_stop)
             .unwrap_or_default();
         let to_name = transit_data.transit_stop_name(to_stop).unwrap_or_default();
 
-        // Create a LineString for the transfer
-        let linestring: LineString = vec![
-            (from_location.x(), from_location.y()),
-            (to_location.x(), to_location.y()),
-        ]
-        .into();
-
+        let line: LineString<_> =
+            vec![(from_loc.x(), from_loc.y()), (to_loc.x(), to_loc.y())].into();
         let value = json!({
             "type": "Feature",
-            "geometry": Geometry::new((&linestring).into()),
+            "geometry": Geometry::new((&line).into()),
             "properties": {
                 "leg_type": "transfer",
                 "leg_index": leg_idx,
@@ -349,134 +318,98 @@ impl DetailedJourney {
                 "duration": duration,
             }
         });
-
         Feature::from_json_value(value).unwrap()
     }
 
-    fn waiting_leg_to_feature(
+    /// Converts a waiting leg to a `GeoJSON` Feature.
+    fn waiting_leg_feature(
         transit_data: &PublicTransitData,
         at_stop: RaptorStopId,
         duration: Time,
     ) -> Feature {
         let geom = transit_data.transit_stop_location(at_stop);
-
-        // Create properties for the feature
-        let mut properties = Map::new();
-        properties.insert("duration".to_string(), JsonValue::Number(duration.into()));
-        properties.insert(
-            "leg_type".to_string(),
-            JsonValue::String("waiting".to_string()),
-        );
-
-        Feature {
-            bbox: None,
-            geometry: Some(Geometry::new((&geom).into())),
-            id: None,
-            properties: Some(properties),
-            foreign_members: None,
-        }
-    }
-
-    pub fn to_geojson_string(&self, transit_data: &PublicTransitData) -> String {
-        let collection = self.to_geojson(transit_data);
-        serde_json::to_string(&collection).unwrap_or_default()
+        let value = json!({
+            "type": "Feature",
+            "geometry": Geometry::new((&geom).into()),
+            "properties": {
+                "leg_type": "waiting",
+                "duration": duration,
+            }
+        });
+        Feature::from_json_value(value).unwrap()
     }
 }
 
-/// Traced multimodal routing from one point to another with detailed itinerary
+/// Traced multimodal routing from one point to another.
+#[allow(clippy::missing_panics_doc)]
 pub fn traced_multimodal_routing(
-    transit_data: &TransitModel,
+    transit_model: &TransitModel,
     start: &TransitPoint,
     end: &TransitPoint,
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<Option<DetailedJourney>, Error> {
-    let transit_data = &transit_data.transit_data;
+    let transit_data = &transit_model.transit_data;
     let direct_walking = start.walking_time_to(end);
-
     let mut best_candidate: Option<(TransitCandidate, Journey, RaptorStopId, RaptorStopId)> = None;
 
     for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
         for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
-            // Skip if walking path is faster
-            if let Some(walking_time) = direct_walking {
-                if access_time + egress_time >= walking_time {
+            if let Some(walk_time) = direct_walking {
+                if access_time + egress_time >= walk_time {
                     continue;
                 }
             }
-
-            // Skip if we already have a better candidate
-            if let Some((candidate, _, _, _)) = &best_candidate {
-                if access_time + egress_time >= candidate.total_time {
+            if let Some((best, _, _, _)) = best_candidate.as_ref() {
+                if access_time + egress_time >= best.total_time {
                     continue;
                 }
             }
-
-            if let Ok(result) = traced_raptor(
+            if let Ok(TracedRaptorResult::SingleTarget(Some(journey))) = traced_raptor(
                 transit_data,
                 access_stop,
                 Some(egress_stop),
                 departure_time + access_time,
                 max_transfers,
             ) {
-                match result {
-                    TracedRaptorResult::SingleTarget(Some(journey)) => {
-                        let transit_journey_time =
-                            journey.arrival_time - (departure_time + access_time);
-                        let total_time = access_time + transit_journey_time + egress_time;
-
-                        let candidate = TransitCandidate {
-                            total_time,
-                            transit_time: transit_journey_time,
-                            transfers_used: journey.transfers_count,
-                        };
-
-                        // Update if this is better than our current best
-                        if best_candidate
-                            .as_ref()
-                            .is_none_or(|(best, _, _, _)| candidate.total_time < best.total_time)
-                        {
-                            best_candidate = Some((candidate, journey, access_stop, egress_stop));
-                        }
-                    }
-                    TracedRaptorResult::SingleTarget(None) => {}
-                    TracedRaptorResult::AllTargets(_) => {
-                        unreachable!("Unexpected AllTargets result")
-                    }
+                let transit_time = journey.arrival_time - (departure_time + access_time);
+                let total_time = access_time + transit_time + egress_time;
+                let candidate = TransitCandidate {
+                    total_time,
+                    transit_time,
+                    transfers_used: journey.transfers_count,
+                };
+                if best_candidate
+                    .as_ref()
+                    .is_none_or(|(best, _, _, _)| candidate.total_time < best.total_time)
+                {
+                    best_candidate = Some((candidate, journey, access_stop, egress_stop));
                 }
             }
         }
     }
 
-    // Generate the final result
-    if is_walking_better(
-        direct_walking,
-        best_candidate.as_ref().map(|(c, _, _, _)| c),
-    ) {
-        // Walking is faster
-        if let Some(walking_time) = direct_walking {
+    if let Some(walk_time) = direct_walking {
+        if best_candidate.is_none() || walk_time <= best_candidate.as_ref().unwrap().0.total_time {
             return Ok(Some(DetailedJourney::walking_only(
                 start,
                 end,
                 departure_time,
-                walking_time,
+                walk_time,
             )));
         }
-    } else if let Some((_, journey, access_stop, egress_stop)) = best_candidate {
-        // Get access and egress times
+    }
+    if let Some((_, journey, access_stop, egress_stop)) = best_candidate {
         let access_time = start
             .nearest_stops
             .iter()
-            .find(|(id, _)| *id == access_stop)
-            .map_or(0, |(_, time)| *time);
-
+            .find(|(s, _)| *s == access_stop)
+            .map_or(0, |(_, t)| *t);
         let egress_time = end
             .nearest_stops
             .iter()
-            .find(|(id, _)| *id == egress_stop)
-            .map_or(0, |(_, time)| *time);
-
-        // Transit route is best
+            .find(|(s, _)| *s == egress_stop)
+            .map_or(0, |(_, t)| *t);
         return Ok(Some(DetailedJourney::with_transit(
             start,
             end,
@@ -488,15 +421,14 @@ pub fn traced_multimodal_routing(
             journey,
             departure_time,
         )));
-    } else if let Some(walking_time) = direct_walking {
-        // No transit option, but we can walk
+    }
+    if let Some(walk_time) = direct_walking {
         return Ok(Some(DetailedJourney::walking_only(
             start,
             end,
             departure_time,
-            walking_time,
+            walk_time,
         )));
     }
-
     Ok(None)
 }
