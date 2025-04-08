@@ -1,7 +1,7 @@
+use ferrobus_macros::stubgen;
 use geo::Point;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
 use crate::model::PyTransitModel;
 use ferrobus_core::{prelude::*, routing::detailed_itinerary::traced_multimodal_routing};
@@ -32,7 +32,7 @@ use ferrobus_core::{prelude::*, routing::detailed_itinerary::traced_multimodal_r
 ///
 /// The ``max_walking_time`` parameter controls how far the point can connect to the transit
 /// network, while ``max_nearest_stops`` limits the number of stops considered during routing.
-#[gen_stub_pyclass]
+#[stubgen]
 #[pyclass(name = "TransitPoint")]
 #[derive(Clone, Debug)]
 pub struct PyTransitPoint {
@@ -40,7 +40,7 @@ pub struct PyTransitPoint {
 }
 
 #[pymethods]
-#[gen_stub_pymethods]
+#[stubgen]
 impl PyTransitPoint {
     #[new]
     #[pyo3(signature = (lat, lon, transit_model, max_walking_time=1200, max_nearest_stops=10))]
@@ -120,7 +120,7 @@ impl PyTransitPoint {
 /// See Also
 /// --------
 /// TransitPoint : For more details about transit points.
-#[gen_stub_pyfunction]
+#[stubgen]
 #[pyfunction]
 #[pyo3(signature = (lat, lon, transit_model, max_walking_time=1200, max_nearest_stops=10))]
 pub fn create_transit_point(
@@ -211,7 +211,7 @@ pub(crate) fn optional_result_to_py(py: Python<'_>, result: Option<&MultiModalRe
 ///         # }
 ///     else:
 ///         print("No route found")
-#[gen_stub_pyfunction]
+#[stubgen]
 #[pyfunction]
 #[pyo3(signature = (transit_model, start_point, end_point, departure_time, max_transfers=3))]
 pub fn find_route(
@@ -327,7 +327,7 @@ pub fn find_route(
 /// Notes
 /// -----
 /// This function releases the GIL during computation to allow other Python threads to run.
-#[gen_stub_pyfunction]
+#[stubgen]
 #[pyfunction]
 #[pyo3(signature = (transit_model, start_point, end_points, departure_time, max_transfers=3))]
 pub fn find_routes_one_to_many(
@@ -396,7 +396,7 @@ pub fn find_routes_one_to_many(
 /// ------
 /// RuntimeError
 ///     If the journey calculation fails.
-#[gen_stub_pyfunction]
+#[stubgen]
 #[pyfunction]
 #[pyo3(signature = (transit_model, start_point, end_point, departure_time, max_transfers=3))]
 pub fn detailed_journey(

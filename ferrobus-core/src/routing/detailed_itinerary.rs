@@ -163,34 +163,6 @@ impl DetailedJourney {
             arrival_time: final_arrival,
         }
     }
-
-    /// Convert from a `MultiModalResult` to maintain compatibility
-    pub fn from_result(
-        result: &crate::routing::multimodal_routing::MultiModalResult,
-        start: &TransitPoint,
-        end: &TransitPoint,
-        departure_time: Time,
-    ) -> Self {
-        if result.transit_time.is_none() {
-            // Walking-only journey
-            Self::walking_only(start, end, departure_time, result.walking_time)
-        } else {
-            // This is a placeholder - can't create a proper journey without the actual transit information
-            let arrival_time = departure_time + result.travel_time;
-
-            Self {
-                access_leg: None,
-                transit_journey: None,
-                egress_leg: None,
-                total_time: result.travel_time,
-                walking_time: result.walking_time,
-                transit_time: result.transit_time,
-                transfers: result.transfers,
-                departure_time,
-                arrival_time,
-            }
-        }
-    }
 }
 
 impl DetailedJourney {

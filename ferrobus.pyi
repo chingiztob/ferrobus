@@ -7,12 +7,7 @@ import typing
 
 class IsochroneIndex:
     r"""
-    IsochroneIndex
-
     A spatial index structure for highly efficient isochrone calculations in transit networks.
-
-    Motivation
-    ==========
 
     Traditional isochrone generation involves computationally expensive geometric operations
     such as buffering network edges and performing unary unions on complex polygons.
@@ -23,9 +18,6 @@ class IsochroneIndex:
     hexagonal grid system (H3 cells) that can be rapidly queried and merged during
     isochrone generation. This provides orders-of-magnitude performance improvements
     by avoiding expensive geometric operations at query time.
-
-    Technical approach
-    ==================
 
     Rather than working with precise network geometry during isochrone calculations,
     this index:
@@ -39,16 +31,62 @@ class IsochroneIndex:
     performance improvements, making it practical for interactive applications.
 
     Example
-    =======
+    -------
 
     .. code-block:: python
 
         index = create_isochrone_index(model, area_wkt, 8, 1200);
         isochrone = calculate_isochrone(py, model, point, departure, 3, 1800, index);
+
+        # The resulting isochrone is a WKT string representing the polygon
+        print(isochrone)
+        >>> MULTIPOLYGON ((...))
+
+    References
+    ----------
+
+    For more information about the H3 hexagonal grid system used in this module,
+    see the `H3 documentation <https://h3geo.org/>`_.
     """
-    def len(self) -> builtins.int: ...
-    def is_empty(self) -> builtins.bool: ...
-    def resolution(self) -> builtins.int: ...
+    def len(self) -> builtins.int:
+        r"""
+        Get the number of cells in the isochrone index
+
+        Returns the total number of hexagonal cells stored in the isochrone index.
+
+        Returns
+        -------
+        int
+            The number of cells in the index.
+        """
+        ...
+
+    def is_empty(self) -> builtins.bool:
+        r"""
+        Check if the isochrone index is empty
+
+        Determines whether the isochrone index contains any cells.
+
+        Returns
+        -------
+        bool
+            True if the index is empty, False otherwise.
+        """
+        ...
+
+    def resolution(self) -> builtins.int:
+        r"""
+        Get the resolution of the isochrone index
+
+        Returns the resolution of the hexagonal grid used in the isochrone index.
+        Higher resolutions correspond to smaller hexagonal cells.
+
+        Returns
+        -------
+        int
+            The resolution of the hexagonal grid (0-15).
+        """
+        ...
 
 class RangeRoutingResult:
     def median_travel_time(self) -> builtins.int: ...
@@ -83,29 +121,65 @@ class TransitModel:
         model = create_transit_model("path/to/osm.pbf", ["path/to/gtfs"], None, 1800)
         transit_point = create_transit_point(lat, lon, model, 1200, 10)
     """
-    def stop_count(self) -> builtins.int: ...
-    def route_count(self) -> builtins.int: ...
-    def feeds_info(self) -> builtins.str: ...
+    def stop_count(self) -> builtins.int:
+        r"""
+        Get total stop count of all feeds in the model
+        """
+        ...
+
+    def route_count(self) -> builtins.int:
+        r"""
+        Get total route count of all feeds in the model
+        """
+        ...
+
+    def feeds_info(self) -> builtins.str:
+        r"""
+        Get information about the GTFS feeds in the transit model
+
+        Returns a summary of the GTFS feeds included in the transit model, such as
+        feed names, versions, and other metadata. The output is formatted as a JSON
+        string, similar to the GTFS `feed_info.txt`.
+
+        Returns
+        -------
+        str
+            A JSON string containing information about the GTFS feeds.
+
+        Example
+        -------
+        .. code-block:: python
+
+            info = model.feeds_info()
+            print(json.loads(info))
+            # Example output:
+            # [
+            #     {
+            #         "feed_publisher_name": "City Transit",
+            #         "feed_publisher_url": "http://citytransit.example.com",
+            #         "feed_lang": "en",
+            #         "feed_start_date": "2025-01-01",
+            #         "feed_end_date": "2025-12-31",
+            #         "feed_version": "2025.04"
+            #     }
+            # ]
+        """
+        ...
+
     def __repr__(self) -> builtins.str: ...
     def __str__(self) -> builtins.str: ...
 
 class TransitPoint:
     r"""
-    TransitPoint
-    ============
-
     A geographic location connected to the transit network with pre-calculated access paths
     to nearby transit stops and the street network.
-
-    Purpose
-    -------
 
     TransitPoint serves as the fundamental origin/destination entity for all routing operations.
     Each point maintains a list of nearby transit stops with walking times, enabling efficient
     multimodal journey planning without recomputing access paths for every query.
 
-    Usage
-    -----
+    Example
+    -------
 
     .. code-block:: python
 
@@ -280,7 +354,7 @@ def create_isochrone_index(
     transit_data: TransitModel,
     area: builtins.str,
     cell_resolution: builtins.int,
-    max_walking_time: builtins.int,
+    max_walking_time: builtins.int = 1200,
 ) -> IsochroneIndex:
     r"""
     Create a spatial index for isochrone calculations
@@ -327,10 +401,11 @@ def create_transit_model(
     Create a unified transit model from OSM and GTFS data
 
     This function builds a complete multimodal transportation model by:
-    1. Processing OpenStreetMap data to create the street network
-    2. Loading GTFS transit schedules
-    3. Connecting transit stops to the street network
-    4. Creating transfer connections between nearby stops
+
+    - Processing OpenStreetMap data to create the street network
+    - Loading GTFS transit schedules into RAPTOR model
+    - Connecting transit stops to the street network
+    - Creating transfer connections between nearby stops
 
     The resulting model enables multimodal routing, isochrone generation,
     and travel time matrix calculations.
@@ -488,6 +563,24 @@ def find_route(
     ------
     RuntimeError
         If the route calculation fails.
+
+    Example
+    -------
+    .. code-block:: python
+
+        result = ferrobus.find_route(model, start_point, end_point, departure_time, max_transfers)
+        if result is not None:
+            print(result)
+            # Example output:
+            # {
+            #     "travel_time_seconds": 1800,
+            #     "walking_time_seconds": 300,
+            #     "transit_time_seconds": 1500,
+            #     "transfers": 1,
+            #     "used_transit": True
+            # }
+        else:
+            print("No route found")
     """
     ...
 
@@ -524,6 +617,63 @@ def find_routes_one_to_many(
         List of routing results in the same order as the input end_points.
         Each result is either a dictionary with route details or None if
         the destination is unreachable.
+
+    Example
+    -------
+    .. code-block:: python
+
+        # Create a transit model
+        model = ferrobus.create_transit_model(
+            gtfs_dirs=["path/to/you_feed"],
+            osm_path="path/to/street_network.osm.pbf"
+        )
+
+        start_point = ferrobus.create_transit_point(
+            lat=52.5200,
+            lon=13.4050,
+            transit_model=model,
+            max_walking_time=900,
+            max_nearest_stops=5
+        )
+        end_point1 = ferrobus.create_transit_point(
+            lat=52.5300,
+            lon=13.4100,
+            transit_model=model,
+            max_walking_time=900,
+            max_nearest_stops=5
+        )
+        end_point2 = ferrobus.create_transit_point(
+            lat=52.5400,
+            lon=13.4200,
+            transit_model=model,
+            max_walking_time=900,
+            max_nearest_stops=5
+        )
+
+        # Find routes
+        results = ferrobus.find_routes_one_to_many(
+            model, start_point, [end_point1, end_point2], departure_time=3600, max_transfers = 3
+        )
+        for result in results:
+            if result is not None:
+                print(result)
+                # Example output for one destination:
+                # [{
+                #     "travel_time_seconds": 1800,
+                #     "walking_time_seconds": 300,
+                #     "transit_time_seconds": 1500,
+                #     "transfers": 1,
+                #     "used_transit": True
+                # },
+                # {
+                #     "travel_time_seconds": 2100,
+                #     "walking_time_seconds": 300,
+                #     "transit_time_seconds": 1800,
+                #     "transfers": 2,
+                #     "used_transit": True
+                # }]
+            else:
+                print("No route found")
 
     Raises
     ------

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["ferrobus-core"]
+members = ["ferrobus-core", "ferrobus_macros"]
 
 [package]
 name = "ferrobus"
@@ -23,8 +23,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 pyo3 = { version = "0.24", features = ["chrono"] }
 pyo3-log = "0.12"
-pyo3-stub-gen = "0.7"
 ferrobus_core = { path = "ferrobus-core" }
+ferrobus_macros = { path = "ferrobus_macros" }
 geo.workspace = true
 geojson.workspace = true
 rayon.workspace = true
@@ -38,6 +38,13 @@ geojson = "0.24.0"
 rayon = "1.10"
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
 serde_json = "1"
+
+[dependencies.pyo3-stub-gen]
+version = "0.7"
+optional = true
+
+[features]
+stubgen = ["pyo3-stub-gen"]
 
 [profile.release]
 lto = "fat"

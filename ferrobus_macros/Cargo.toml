@@ -1,0 +1,13 @@
+[package]
+name = "ferrobus_macros"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "2"
+quote = "1"

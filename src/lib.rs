@@ -1,5 +1,4 @@
 use pyo3::prelude::*;
-use pyo3_stub_gen::define_stub_info_gatherer;
 
 use isochrone::{
     PyIsochroneIndex, calculate_bulk_isochrones, calculate_isochrone,
@@ -99,4 +98,5 @@ fn ferrobus(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-define_stub_info_gatherer!(stub_info);
+#[cfg(feature = "stubgen")]
+pyo3_stub_gen::define_stub_info_gatherer!(stub_info);

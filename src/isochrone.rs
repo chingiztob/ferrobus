@@ -19,9 +19,9 @@
 //! ```
 
 use ferrobus_core::prelude::*;
+use ferrobus_macros::stubgen;
 use geo::{Coord, Geometry, LineString, Polygon};
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 use wkt::{ToWkt, TryFromWkt};
 
 use geojson::{Feature, FeatureCollection};
@@ -70,13 +70,13 @@ use crate::routing::PyTransitPoint;
 ///
 /// For more information about the H3 hexagonal grid system used in this module,
 /// see the `H3 documentation <https://h3geo.org/>`_.
-#[gen_stub_pyclass]
+#[stubgen]
 #[pyclass(name = "IsochroneIndex")]
 pub struct PyIsochroneIndex {
     inner: IsochroneIndex,
 }
 
-#[gen_stub_pymethods]
+#[stubgen]
 #[pymethods]
 impl PyIsochroneIndex {
     /// Get the number of cells in the isochrone index
@@ -148,9 +148,9 @@ impl PyIsochroneIndex {
 /// Creating this index may be compute-intensive but allows for extremely fast
 /// subsequent isochrone calculations, making it ideal for interactive applications
 /// or batch processing multiple isochrones from different starting points.
+#[stubgen]
 #[pyfunction]
 #[pyo3(signature = (transit_data, area, cell_resolution, max_walking_time=1200))]
-#[gen_stub_pyfunction]
 pub fn create_isochrone_index(
     transit_data: &PyTransitModel,
     area: &str,
@@ -206,7 +206,7 @@ pub fn create_isochrone_index(
 /// RuntimeError
 ///     If the isochrone calculation fails.
 #[pyfunction]
-#[gen_stub_pyfunction]
+#[stubgen]
 pub fn calculate_isochrone(
     py: Python<'_>,
     transit_data: &PyTransitModel,
@@ -267,7 +267,7 @@ pub fn calculate_isochrone(
 /// RuntimeError
 ///     If the batch isochrone calculation fails.
 #[pyfunction]
-#[gen_stub_pyfunction]
+#[stubgen]
 #[allow(clippy::needless_pass_by_value)]
 pub fn calculate_bulk_isochrones(
     py: Python<'_>,
@@ -339,7 +339,7 @@ pub fn calculate_bulk_isochrones(
 /// This function is useful for analyzing transit reliability and service
 /// frequency across different times of day.
 #[pyfunction]
-#[gen_stub_pyfunction]
+#[stubgen]
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_percent_access_isochrone(
     py: Python<'_>,

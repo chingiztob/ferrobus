@@ -1,7 +1,7 @@
 use ferrobus_core::prelude::*;
 
+use ferrobus_macros::stubgen;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
 /// TransitModel
 ///
@@ -25,13 +25,13 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pyme
 ///
 ///     model = create_transit_model("path/to/osm.pbf", ["path/to/gtfs"], None, 1800)
 ///     transit_point = create_transit_point(lat, lon, model, 1200, 10)
-#[gen_stub_pyclass]
+#[stubgen]
 #[pyclass(name = "TransitModel")]
 pub struct PyTransitModel {
     pub(crate) model: TransitModel,
 }
 
-#[gen_stub_pymethods]
+#[stubgen]
 #[pymethods]
 impl PyTransitModel {
     /// Get total stop count of all feeds in the model
@@ -127,7 +127,7 @@ impl PyTransitModel {
 /// Notes
 /// -----
 /// The function releases the GIL during processing to allow other Python threads to continue execution.
-#[gen_stub_pyfunction]
+#[stubgen]
 #[pyfunction(name = "create_transit_model")]
 #[pyo3(signature = (osm_path, gtfs_dirs, date, max_transfer_time = 1800))]
 pub fn py_create_transit_model(

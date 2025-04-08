@@ -1,6 +1,6 @@
 use ferrobus_core::prelude::*;
+use ferrobus_macros::stubgen;
 use pyo3::prelude::*;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use rayon::prelude::*;
 
 use crate::model::PyTransitModel;
@@ -25,7 +25,7 @@ use crate::routing::PyTransitPoint;
 /// list[list[Optional[int]]]
 ///     A 2D matrix where each cell [i][j] contains the travel time in seconds
 ///     from point i to point j, or None if the point is unreachable.
-#[gen_stub_pyfunction]
+#[stubgen]
 #[pyfunction]
 pub fn travel_time_matrix(
     py: Python<'_>,
