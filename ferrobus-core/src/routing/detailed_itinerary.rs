@@ -1,6 +1,6 @@
-use geo::Point;
-use geojson::{Feature, FeatureCollection, Geometry, Value as GeoJsonValue};
-use serde_json::{Map, Value as JsonValue};
+use geo::{LineString, Point, line_string};
+use geojson::{Feature, FeatureCollection, Geometry};
+use serde_json::{Map, Value as JsonValue, json};
 
 use crate::{
     MAX_CANDIDATE_STOPS, TransitModel,
@@ -31,52 +31,26 @@ impl WalkingLeg {
     fn to_feature(&self, leg_type: &str) -> Feature {
         let leg = self;
         // Create a LineString for the walking path
-        let coordinates = vec![
-            vec![
-                leg.from_location.x(), // longitude
-                leg.from_location.y(), // latitude
-            ],
-            vec![
-                leg.to_location.x(), // longitude
-                leg.to_location.y(), // latitude
-            ],
+
+        let coordinates = line_string![
+            (x: leg.from_location.x(), y: leg.from_location.y()),
+            (x: leg.to_location.x(), y: leg.to_location.y()),
         ];
 
-        // Create properties for the feature
-        let mut properties = Map::new();
-        properties.insert(
-            "leg_type".to_string(),
-            JsonValue::String(leg_type.to_string()),
-        );
-        properties.insert(
-            "from_name".to_string(),
-            JsonValue::String(leg.from_name.clone()),
-        );
-        properties.insert(
-            "to_name".to_string(),
-            JsonValue::String(leg.to_name.clone()),
-        );
-        properties.insert(
-            "departure_time".to_string(),
-            JsonValue::Number(leg.departure_time.into()),
-        );
-        properties.insert(
-            "arrival_time".to_string(),
-            JsonValue::Number(leg.arrival_time.into()),
-        );
-        properties.insert(
-            "duration".to_string(),
-            JsonValue::Number(leg.duration.into()),
-        );
-        properties.insert("mode".to_string(), JsonValue::String("walking".to_string()));
+        let value = json!({
+            "type": "Feature",
+            "geometry": Geometry::new((&coordinates).into()),
+            "properties": {
+                "leg_type": leg_type,
+                "from_name": leg.from_name,
+                "to_name": leg.to_name,
+                "departure_time": leg.departure_time,
+                "arrival_time": leg.arrival_time,
+                "duration": leg.duration,
+            }
+        });
 
-        Feature {
-            bbox: None,
-            geometry: Some(Geometry::new(GeoJsonValue::LineString(coordinates))),
-            id: None,
-            properties: Some(properties),
-            foreign_members: None,
-        }
+        Feature::from_json_value(value).unwrap()
     }
 }
 
@@ -269,6 +243,13 @@ impl DetailedJourney {
                             idx,
                         ));
                     }
+                    crate::routing::raptor::JourneyLeg::Waiting { at_stop, duration } => {
+                        features.push(DetailedJourney::waiting_leg_to_feature(
+                            transit_data,
+                            *at_stop,
+                            *duration,
+                        ));
+                    }
                 }
             }
         }
@@ -309,7 +290,7 @@ impl DetailedJourney {
 
         // Create intermediate points by getting all stops between from_stop and to_stop on this route
         let mut coordinates = Vec::new();
-        coordinates.push(vec![from_location.x(), from_location.y()]);
+        coordinates.push((from_location.x(), from_location.y()));
 
         // Try to get all stops for this route
         if let Ok(route_stops) = transit_data.get_route_stops(route_id) {
@@ -328,46 +309,32 @@ impl DetailedJourney {
                 for idx in range {
                     let stop_id = route_stops[idx];
                     let stop_loc = transit_data.transit_stop_location(stop_id);
-                    coordinates.push(vec![stop_loc.x(), stop_loc.y()]);
+                    coordinates.push((stop_loc.x(), stop_loc.y()));
                 }
             }
         }
 
-        coordinates.push(vec![to_location.x(), to_location.y()]);
+        coordinates.push((to_location.x(), to_location.y()));
+        let linestring: LineString = coordinates.into();
         let route_id = &transit_data.routes[route_id].route_id;
 
-        // Create properties for the feature
-        let mut properties = Map::new();
-        properties.insert(
-            "leg_type".to_string(),
-            JsonValue::String("transit".to_string()),
-        );
-        properties.insert("leg_index".to_string(), JsonValue::Number(leg_idx.into()));
-        properties.insert("route_id".to_string(), JsonValue::String(route_id.into()));
-        properties.insert("trip_id".to_string(), JsonValue::Number(trip_id.into()));
-        properties.insert("from_name".to_string(), JsonValue::String(from_name));
-        properties.insert("to_name".to_string(), JsonValue::String(to_name));
-        properties.insert(
-            "departure_time".to_string(),
-            JsonValue::Number(departure_time.into()),
-        );
-        properties.insert(
-            "arrival_time".to_string(),
-            JsonValue::Number(arrival_time.into()),
-        );
-        properties.insert(
-            "duration".to_string(),
-            JsonValue::Number((arrival_time - departure_time).into()),
-        );
-        properties.insert("mode".to_string(), JsonValue::String("transit".to_string()));
+        let value = json!({
+            "type": "Feature",
+            "geometry": Geometry::new((&linestring).into()),
+            "properties": {
+                "leg_type": "transit",
+                "leg_index": leg_idx,
+                "route_id": route_id,
+                "trip_id": trip_id,
+                "from_name": from_name,
+                "to_name": to_name,
+                "departure_time": departure_time,
+                "arrival_time": arrival_time,
+                "duration": (arrival_time - departure_time),
+            }
+        });
 
-        Feature {
-            bbox: None,
-            geometry: Some(Geometry::new(GeoJsonValue::LineString(coordinates))),
-            id: None,
-            properties: Some(properties),
-            foreign_members: None,
-        }
+        Feature::from_json_value(value).unwrap()
     }
 
     /// Convert a transfer leg to a `GeoJSON` Feature
@@ -391,37 +358,47 @@ impl DetailedJourney {
         let to_name = transit_data.transit_stop_name(to_stop).unwrap_or_default();
 
         // Create a LineString for the transfer
-        let coordinates = vec![
-            vec![from_location.x(), from_location.y()],
-            vec![to_location.x(), to_location.y()],
-        ];
+        let linestring: LineString = vec![
+            (from_location.x(), from_location.y()),
+            (to_location.x(), to_location.y()),
+        ]
+        .into();
+
+        let value = json!({
+            "type": "Feature",
+            "geometry": Geometry::new((&linestring).into()),
+            "properties": {
+                "leg_type": "transfer",
+                "leg_index": leg_idx,
+                "from_name": from_name,
+                "to_name": to_name,
+                "departure_time": departure_time,
+                "arrival_time": arrival_time,
+                "duration": duration,
+            }
+        });
+
+        Feature::from_json_value(value).unwrap()
+    }
+
+    fn waiting_leg_to_feature(
+        transit_data: &PublicTransitData,
+        at_stop: RaptorStopId,
+        duration: Time,
+    ) -> Feature {
+        let geom = transit_data.transit_stop_location(at_stop);
 
         // Create properties for the feature
         let mut properties = Map::new();
-        properties.insert(
-            "leg_type".to_string(),
-            JsonValue::String("transfer".to_string()),
-        );
-        properties.insert("leg_index".to_string(), JsonValue::Number(leg_idx.into()));
-        properties.insert("from_name".to_string(), JsonValue::String(from_name));
-        properties.insert("to_name".to_string(), JsonValue::String(to_name));
-        properties.insert(
-            "departure_time".to_string(),
-            JsonValue::Number(departure_time.into()),
-        );
-        properties.insert(
-            "arrival_time".to_string(),
-            JsonValue::Number(arrival_time.into()),
-        );
         properties.insert("duration".to_string(), JsonValue::Number(duration.into()));
         properties.insert(
-            "mode".to_string(),
-            JsonValue::String("transfer_walk".to_string()),
+            "leg_type".to_string(),
+            JsonValue::String("waiting".to_string()),
         );
 
         Feature {
             bbox: None,
-            geometry: Some(Geometry::new(GeoJsonValue::LineString(coordinates))),
+            geometry: Some(Geometry::new((&geom).into())),
             id: None,
             properties: Some(properties),
             foreign_members: None,

@@ -68,17 +68,14 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
             })
         });
     }
-
-    // Key raptor transit data model vectors
-
-    let mut stop_routes: Vec<RouteId> = Vec::new();
-
-    // convert Raw GTFS data to Raptor data
-    let mut stops_vec = create_stops_vector(stops);
     // Process trips
     let (stop_times, route_stops, routes_vec) =
         process_trip_stop_times(&stop_id_map, &trip_id_map, &trip_stop_times);
     drop(trip_stop_times);
+
+    // Key raptor transit data model vectors
+    let mut stop_routes: Vec<RouteId> = Vec::new();
+    let mut stops_vec = create_stops_vector(stops);
 
     // Index of routes for each stop
     let mut stop_to_routes: HashMap<RaptorStopId, HashSet<RouteId>> =
@@ -171,7 +168,7 @@ fn process_trip_stop_times<'a>(
     trip_id_map: &HashMap<&str, &str>,
     trip_stop_times: &'a HashMap<String, Vec<FeedStopTime>>,
 ) -> (Vec<StopTime>, Vec<usize>, Vec<Route>) {
-    // Group trips by route id using references (avoiding cloning of the trip lists).
+    // Group trips by route id
     let mut routes_map: HashMap<String, Vec<&'a [FeedStopTime]>> = HashMap::new();
     for (trip_id, feed_stop_times) in trip_stop_times {
         if let Some(&route_id) = trip_id_map.get(trip_id.as_str()) {
@@ -190,13 +187,13 @@ fn process_trip_stop_times<'a>(
 
     // Process each route group.
     for (route_id, trips) in routes_map {
-        // Group trips by their stop count.
+        // Not all trips have the same number of stops, but Raptor requires a fixed number of stops per route.
+        // So route will be added in few variations, each with a different number of stops.
         let mut groups_by_length: HashMap<usize, Vec<&'a [FeedStopTime]>> = HashMap::new();
         for ts in trips {
             groups_by_length.entry(ts.len()).or_default().push(ts);
         }
 
-        // Process each subgroup (each distinct stop count).
         for (num_stops, mut group) in groups_by_length {
             // Sort trips by departure time at the first stop.
             group.sort_by_key(|ts| parse_time(&ts[0].departure_time));
@@ -219,16 +216,16 @@ fn process_trip_stop_times<'a>(
             // Record the starting index for this subgroup's trips.
             let trips_start = stop_times_vec.len();
             let valid_trip_count = group.len();
-            // Append each trip’s stop times (converted to our internal StopTime type).
-            for ts in group {
-                for stop_time in ts {
+
+            for current_trip in group {
+                for stop_time in current_trip {
                     stop_times_vec.push(StopTime {
                         arrival: parse_time(&stop_time.arrival_time),
                         departure: parse_time(&stop_time.departure_time),
                     });
                 }
             }
-            // Create a Route entry for this subgroup.
+
             routes_vec.push(Route {
                 num_trips: valid_trip_count,
                 num_stops,

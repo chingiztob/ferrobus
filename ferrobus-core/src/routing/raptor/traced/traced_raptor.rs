@@ -1,4 +1,5 @@
 use fixedbitset::FixedBitSet;
+use itertools::Itertools;
 
 use super::state::{Predecessor, TracedRaptorState};
 use crate::routing::raptor::common::{RaptorError, find_earliest_trip};
@@ -23,6 +24,10 @@ pub enum JourneyLeg {
         departure_time: Time,
         to_stop: RaptorStopId,
         arrival_time: Time,
+        duration: Time,
+    },
+    Waiting {
+        at_stop: RaptorStopId,
         duration: Time,
     },
 }
@@ -333,6 +338,36 @@ fn reconstruct_journey(
 
     // Legs are in reverse order (target to source), so reverse them
     legs.reverse();
+
+    // Add "waiting" points to result
+    let mut walking_legs = Vec::new();
+
+    // Iterate over journeys with window, if next departure is `transit` , then calculate delay
+    // between this departure and out arrival on that stop
+    for (idx, (prev_leg, next_leg)) in legs.iter().tuple_windows().enumerate() {
+        if let (
+            JourneyLeg::Transit { arrival_time, .. } | JourneyLeg::Transfer { arrival_time, .. },
+            JourneyLeg::Transit {
+                from_stop,
+                departure_time,
+                ..
+            },
+        ) = (prev_leg, next_leg)
+        {
+            walking_legs.push((
+                idx,
+                JourneyLeg::Waiting {
+                    at_stop: *from_stop,
+                    duration: (*departure_time - *arrival_time),
+                },
+            ));
+        }
+    }
+    // Shift accounts for elements shifting on each insert, +1 alligns waits to correct position
+    for (shift, (idx, leg)) in walking_legs.into_iter().enumerate() {
+        legs.insert(idx + shift + 1, leg);
+    }
+
     let transfers_count = legs
         .iter()
         .filter(|leg| matches!(leg, JourneyLeg::Transfer { .. }))

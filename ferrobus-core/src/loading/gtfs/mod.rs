@@ -1,4 +1,4 @@
-//! Обработка GTFS данных для транспортной модели
+//! Processing raw GTFS data for transit model construction
 
 mod parser;
 mod processor;

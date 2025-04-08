@@ -1,7 +1,7 @@
 //! Calculation of isochrones with naive buffer over reached nodes
 //! can be very slow for large areas. This module provides an
 //! alternative approach to calculate isochrones using H3 hexagonal
-//! grid cells as a `index`.
+//! grid cells as a index.
 
 use geo::{MultiPolygon, Point, Polygon};
 use hashbrown::HashMap;

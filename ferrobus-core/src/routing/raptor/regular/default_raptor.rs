@@ -71,7 +71,6 @@ pub fn raptor(
                             if new_trip_idx != trip_idx {
                                 trip_idx = new_trip_idx;
                                 trip = data.get_trip(route_id, new_trip_idx)?;
-                                //current_board_pos = trip_stop_idx;
                             }
                         }
                     }

@@ -46,7 +46,6 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
         });
     }
 
-    // Добавление рёбер
     for edge in edges {
         let source_index = *node_indices
             .get(&edge.source)
@@ -66,6 +65,8 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
         graph.add_edge(source_index, target_index, edge_obj);
     }
 
+    // Keep only the largest connected component to avoid isolated parts of the graph
+    // affecting routing
     let largest_component = connected_components(&graph)
         .into_iter()
         .max_by_key(hashbrown::HashSet::len)

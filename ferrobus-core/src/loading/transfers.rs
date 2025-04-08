@@ -49,7 +49,7 @@ pub fn calculate_transfers(graph: &mut TransitModel, max_transfer_time: Time) ->
     (0..stop_count).into_par_iter().for_each(|source_idx| {
         let source_node = stop_nodes_indices[source_idx];
 
-        // Use Dijkstra to find paths to all other stops within time limit
+        // Use Dijkstra to find paths to all other stops within cutoff
         let reachable = dijkstra::dijkstra_path_weights(
             &graph.street_graph,
             source_node,
@@ -76,7 +76,7 @@ pub fn calculate_transfers(graph: &mut TransitModel, max_transfer_time: Time) ->
             }
         }
 
-        // Save the range of transfers for this stop using thread-safe operations
+        // Save the range of transfers for this stop
         if count > 0 {
             let start_idx;
             {
