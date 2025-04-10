@@ -296,18 +296,24 @@ impl DetailedJourney {
         duration: Time,
         leg_idx: usize,
     ) -> Feature {
-        let from_loc = transit_data.transit_stop_location(from_stop);
-        let to_loc = transit_data.transit_stop_location(to_stop);
         let from_name = transit_data
             .transit_stop_name(from_stop)
             .unwrap_or_default();
         let to_name = transit_data.transit_stop_name(to_stop).unwrap_or_default();
 
-        let line: LineString<_> =
-            vec![(from_loc.x(), from_loc.y()), (to_loc.x(), to_loc.y())].into();
+        let transfers_start = &transit_data.stops[from_stop].transfers_start;
+        let transfers_end = transit_data.stops[from_stop].transfers_len + transfers_start;
+        let geometry = &transit_data.transfers[*transfers_start..transfers_end]
+            .iter()
+            .find(|t| t.target_stop == to_stop)
+            .unwrap()
+            .geometry;
+
+        let geometry = Geometry::new(geometry.as_ref().into());
+
         let value = json!({
             "type": "Feature",
-            "geometry": Geometry::new((&line).into()),
+            "geometry": geometry,
             "properties": {
                 "leg_type": "transfer",
                 "leg_index": leg_idx,

@@ -1,6 +1,7 @@
 use fixedbitset::FixedBitSet;
 use std::collections::VecDeque;
 
+use crate::model::transit::types::Transfer;
 use crate::routing::raptor::common::{
     RaptorError, RaptorResult, RaptorState, find_earliest_trip, find_earliest_trip_at_stop,
     get_target_bound, validate_raptor_inputs,
@@ -29,7 +30,12 @@ pub fn raptor(
 
     // Process foot-path transfers from the source.
     let transfers = data.get_stop_transfers(source)?;
-    for &(target_stop, duration) in transfers {
+    for &Transfer {
+        target_stop,
+        duration,
+        ..
+    } in transfers
+    {
         let new_time = departure_time.saturating_add(duration);
         // For foot-paths we assume no waiting time (arrival equals boarding).
         if state.update(0, target_stop, new_time, new_time)? {
@@ -153,7 +159,12 @@ pub(crate) fn process_foot_paths(
     for stop in current_marks {
         let current_board = state.board_times[round][stop];
         let transfers = data.get_stop_transfers(stop)?;
-        for &(target_stop, duration) in transfers {
+        for &Transfer {
+            target_stop,
+            duration,
+            ..
+        } in transfers
+        {
             let new_time = current_board.saturating_add(duration);
             if new_time >= state.board_times[round][target_stop] || new_time >= target_bound {
                 continue;

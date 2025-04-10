@@ -1,6 +1,6 @@
 //! Public transit data structure and methods to work with it
 
-use super::types::{FeedMeta, RaptorStopId, Route, RouteId, Stop, StopTime, Time};
+use super::types::{FeedMeta, RaptorStopId, Route, RouteId, Stop, StopTime, Time, Transfer};
 use crate::routing::raptor::RaptorError;
 use hashbrown::HashMap;
 use petgraph::graph::NodeIndex;
@@ -20,7 +20,7 @@ pub struct PublicTransitData {
     /// Routes through each stop
     pub stop_routes: Vec<RouteId>,
     /// Transfers between stops
-    pub transfers: Vec<(RaptorStopId, Time)>,
+    pub transfers: Vec<Transfer>,
     /// Mapping road network nodes to stops
     pub node_to_stop: HashMap<NodeIndex, RaptorStopId>,
     /// Metadata for feeds
@@ -127,7 +127,7 @@ impl PublicTransitData {
     pub(crate) fn get_stop_transfers(
         &self,
         stop_id: RaptorStopId,
-    ) -> Result<&[(RaptorStopId, Time)], RaptorError> {
+    ) -> Result<&[Transfer], RaptorError> {
         self.validate_stop(stop_id)?;
         let stop = &self.stops[stop_id];
         let end = stop.transfers_start + stop.transfers_len;

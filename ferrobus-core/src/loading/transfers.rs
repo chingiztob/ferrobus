@@ -6,7 +6,9 @@ use log::info;
 use petgraph::graph::NodeIndex;
 use rayon::prelude::*;
 
-use crate::{Error, RaptorStopId, Time, TransitModel, routing::dijkstra};
+use crate::{
+    Error, RaptorStopId, Time, TransitModel, model::transit::types::Transfer, routing::dijkstra,
+};
 
 /// Calculate transfers between stops using the street network
 #[allow(clippy::missing_panics_doc)]
@@ -50,7 +52,7 @@ pub fn calculate_transfers(graph: &mut TransitModel, max_transfer_time: Time) ->
         let source_node = stop_nodes_indices[source_idx];
 
         // Use Dijkstra to find paths to all other stops within cutoff
-        let reachable = dijkstra::dijkstra_path_weights(
+        let reachable = dijkstra::dijkstra_paths(
             &graph.street_graph,
             source_node,
             None,
@@ -68,9 +70,17 @@ pub fn calculate_transfers(graph: &mut TransitModel, max_transfer_time: Time) ->
             let target_node = stop_nodes_indices[target_idx];
 
             // If the target is reachable within our time limit
-            if let Some(time) = reachable.get(&target_node) {
-                if *time <= max_transfer_time {
-                    local_transfers.push((target_idx, *time as Time));
+            if let Some(path) = reachable.get(&target_node) {
+                let time = path.duration() as u32;
+                let geometry = path.geometry();
+                let geometry = Box::new(geometry);
+
+                if time <= max_transfer_time {
+                    local_transfers.push(Transfer {
+                        target_stop: target_idx,
+                        duration: time as Time,
+                        geometry,
+                    });
                     count += 1;
                 }
             }

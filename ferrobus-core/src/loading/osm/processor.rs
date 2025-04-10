@@ -59,7 +59,7 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
 
         let edge_obj = StreetEdge {
             weight,
-            geometry: Some(LineString::new(edge.geometry)),
+            geometry: LineString::new(edge.geometry),
         };
 
         graph.add_edge(source_index, target_index, edge_obj);

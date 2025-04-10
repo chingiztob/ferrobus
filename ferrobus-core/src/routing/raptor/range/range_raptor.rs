@@ -1,5 +1,6 @@
 use log::warn;
 
+use crate::model::transit::types::Transfer;
 use crate::routing::raptor::common::{
     RaptorError, RaptorState, find_earliest_trip, find_earliest_trip_at_stop, get_target_bound,
     validate_raptor_inputs,
@@ -59,7 +60,12 @@ pub fn rraptor(
 
         // Process foot-path transfers from the source.
         let transfers = data.get_stop_transfers(source)?;
-        for &(target_stop, duration) in transfers {
+        for &Transfer {
+            target_stop,
+            duration,
+            ..
+        } in transfers
+        {
             if target_stop >= num_stops {
                 warn!("Invalid transfer target {target_stop}");
                 continue;

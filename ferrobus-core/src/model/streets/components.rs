@@ -20,7 +20,7 @@ pub struct StreetEdge {
     /// Pedestrian crossing time in seconds
     pub weight: Time,
     /// Optional geometry for visualization
-    pub geometry: Option<LineString<f64>>,
+    pub geometry: LineString<f64>,
 }
 
 impl StreetEdge {
