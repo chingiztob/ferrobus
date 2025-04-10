@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["ferrobus-core", "ferrobus_macros"]
+members = ["ferrobus-core", "ferrobus-macros"]
 
 [package]
 name = "ferrobus"
@@ -24,7 +24,7 @@ crate-type = ["cdylib", "rlib"]
 pyo3 = { version = "0.24", features = ["chrono"] }
 pyo3-log = "0.12"
 ferrobus_core = { path = "ferrobus-core" }
-ferrobus_macros = { path = "ferrobus_macros" }
+ferrobus_macros = { path = "ferrobus-macros" }
 geo.workspace = true
 geojson.workspace = true
 rayon.workspace = true

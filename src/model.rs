@@ -26,7 +26,7 @@ use pyo3::prelude::*;
 ///     model = create_transit_model("path/to/osm.pbf", ["path/to/gtfs"], None, 1800)
 ///     transit_point = create_transit_point(lat, lon, model, 1200, 10)
 #[stubgen]
-#[pyclass(name = "TransitModel")]
+#[pyclass(name = "TransitModel", frozen)]
 pub struct PyTransitModel {
     pub(crate) model: TransitModel,
 }

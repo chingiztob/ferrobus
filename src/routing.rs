@@ -28,7 +28,7 @@ use ferrobus_core::{prelude::*, routing::detailed_itinerary::traced_multimodal_r
 ///     )
 ///
 ///     # Use the point for routing
-///     route = ferrobus.find_route(model, start_point, end_point, departure_time)
+///     route = ferrobus.find_route(model, stёart_point, end_point, departure_time)
 ///
 /// The ``max_walking_time`` parameter controls how far the point can connect to the transit
 /// network, while ``max_nearest_stops`` limits the number of stops considered during routing.

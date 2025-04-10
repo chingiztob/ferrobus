@@ -6,8 +6,6 @@ pub enum Error {
     NoPointsFound,
     #[error("Invalid node index")]
     InvalidNodeIndex,
-    #[error("Network error: {0}")]
-    NetworkError(String),
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
     #[error("Invalid data: {0}")]
@@ -16,4 +14,6 @@ pub enum Error {
     IsochroneError(String),
     #[error("H3 error: {0}")]
     H3Error(#[from] h3o::error::InvalidGeometry),
+    #[error("Unknown error: {0}")]
+    UnrecoverableError(&'static str),
 }

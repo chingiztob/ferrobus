@@ -1,5 +1,5 @@
 use log::info;
-use std::sync::mpsc;
+use std::sync::mpsc::{self, RecvError};
 
 use super::config::TransitModelConfig;
 use super::gtfs::transit_model_from_gtfs;
@@ -12,10 +12,6 @@ use crate::{Error, TransitModel};
 /// # Errors
 ///
 /// Returns an error if there are problems reading or processing data
-///
-/// # Panics
-///
-/// Panics on unrecoverable OSM data processing errors
 pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel, Error> {
     info!(
         "Processing street data (OSM): {}",
@@ -34,10 +30,15 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
     info!("Processing public transit data (GTFS)");
     let transit_data = transit_model_from_gtfs(config)?;
 
-    // Wait for OSM processing to complete
-    let street_graph = street_receiver
-        .recv()
-        .expect("Unrecoverable error while processing OSM data")?;
+    let street_graph = match street_receiver.recv() {
+        Ok(Ok(graph)) => graph,
+        Ok(Err(error)) => return Err(error),
+        Err(RecvError) => {
+            return Err(Error::UnrecoverableError(
+                "Unrecoverable error while processing OSM data",
+            ));
+        }
+    };
 
     // Wait for the thread to finish
     let _ = graph_handle.join();
