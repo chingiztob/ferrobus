@@ -27,15 +27,18 @@ impl PartialOrd for State {
 }
 
 /// Dijkstra's algorithm for finding shortest paths in the walking network
-/// Returns a map of node indices to walking times in seconds
-pub fn dijkstra_paths(
+/// Returns a map of node indices to walking paths
+pub(crate) fn dijkstra_paths(
     graph: &StreetGraph,
     start: NodeIndex,
     target: Option<NodeIndex>,
     max_cost: Option<f64>,
 ) -> HashMap<NodeIndex, WalkingPath> {
-    let mut distances: HashMap<NodeIndex, u32> = HashMap::new();
-    let mut heap = BinaryHeap::new();
+    // Estimate capacity based on graph size (adjust as needed)
+    let estimated_nodes = graph.graph.node_count().min(1000);
+    let mut distances: HashMap<NodeIndex, u32> = HashMap::with_capacity(estimated_nodes);
+    let mut predecessors: HashMap<NodeIndex, NodeIndex> = HashMap::with_capacity(estimated_nodes);
+    let mut heap = BinaryHeap::with_capacity(estimated_nodes / 4);
 
     // Start node has distance 0
     heap.push(State {
@@ -43,7 +46,6 @@ pub fn dijkstra_paths(
         node: start,
     });
     distances.insert(start, 0);
-    let mut predecessors: HashMap<NodeIndex, (NodeIndex, Segment)> = HashMap::new();
 
     while let Some(State { cost, node }) = heap.pop() {
         // Check if we've reached the target
@@ -63,7 +65,7 @@ pub fn dijkstra_paths(
         // Check max cost constraint
         if let Some(max) = max_cost {
             if f64::from(cost) > max {
-                continue;
+                break;
             }
         }
 
@@ -71,13 +73,7 @@ pub fn dijkstra_paths(
         for edge in graph.edges(node) {
             let next = edge.target();
             let walking_time = edge.weight().weight;
-            let geometry = &edge.weight().geometry;
             let next_cost = cost + walking_time;
-
-            let segment = Segment {
-                weight: f64::from(walking_time),
-                geometry,
-            };
 
             // Add or update distance if better using Entry API
             match distances.entry(next) {
@@ -87,7 +83,7 @@ pub fn dijkstra_paths(
                         cost: next_cost,
                         node: next,
                     });
-                    predecessors.insert(next, (node, segment));
+                    predecessors.insert(next, node);
                 }
                 hashbrown::hash_map::Entry::Occupied(mut entry) => {
                     if next_cost < *entry.get() {
@@ -96,7 +92,7 @@ pub fn dijkstra_paths(
                             cost: next_cost,
                             node: next,
                         });
-                        predecessors.insert(next, (node, segment));
+                        predecessors.insert(next, node);
                     }
                 }
             }
@@ -104,80 +100,75 @@ pub fn dijkstra_paths(
     }
 
     let mut paths = HashMap::with_capacity(distances.len());
-    for target in distances.keys() {
-        let mut current_node = target;
-        let mut itinerary = WalkingPath::new();
 
-        while let Some((prev_node, segment)) = predecessors.get(current_node) {
-            itinerary.push(segment.clone());
-            current_node = prev_node;
+    // Construct paths for all reached nodes
+    for (&target_node, &target_cost) in &distances {
+        // Only create path if we can reach the target (or it's the start)
+        if predecessors.contains_key(&target_node) || target_node == start {
+            // Estimate path length for capacity pre-allocation
+            let mut path_len = 1;
+            let mut current = target_node;
+            while current != start {
+                if let Some(&prev) = predecessors.get(&current) {
+                    path_len += 1;
+                    current = prev;
+                } else {
+                    break;
+                }
+            }
+
+            // Pre-allocate vectors with exact capacity needed
+            let mut node_path = Vec::with_capacity(path_len);
+
+            // Follow predecessors backward from target to start
+            current = target_node;
+            while current != start {
+                node_path.push(current);
+                if let Some(&prev) = predecessors.get(&current) {
+                    current = prev;
+                } else {
+                    break;
+                }
+            }
+            node_path.push(start);
+            node_path.reverse(); // Now path is from start to target
+
+            // Create path coords directly - we know exact capacity
+            let mut path_coords = Vec::with_capacity(node_path.len());
+
+            // Collect all nodes with their positions in one pass
+            for &node_idx in &node_path {
+                if let Some(node_weight) = graph.graph.node_weight(node_idx) {
+                    path_coords.push(node_weight.geometry.into());
+                }
+            }
+
+            // We already know total cost from distances map
+            let walking_path = WalkingPath {
+                nodes: path_coords,
+                total_duration: f64::from(target_cost),
+            };
+
+            paths.insert(target_node, walking_path);
         }
-
-        itinerary.segments.reverse();
-        paths.insert(*target, itinerary);
     }
 
     paths
 }
 
 #[derive(Debug, Clone)]
-pub struct Segment<'a> {
-    pub(crate) weight: f64,
-    pub(crate) geometry: &'a LineString,
+pub struct WalkingPath {
+    nodes: Vec<Coord<f64>>,
+    total_duration: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct WalkingPath<'a> {
-    pub segments: Vec<Segment<'a>>,
-}
-
-impl<'a> WalkingPath<'a> {
-    pub(crate) fn new() -> WalkingPath<'a> {
-        WalkingPath {
-            segments: Vec::new(),
-        }
-    }
-
-    pub(crate) fn push(&mut self, segment: Segment<'a>) {
-        self.segments.push(segment);
-    }
-
+impl WalkingPath {
     pub fn duration(&self) -> f64 {
-        self.segments.iter().map(|s| s.weight).sum()
+        self.total_duration
     }
 
     pub(crate) fn geometry(&self) -> LineString<f64> {
-        // Create an empty vector to store coordinates from each segment's geometry.
-        let mut coords: Vec<Coord<f64>> = Vec::new();
-
-        for segment in &self.segments {
-            let ls = segment.geometry;
-
-            // Extract coordinates from the segment's geometry.
-            // In geo, a LineString is often a wrapper around Vec<Coordinate<T>>.
-            // Here we clone the underlying coordinates for our use.
-            let seg_coords = ls.0.clone();
-
-            // If this is the first segment with geometry, simply use all of its points.
-            if coords.is_empty() {
-                coords = seg_coords;
-            } else {
-                // For subsequent segments, check if the first coordinate of the current
-                // segment is the same as the last coordinate of the built-up path.
-                // If so, skip the duplicate coordinate to ensure a smooth continuous LineString.
-                if let Some(first_seg_coord) = seg_coords.first() {
-                    if first_seg_coord == coords.last().unwrap() {
-                        // Extend the coordinate vector, skipping the duplicate.
-                        coords.extend_from_slice(&seg_coords[1..]);
-                    } else {
-                        // No shared coordinate; simply add all coordinates.
-                        coords.extend(seg_coords);
-                    }
-                }
-            }
-        }
-
-        // Construct and return the combined LineString from our coordinate vector.
-        LineString(coords)
+        // Create LineString directly without unnecessary cloning
+        LineString(self.nodes.clone())
     }
 }

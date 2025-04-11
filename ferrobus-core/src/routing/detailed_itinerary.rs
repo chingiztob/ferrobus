@@ -303,13 +303,25 @@ impl DetailedJourney {
 
         let transfers_start = &transit_data.stops[from_stop].transfers_start;
         let transfers_end = transit_data.stops[from_stop].transfers_len + transfers_start;
-        let geometry = &transit_data.transfers[*transfers_start..transfers_end]
+        let transfer_opt = &transit_data.transfers[*transfers_start..transfers_end]
             .iter()
-            .find(|t| t.target_stop == to_stop)
-            .unwrap()
-            .geometry;
+            .find(|t| t.target_stop == to_stop);
 
-        let geometry = Geometry::new(geometry.as_ref().into());
+        let geometry = match transfer_opt {
+            Some(transfer) if transfer.geometry.0.len() > 1 => {
+                Geometry::new(transfer.geometry.as_ref().into())
+            }
+            _ => {
+                // Fallback to a direct line if no valid geometry is found
+                let from_loc = transit_data.transit_stop_location(from_stop);
+                let to_loc = transit_data.transit_stop_location(to_stop);
+                let direct_line = line_string![
+                    (x: from_loc.x(), y: from_loc.y()),
+                    (x: to_loc.x(), y: to_loc.y())
+                ];
+                Geometry::new((&direct_line).into())
+            }
+        };
 
         let value = json!({
             "type": "Feature",
