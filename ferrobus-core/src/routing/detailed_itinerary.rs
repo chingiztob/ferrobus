@@ -11,6 +11,8 @@ use crate::{
     },
 };
 
+use super::dijkstra::dijkstra_paths;
+
 /// Represents a walking leg outside the transit network.
 #[derive(Debug, Clone)]
 pub struct WalkingLeg {
@@ -165,7 +167,8 @@ impl DetailedJourney {
     }
 
     /// Converts the complete journey to a `GeoJSON` `FeatureCollection`.
-    pub fn to_geojson(&self, transit_data: &PublicTransitData) -> FeatureCollection {
+    pub fn to_geojson(&self, transit_model: &TransitModel) -> FeatureCollection {
+        let transit_data = &transit_model.transit_data;
         let mut features = Vec::new();
 
         if let Some(access) = &self.access_leg {
@@ -198,7 +201,7 @@ impl DetailedJourney {
                         arrival_time,
                         duration,
                     } => Self::transfer_leg_feature(
-                        transit_data,
+                        transit_model,
                         *from_stop,
                         *to_stop,
                         *departure_time,
@@ -222,11 +225,6 @@ impl DetailedJourney {
             bbox: None,
             foreign_members: None,
         }
-    }
-
-    /// Converts the journey to a `GeoJSON` string.
-    pub fn to_geojson_string(&self, transit_data: &PublicTransitData) -> String {
-        serde_json::to_string(&self.to_geojson(transit_data)).unwrap_or_default()
     }
 
     /// Converts a transit leg to a `GeoJSON` Feature.
@@ -286,9 +284,14 @@ impl DetailedJourney {
         Feature::from_json_value(value).unwrap()
     }
 
+    /// Converts the journey to a `GeoJSON` string.
+    pub fn to_geojson_string(&self, transit_model: &TransitModel) -> String {
+        serde_json::to_string(&self.to_geojson(transit_model)).unwrap_or_default()
+    }
+
     /// Converts a transfer leg to a `GeoJSON` Feature.
     fn transfer_leg_feature(
-        transit_data: &PublicTransitData,
+        transit_model: &TransitModel,
         from_stop: RaptorStopId,
         to_stop: RaptorStopId,
         departure_time: Time,
@@ -296,20 +299,52 @@ impl DetailedJourney {
         duration: Time,
         leg_idx: usize,
     ) -> Feature {
+        let transit_data = &transit_model.transit_data;
         let from_name = transit_data
             .transit_stop_name(from_stop)
             .unwrap_or_default();
         let to_name = transit_data.transit_stop_name(to_stop).unwrap_or_default();
+        let source_stop = &transit_data.stops[from_stop];
 
-        let transfers_start = &transit_data.stops[from_stop].transfers_start;
-        let transfers_end = transit_data.stops[from_stop].transfers_len + transfers_start;
-        let transfer_opt = &transit_data.transfers[*transfers_start..transfers_end]
-            .iter()
-            .find(|t| t.target_stop == to_stop);
+        let rtree = transit_model.rtree_ref();
+        let source_street_node = rtree
+            .nearest_neighbor(&source_stop.geometry)
+            .ok_or(Error::NoPointsFound)
+            .unwrap()
+            .data;
 
-        let geometry = match transfer_opt {
-            Some(transfer) if transfer.geometry.0.len() > 1 => {
-                Geometry::new(transfer.geometry.as_ref().into())
+        let target_street_node = rtree
+            .nearest_neighbor(&transit_data.stops[to_stop].geometry)
+            .ok_or(Error::NoPointsFound)
+            .unwrap()
+            .data;
+
+        let mut binding = dijkstra_paths(
+            &transit_model.street_graph,
+            source_street_node,
+            Some(target_street_node),
+            Some(1800.0),
+        );
+        let transfer_geometry = binding.remove(&target_street_node);
+        let source_stop_geom = transit_data.transit_stop_location(from_stop);
+        let target_stop_geom = transit_data.transit_stop_location(to_stop);
+
+        let geometry = match transfer_geometry {
+            Some(transfer) if transfer.nodes().len() > 1 => {
+                let mut nodes = transfer.into_nodes();
+                // Using `unwrap` and [] because if this fails, this whole
+                // operation doesn't make sense
+                nodes[0].x = source_stop_geom.x();
+                nodes[0].y = source_stop_geom.y();
+                nodes.last_mut().unwrap().x = target_stop_geom.x();
+                nodes.last_mut().unwrap().y = target_stop_geom.y();
+
+                assert!(nodes[0].x.is_finite());
+                assert!(nodes.last().unwrap().x.is_finite());
+
+                let linestring = LineString::new(nodes);
+
+                Geometry::new((&linestring).into())
             }
             _ => {
                 // Fallback to a direct line if no valid geometry is found

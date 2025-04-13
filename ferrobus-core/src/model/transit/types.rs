@@ -1,6 +1,6 @@
 //! Basic types for public transit data model
 
-use geo::{LineString, Point};
+use geo::Point;
 
 use crate::loading::gtfs::FeedInfo;
 
@@ -63,5 +63,4 @@ pub struct FeedMeta {
 pub struct Transfer {
     pub target_stop: RaptorStopId,
     pub duration: Time,
-    pub geometry: Box<LineString>,
 }

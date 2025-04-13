@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::BinaryHeap};
 
-use geo::{Coord, LineString};
+use geo::Coord;
 use hashbrown::HashMap;
 use petgraph::{graph::NodeIndex, visit::EdgeRef};
 
@@ -102,7 +102,7 @@ pub(crate) fn dijkstra_paths(
     let mut paths = HashMap::with_capacity(distances.len());
 
     // Construct paths for all reached nodes
-    for (&target_node, &target_cost) in &distances {
+    for &target_node in distances.keys() {
         // Only create path if we can reach the target (or it's the start)
         if predecessors.contains_key(&target_node) || target_node == start {
             // Estimate path length for capacity pre-allocation
@@ -134,7 +134,12 @@ pub(crate) fn dijkstra_paths(
             node_path.reverse(); // Now path is from start to target
 
             // Create path coords directly - we know exact capacity
-            let mut path_coords = Vec::with_capacity(node_path.len());
+            let mut path_coords = Vec::with_capacity(node_path.len() + 2);
+            // Placeholder for transfer source stop, which can be set only after whole itinerary is known
+            path_coords.push(Coord {
+                x: f64::NAN,
+                y: f64::NAN,
+            });
 
             // Collect all nodes with their positions in one pass
             for &node_idx in &node_path {
@@ -142,12 +147,14 @@ pub(crate) fn dijkstra_paths(
                     path_coords.push(node_weight.geometry.into());
                 }
             }
+            // Placeholder for transfer target stop, which can be set only after whole itinerary is known
+            path_coords.push(Coord {
+                x: f64::NAN,
+                y: f64::NAN,
+            });
 
             // We already know total cost from distances map
-            let walking_path = WalkingPath {
-                nodes: path_coords,
-                total_duration: f64::from(target_cost),
-            };
+            let walking_path = WalkingPath { nodes: path_coords };
 
             paths.insert(target_node, walking_path);
         }
@@ -159,16 +166,14 @@ pub(crate) fn dijkstra_paths(
 #[derive(Debug, Clone)]
 pub struct WalkingPath {
     nodes: Vec<Coord<f64>>,
-    total_duration: f64,
 }
 
 impl WalkingPath {
-    pub fn duration(&self) -> f64 {
-        self.total_duration
+    pub(crate) fn into_nodes(self) -> Vec<Coord<f64>> {
+        self.nodes
     }
 
-    pub(crate) fn geometry(&self) -> LineString<f64> {
-        // Create LineString directly without unnecessary cloning
-        LineString(self.nodes.clone())
+    pub(crate) fn nodes(&self) -> &[Coord<f64>] {
+        &self.nodes
     }
 }

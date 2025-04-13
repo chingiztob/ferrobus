@@ -422,9 +422,7 @@ pub fn detailed_journey(
         })?;
 
         if let Some(result) = result {
-            return Ok(Some(
-                result.to_geojson_string(&transit_model.model.transit_data),
-            ));
+            return Ok(Some(result.to_geojson_string(&transit_model.model)));
         }
         Ok(None)
     })
