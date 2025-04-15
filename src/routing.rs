@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use crate::model::PyTransitModel;
-use ferrobus_core::{prelude::*, routing::detailed_itinerary::traced_multimodal_routing};
+use ferrobus_core::{prelude::*, routing::itinerary::traced_multimodal_routing};
 
 /// A geographic location connected to the transit network with pre-calculated access paths
 /// to nearby transit stops and the street network.

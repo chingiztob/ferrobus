@@ -43,9 +43,15 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
     // Wait for the thread to finish
     let _ = graph_handle.join();
 
-    let mut graph = TransitModel::with_transit(street_graph, transit_data);
+    let mut graph = TransitModel::with_transit(
+        street_graph,
+        transit_data,
+        crate::model::transit_model::TransitModelMeta {
+            max_transfer_time: config.max_transfer_time,
+        },
+    );
 
-    calculate_transfers(&mut graph, config.max_transfer_time)?;
+    calculate_transfers(&mut graph)?;
     info!(
         "Calculated {} transfers between stops",
         &graph.transit_data.transfers.len()

@@ -13,6 +13,12 @@ use rstar::RTree;
 pub struct TransitModel {
     pub transit_data: PublicTransitData,
     pub street_graph: StreetGraph,
+    pub meta: TransitModelMeta,
+}
+
+#[derive(Debug)]
+pub struct TransitModelMeta {
+    pub max_transfer_time: Time,
 }
 
 impl TransitModel {
@@ -20,10 +26,12 @@ impl TransitModel {
     pub(crate) fn with_transit(
         street_network: StreetGraph,
         transit_data: PublicTransitData,
+        meta: TransitModelMeta,
     ) -> Self {
         Self {
             transit_data,
             street_graph: street_network,
+            meta,
         }
     }
 
@@ -231,6 +239,9 @@ mod tests {
         TransitModel {
             transit_data,
             street_graph: street_network,
+            meta: TransitModelMeta {
+                max_transfer_time: 1800, // 30 minutes
+            },
         }
     }
 

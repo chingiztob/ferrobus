@@ -10,12 +10,14 @@ use crate::{
 /// Calculate transfers between stops using the street network
 #[allow(clippy::missing_panics_doc)]
 #[allow(clippy::needless_range_loop)]
-pub fn calculate_transfers(graph: &mut TransitModel, max_transfer_time: Time) -> Result<(), Error> {
+pub fn calculate_transfers(graph: &mut TransitModel) -> Result<(), Error> {
     // Structure for each stop's result
     type StopResult = (RaptorStopId, Vec<Transfer>);
+
+    let max_transfer_time = graph.meta.max_transfer_time;
+
     // Get the stop count first before mutably borrowing transit_data
     let stop_count = graph.transit_data.stops.len();
-
     info!("Calculating transfers between {stop_count} stops");
 
     // First, snap all transit stops to the street network
@@ -87,8 +89,9 @@ pub fn calculate_transfers(graph: &mut TransitModel, max_transfer_time: Time) ->
         .collect();
 
     // Merge the results
-    let mut transfers = Vec::new();
-    let mut transfer_indices = HashMap::<RaptorStopId, (usize, usize)>::new();
+    let mut transfers = Vec::with_capacity(all_results.iter().map(|(_, t)| t.len()).sum());
+    let mut transfer_indices =
+        HashMap::<RaptorStopId, (usize, usize)>::with_capacity(all_results.len());
 
     for (source_idx, local_transfers) in all_results {
         let count = local_transfers.len();
