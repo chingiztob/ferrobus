@@ -58,3 +58,9 @@ pub struct Stop {
 pub struct FeedMeta {
     pub feed_info: FeedInfo,
 }
+
+#[derive(Debug, Clone)]
+pub struct Transfer {
+    pub target_stop: RaptorStopId,
+    pub duration: Time,
+}

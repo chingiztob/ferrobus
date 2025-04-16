@@ -14,10 +14,19 @@ where
 
 /// Parse time string in HH:MM:SS format to seconds since midnight
 pub fn parse_time(time_str: &str) -> u32 {
-    let parts: Vec<u32> = time_str
-        .split(':')
-        .map(|p| p.parse::<u32>().unwrap_or(0))
-        .collect();
+    let mut parts = time_str.split(':');
+    let hours = parts
+        .next()
+        .and_then(|p| p.parse::<u32>().ok())
+        .unwrap_or(0);
+    let minutes = parts
+        .next()
+        .and_then(|p| p.parse::<u32>().ok())
+        .unwrap_or(0);
+    let seconds = parts
+        .next()
+        .and_then(|p| p.parse::<u32>().ok())
+        .unwrap_or(0);
 
-    parts[0] * 3600 + parts[1] * 60 + parts[2]
+    hours * 3600 + minutes * 60 + seconds
 }

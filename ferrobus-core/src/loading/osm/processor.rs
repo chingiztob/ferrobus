@@ -1,4 +1,3 @@
-use geo::LineString;
 use hashbrown::HashMap;
 use log::info;
 use osm4routing::FootAccessibility;
@@ -18,7 +17,6 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
     let mut graph = UnGraph::<StreetNode, StreetEdge>::new_undirected();
     // Store OSM node IDs and their corresponding graph node indices
     let (nodes, edges) = osm4routing::Reader::new()
-        .read_tag("highway")
         .read(filename)
         .map_err(|e| Error::InvalidData(format!("Error reading OSM data: {e}")))?;
 
@@ -57,10 +55,7 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let weight = (edge.length() / WALKING_SPEED) as Time;
 
-        let edge_obj = StreetEdge {
-            weight,
-            geometry: Some(LineString::new(edge.geometry)),
-        };
+        let edge_obj = StreetEdge { weight };
 
         graph.add_edge(source_index, target_index, edge_obj);
     }

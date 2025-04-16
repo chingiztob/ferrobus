@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use crate::model::PyTransitModel;
-use ferrobus_core::{prelude::*, routing::detailed_itinerary::traced_multimodal_routing};
+use ferrobus_core::{prelude::*, routing::itinerary::traced_multimodal_routing};
 
 /// A geographic location connected to the transit network with pre-calculated access paths
 /// to nearby transit stops and the street network.
@@ -422,9 +422,7 @@ pub fn detailed_journey(
         })?;
 
         if let Some(result) = result {
-            return Ok(Some(
-                result.to_geojson_string(&transit_model.model.transit_data),
-            ));
+            return Ok(Some(result.to_geojson_string(&transit_model.model)));
         }
         Ok(None)
     })

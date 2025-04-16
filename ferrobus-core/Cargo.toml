@@ -19,7 +19,8 @@ petgraph = "0.7"
 hashbrown = "0.15"
 fixedbitset = "0.5"
 h3o = { version = "0.8", features = ["geo"] }
-osm4routing = { git = "https://github.com/rust-transit/osm4routing2.git" }
+#osm4routing = { git = "https://github.com/rust-transit/osm4routing2.git" }
+osm4routing = { git = "https://github.com/chingiztob/osm4routing2.git", branch = "switch_to_osmpbf" }
 geo.workspace = true
 geojson.workspace = true
 rayon.workspace = true

@@ -1,6 +1,6 @@
 //! Street network components - nodes, edges, and transit points
 
-use geo::{LineString, Point};
+use geo::Point;
 use osm4routing::NodeId;
 
 use crate::Time;
@@ -19,8 +19,6 @@ pub struct StreetNode {
 pub struct StreetEdge {
     /// Pedestrian crossing time in seconds
     pub weight: Time,
-    /// Optional geometry for visualization
-    pub geometry: Option<LineString<f64>>,
 }
 
 impl StreetEdge {

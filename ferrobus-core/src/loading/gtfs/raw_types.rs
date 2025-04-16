@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use super::parser::parse_time;
+
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct FeedCalendar {
@@ -47,10 +49,12 @@ pub struct FeedRoute {
 #[serde(default)]
 pub struct FeedStopTime {
     pub trip_id: String,
-    pub arrival_time: String,
-    pub departure_time: String,
+    #[serde(deserialize_with = "deserialize_gtfs_time")]
+    pub arrival_time: u32,
+    #[serde(deserialize_with = "deserialize_gtfs_time")]
+    pub departure_time: u32,
     pub stop_id: String,
-    pub stop_sequence: String,
+    pub stop_sequence: u32,
     /* pub stop_headsign: String,
     pub pickup_type: String,
     pub drop_off_type: String,
@@ -64,8 +68,8 @@ pub struct FeedStop {
     pub stop_code: String,
     pub stop_name: String,
     pub stop_desc: String,
-    pub stop_lat: String,
-    pub stop_lon: String,
+    pub stop_lat: f64,
+    pub stop_lon: f64,
     pub zone_id: String,
     pub stop_url: String,
     pub location_type: String,
@@ -109,7 +113,7 @@ pub struct FeedCalendarDates {
     pub service_id: String,
     #[serde(deserialize_with = "deserialize_gtfs_date")]
     pub date: Option<chrono::NaiveDate>,
-    pub exception_type: String,
+    pub exception_type: u8,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -138,4 +142,12 @@ where
             .map(Some)
             .map_err(serde::de::Error::custom)
     }
+}
+
+fn deserialize_gtfs_time<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let time_str = String::deserialize(deserializer)?;
+    Ok(parse_time(&time_str))
 }

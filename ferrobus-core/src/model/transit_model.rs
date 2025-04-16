@@ -13,6 +13,12 @@ use rstar::RTree;
 pub struct TransitModel {
     pub transit_data: PublicTransitData,
     pub street_graph: StreetGraph,
+    pub meta: TransitModelMeta,
+}
+
+#[derive(Debug)]
+pub struct TransitModelMeta {
+    pub max_transfer_time: Time,
 }
 
 impl TransitModel {
@@ -20,10 +26,12 @@ impl TransitModel {
     pub(crate) fn with_transit(
         street_network: StreetGraph,
         transit_data: PublicTransitData,
+        meta: TransitModelMeta,
     ) -> Self {
         Self {
             transit_data,
             street_graph: street_network,
+            meta,
         }
     }
 
@@ -178,36 +186,14 @@ mod tests {
             n2,
             StreetEdge {
                 weight: 793, // ~1110m / 1.4m/s = 793s
-                geometry: None,
             },
         );
 
-        graph.add_edge(
-            n1,
-            n3,
-            StreetEdge {
-                weight: 793,
-                geometry: None,
-            },
-        );
+        graph.add_edge(n1, n3, StreetEdge { weight: 793 });
 
-        graph.add_edge(
-            n2,
-            n4,
-            StreetEdge {
-                weight: 793,
-                geometry: None,
-            },
-        );
+        graph.add_edge(n2, n4, StreetEdge { weight: 793 });
 
-        graph.add_edge(
-            n3,
-            n4,
-            StreetEdge {
-                weight: 793,
-                geometry: None,
-            },
-        );
+        graph.add_edge(n3, n4, StreetEdge { weight: 793 });
 
         let rtree = build_rtree(&graph);
         let street_network = StreetGraph { graph, rtree };
@@ -231,6 +217,9 @@ mod tests {
         TransitModel {
             transit_data,
             street_graph: street_network,
+            meta: TransitModelMeta {
+                max_transfer_time: 1800, // 30 minutes
+            },
         }
     }
 
@@ -321,7 +310,6 @@ mod tests {
                 node,
                 StreetEdge {
                     weight: 500, // Less than our max walking time
-                    geometry: None,
                 },
             );
 

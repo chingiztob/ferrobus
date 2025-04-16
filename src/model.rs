@@ -129,7 +129,7 @@ impl PyTransitModel {
 /// The function releases the GIL during processing to allow other Python threads to continue execution.
 #[stubgen]
 #[pyfunction(name = "create_transit_model")]
-#[pyo3(signature = (osm_path, gtfs_dirs, date, max_transfer_time = 1800))]
+#[pyo3(signature = (osm_path, gtfs_dirs, date, max_transfer_time = 1200))]
 pub fn py_create_transit_model(
     py: Python<'_>,
     osm_path: &str,
