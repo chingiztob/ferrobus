@@ -149,7 +149,7 @@ mod tests {
     use crate::loading::osm::build_rtree;
     use crate::model::streets::components::{StreetEdge, StreetNode};
     use crate::model::{PublicTransitData, streets::network::StreetGraph};
-    use geo::{LineString, Point};
+    use geo::Point;
     use hashbrown::HashMap;
     use hashbrown::HashSet;
     use osm4routing::NodeId;
@@ -186,36 +186,14 @@ mod tests {
             n2,
             StreetEdge {
                 weight: 793, // ~1110m / 1.4m/s = 793s
-                geometry: LineString::new(Vec::new()),
             },
         );
 
-        graph.add_edge(
-            n1,
-            n3,
-            StreetEdge {
-                weight: 793,
-                geometry: LineString::new(Vec::new()),
-            },
-        );
+        graph.add_edge(n1, n3, StreetEdge { weight: 793 });
 
-        graph.add_edge(
-            n2,
-            n4,
-            StreetEdge {
-                weight: 793,
-                geometry: LineString::new(Vec::new()),
-            },
-        );
+        graph.add_edge(n2, n4, StreetEdge { weight: 793 });
 
-        graph.add_edge(
-            n3,
-            n4,
-            StreetEdge {
-                weight: 793,
-                geometry: LineString::new(Vec::new()),
-            },
-        );
+        graph.add_edge(n3, n4, StreetEdge { weight: 793 });
 
         let rtree = build_rtree(&graph);
         let street_network = StreetGraph { graph, rtree };
@@ -332,7 +310,6 @@ mod tests {
                 node,
                 StreetEdge {
                     weight: 500, // Less than our max walking time
-                    geometry: LineString::new(Vec::new()),
                 },
             );
 
