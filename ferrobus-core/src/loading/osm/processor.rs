@@ -17,7 +17,6 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
     let mut graph = UnGraph::<StreetNode, StreetEdge>::new_undirected();
     // Store OSM node IDs and their corresponding graph node indices
     let (nodes, edges) = osm4routing::Reader::new()
-        .read_tag("highway")
         .read(filename)
         .map_err(|e| Error::InvalidData(format!("Error reading OSM data: {e}")))?;
 

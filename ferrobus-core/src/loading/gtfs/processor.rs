@@ -4,7 +4,7 @@ use hashbrown::{HashMap, HashSet};
 use log::warn;
 
 use super::{
-    parser::{deserialize_gtfs_file, parse_time},
+    parser::deserialize_gtfs_file,
     raw_types::{
         FeedCalendarDates, FeedInfo, FeedRoute, FeedService, FeedStop, FeedStopTime, FeedTrip,
     },
@@ -38,10 +38,10 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
     );
 
     // Create maps for fast lookup during conversion
-    let stop_id_map: HashMap<String, RaptorStopId> = stops
+    let stop_id_map: HashMap<&str, RaptorStopId> = stops
         .iter()
         .enumerate()
-        .map(|(idx, stop)| (stop.stop_id.clone(), idx))
+        .map(|(idx, stop)| (stop.stop_id.as_str(), idx))
         .collect();
 
     let trip_id_map: HashMap<&str, &str> = trips
@@ -59,14 +59,7 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
     }
 
     for stop_list in trip_stop_times.values_mut() {
-        stop_list.sort_by_key(|s| {
-            s.stop_sequence.parse::<u32>().unwrap_or_else(|e| {
-                panic!(
-                    "Failed to parse stop_sequence {} with Error: {}",
-                    s.stop_sequence, e
-                );
-            })
-        });
+        stop_list.sort_by_key(|s| s.stop_sequence);
     }
     // Process trips
     let (stop_times, route_stops, routes_vec) =
@@ -75,6 +68,7 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
 
     // Key raptor transit data model vectors
     let mut stop_routes: Vec<RouteId> = Vec::new();
+    drop(stop_id_map);
     let mut stops_vec = create_stops_vector(stops);
 
     // Index of routes for each stop
@@ -144,10 +138,10 @@ fn filter_trips_by_service_day(
     // Filter calendar_dates exceptions
     for calendar_date in calendar_dates {
         if calendar_date.date == Some(date) {
-            if calendar_date.exception_type == "1" {
+            if calendar_date.exception_type == 1 {
                 // Add service if exception type is 1 (service added)
                 active_services.insert(calendar_date.service_id.as_str());
-            } else if calendar_date.exception_type == "2" {
+            } else if calendar_date.exception_type == 2 {
                 // Remove service if exception type is 2 (service removed)
                 active_services.remove(calendar_date.service_id.as_str());
             }
@@ -164,7 +158,7 @@ fn filter_trips_by_service_day(
 }
 
 fn process_trip_stop_times<'a>(
-    stop_id_map: &HashMap<String, usize>,
+    stop_id_map: &HashMap<&str, usize>,
     trip_id_map: &HashMap<&str, &str>,
     trip_stop_times: &'a HashMap<String, Vec<FeedStopTime>>,
 ) -> (Vec<StopTime>, Vec<usize>, Vec<Route>) {
@@ -196,14 +190,14 @@ fn process_trip_stop_times<'a>(
 
         for (num_stops, mut group) in groups_by_length {
             // Sort trips by departure time at the first stop.
-            group.sort_by_key(|ts| parse_time(&ts[0].departure_time));
+            group.sort_by_key(|ts| &ts[0].departure_time);
 
             // Use the first trip as representative for the stop order.
             let representative = group[0];
             let stops_start = route_stops.len();
             // Build the route's stop sequence.
             for stop_time in representative {
-                if let Some(&stop_idx) = stop_id_map.get(&stop_time.stop_id) {
+                if let Some(&stop_idx) = stop_id_map.get(stop_time.stop_id.as_str()) {
                     route_stops.push(stop_idx);
                 } else {
                     warn!(
@@ -220,8 +214,8 @@ fn process_trip_stop_times<'a>(
             for current_trip in group {
                 for stop_time in current_trip {
                     stop_times_vec.push(StopTime {
-                        arrival: parse_time(&stop_time.arrival_time),
-                        departure: parse_time(&stop_time.departure_time),
+                        arrival: stop_time.arrival_time,
+                        departure: stop_time.departure_time,
                     });
                 }
             }
@@ -242,16 +236,7 @@ fn create_stops_vector(stops: Vec<FeedStop>) -> Vec<Stop> {
     let stops_vec: Vec<Stop> = stops
         .into_iter()
         .map(|feed_stop| {
-            let geometry = Point::new(
-                feed_stop.stop_lon.parse::<f64>().unwrap_or_else(|e| {
-                    warn!("Invalid stop_lon '{}': {}", feed_stop.stop_lon, e);
-                    0.0
-                }),
-                feed_stop.stop_lat.parse::<f64>().unwrap_or_else(|e| {
-                    warn!("Invalid stop_lat '{}': {}", feed_stop.stop_lat, e);
-                    0.0
-                }),
-            );
+            let geometry = Point::new(feed_stop.stop_lon, feed_stop.stop_lat);
 
             Stop {
                 stop_id: feed_stop.stop_id,

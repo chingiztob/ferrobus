@@ -36,7 +36,10 @@ wkt = "0.12.0"
 geo = "0.30.0"
 geojson = "0.24.0"
 rayon = "1.10"
-chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
+chrono = { version = "0.4", default-features = false, features = [
+    "std",
+    "serde",
+] }
 serde_json = "1"
 
 [dependencies.pyo3-stub-gen]
@@ -48,6 +51,10 @@ stubgen = ["pyo3-stub-gen"]
 
 [profile.release]
 lto = "fat"
+
+[profile.heaptrack]
+inherits = "release"
+debug = true
 
 [profile.test]
 opt-level = 1
