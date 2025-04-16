@@ -484,10 +484,6 @@ name = "flat_map"
 version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4fa2a56a33c493fc81acbad4676c599cf2b128f21462a020043ea1eee46244f"
-dependencies = [
- "serde",
- "serde_derive",
-]
 
 [[package]]
 name = "flate2"
@@ -1024,7 +1020,7 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 [[package]]
 name = "osm4routing"
 version = "0.8.0"
-source = "git+https://github.com/rust-transit/osm4routing2.git#bc78837a4ed53b8be78aa6479c37ebe27546561d"
+source = "git+https://github.com/rust-transit/osm4routing2.git#976a88e63b0f2157f5dec7938fa907b153eaf7ac"
 dependencies = [
  "ahash",
  "clap",
@@ -1036,9 +1032,9 @@ dependencies = [
 
 [[package]]
 name = "osmpbfreader"
-version = "0.17.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38e9c16f77106ccd0f85602ff6b2237375b1f331ef950f59c35bdd6eff37cb64"
+checksum = "3dfa3be445b2878b016888e1d9491b625d905e35507bdbf918df4b41347d2e4a"
 dependencies = [
  "byteorder",
  "flat_map",
@@ -1048,7 +1044,6 @@ dependencies = [
  "protobuf-codegen",
  "pub-iterator-type",
  "self_cell",
- "serde",
  "smartstring",
 ]
 
@@ -1585,7 +1580,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fb72c633efbaa2dd666986505016c32c3044395ceaf881518399d2f4127ee29"
 dependencies = [
  "autocfg",
- "serde",
  "static_assertions",
  "version_check",
 ]
