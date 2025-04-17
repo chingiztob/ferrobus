@@ -1,11 +1,11 @@
 use log::warn;
 
-use crate::model::transit::types::Transfer;
+use crate::model::Transfer;
 use crate::routing::raptor::common::{
     RaptorError, RaptorState, find_earliest_trip, find_earliest_trip_at_stop, get_target_bound,
     validate_raptor_inputs,
 };
-use crate::routing::raptor::regular::{create_route_queue, process_foot_paths};
+use crate::routing::raptor::common::{create_route_queue, process_foot_paths};
 use crate::{PublicTransitData, RaptorStopId, Time};
 
 #[derive(Debug)]

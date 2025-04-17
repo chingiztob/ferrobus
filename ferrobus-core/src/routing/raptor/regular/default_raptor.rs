@@ -1,10 +1,7 @@
-use fixedbitset::FixedBitSet;
-use std::collections::VecDeque;
-
-use crate::model::transit::types::Transfer;
+use crate::model::Transfer;
 use crate::routing::raptor::common::{
-    RaptorError, RaptorResult, RaptorState, find_earliest_trip, find_earliest_trip_at_stop,
-    get_target_bound, validate_raptor_inputs,
+    RaptorError, RaptorResult, RaptorState, create_route_queue, find_earliest_trip,
+    find_earliest_trip_at_stop, get_target_bound, process_foot_paths, validate_raptor_inputs,
 };
 use crate::{PublicTransitData, RaptorStopId, Time};
 
@@ -140,56 +137,4 @@ pub fn raptor(
     } else {
         Ok(RaptorResult::AllTargets(state.best_arrival))
     }
-}
-
-pub(crate) fn process_foot_paths(
-    data: &PublicTransitData,
-    target: Option<usize>,
-    num_stops: usize,
-    state: &mut RaptorState,
-    round: usize,
-) -> Result<FixedBitSet, RaptorError> {
-    let current_marks: Vec<RaptorStopId> = state.marked_stops[round].ones().collect();
-    let mut new_marks = FixedBitSet::with_capacity(num_stops);
-    let target_bound = if let Some(target_stop) = target {
-        state.best_arrival[target_stop]
-    } else {
-        Time::MAX
-    };
-    for stop in current_marks {
-        let current_board = state.board_times[round][stop];
-        let transfers = data.get_stop_transfers(stop)?;
-        for &Transfer {
-            target_stop,
-            duration,
-            ..
-        } in transfers
-        {
-            let new_time = current_board.saturating_add(duration);
-            if new_time >= state.board_times[round][target_stop] || new_time >= target_bound {
-                continue;
-            }
-            // For transfers, assume arrival equals boarding.
-            if state.update(round, target_stop, new_time, new_time)? {
-                new_marks.set(target_stop, true);
-            }
-        }
-    }
-    Ok(new_marks)
-}
-
-pub(crate) fn create_route_queue(
-    data: &PublicTransitData,
-    marked_stops: &FixedBitSet,
-) -> Result<VecDeque<(usize, usize)>, RaptorError> {
-    let mut queue = VecDeque::new();
-
-    for route_id in 0..data.routes.len() {
-        let stops = data.get_route_stops(route_id)?;
-        if let Some(pos) = stops.iter().position(|&stop| marked_stops.contains(stop)) {
-            queue.push_back((route_id, pos));
-        }
-    }
-
-    Ok(queue)
 }

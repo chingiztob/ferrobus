@@ -2,9 +2,9 @@ use fixedbitset::FixedBitSet;
 use itertools::Itertools;
 
 use super::state::{Predecessor, TracedRaptorState};
-use crate::model::transit::types::Transfer;
+use crate::model::Transfer;
+use crate::routing::raptor::common::create_route_queue;
 use crate::routing::raptor::common::{RaptorError, find_earliest_trip};
-use crate::routing::raptor::regular::create_route_queue;
 use crate::{PublicTransitData, RaptorStopId, Time};
 
 /// Represents a single leg of an itinerary

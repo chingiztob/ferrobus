@@ -1,7 +1,7 @@
 use fixedbitset::FixedBitSet;
 use thiserror::Error;
 
-use crate::{PublicTransitData, RouteId, Time};
+use crate::{PublicTransitData, Time};
 
 #[derive(Debug)]
 pub struct RaptorState {
@@ -28,6 +28,16 @@ pub enum RaptorError {
     MaxTransfersExceeded,
     #[error("Invalid jorney")]
     InvalidJourney,
+}
+
+/// Result of the RAPTOR algorithm.
+#[derive(Debug)]
+pub enum RaptorResult {
+    SingleTarget {
+        arrival_time: Option<Time>,
+        transfers_used: usize,
+    },
+    AllTargets(Vec<Time>),
 }
 
 /// Common validation and setup for RAPTOR algorithms
@@ -93,70 +103,4 @@ impl RaptorState {
         }
         Ok(false) // No improvement
     }
-}
-
-// When searching for a trip, we now use the board_times value from the previous round.
-pub fn find_earliest_trip(
-    data: &PublicTransitData,
-    route_id: RouteId,
-    stop_idx: usize,
-    earliest_board: Time,
-) -> Option<usize> {
-    let route = &data.routes[route_id];
-    let trips_offset = route.trips_start;
-    let num_stops = route.num_stops;
-    let mut low = 0;
-    let mut high = route.num_trips;
-    let mut result = None;
-    while low < high {
-        let mid = (low + high) / 2;
-        let trip_start = trips_offset + mid * num_stops;
-        // Here, we consider the departure time for boarding.
-        let departure = data.stop_times[trip_start + stop_idx].departure;
-        if departure >= earliest_board {
-            result = Some(mid);
-            high = mid;
-        } else {
-            low = mid + 1;
-        }
-    }
-    result
-}
-
-/// Find the earliest trip at a given stop on a route
-/// Returns (`trip_idx`, `board_pos`) if found, None otherwise
-pub fn find_earliest_trip_at_stop(
-    data: &PublicTransitData,
-    route_id: usize,
-    stops: &[usize],
-    board_times: &[Time],
-    start_pos: usize,
-) -> std::option::Option<(usize, usize)> {
-    let mut current_trip_opt = None;
-    let mut current_board_pos = 0;
-
-    // Find the earliest trip on this route that is catchable
-    for (idx, &stop) in stops.iter().enumerate().skip(start_pos) {
-        let earliest_board = board_times[stop];
-        if earliest_board == Time::MAX {
-            continue;
-        }
-        if let Some(trip_idx) = find_earliest_trip(data, route_id, idx, earliest_board) {
-            current_trip_opt = Some((trip_idx, idx));
-            current_board_pos = idx;
-            break;
-        }
-    }
-
-    current_trip_opt.map(|(idx, _)| (idx, current_board_pos))
-}
-
-/// Result of the RAPTOR algorithm.
-#[derive(Debug)]
-pub enum RaptorResult {
-    SingleTarget {
-        arrival_time: Option<Time>,
-        transfers_used: usize,
-    },
-    AllTargets(Vec<Time>),
 }

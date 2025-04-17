@@ -59,7 +59,7 @@ mod tests {
             geometry: Point::new(2.0, 2.0),
         });
 
-        let rtree = crate::loading::osm::build_rtree(&graph);
+        let rtree = crate::loading::build_rtree(&graph);
         let network = StreetGraph { graph, rtree };
 
         let (node, _) = network.nearest_node(&Point::new(0.4, 0.4)).unwrap();

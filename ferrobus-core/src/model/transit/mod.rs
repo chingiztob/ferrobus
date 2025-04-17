@@ -1,7 +1,4 @@
-//! Модель данных общественного транспорта
+//! Oublic transit data model, according to the original Microsoft paper
 
-pub mod data;
-pub mod types;
-
-pub use data::PublicTransitData;
-pub use types::{RaptorStopId, Route, RouteId, Stop, StopTime, Time};
+pub(crate) mod data;
+pub(crate) mod types;

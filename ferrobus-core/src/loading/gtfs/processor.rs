@@ -4,7 +4,7 @@ use hashbrown::{HashMap, HashSet};
 use log::warn;
 
 use super::{
-    parser::deserialize_gtfs_file,
+    de::deserialize_gtfs_file,
     raw_types::{
         FeedCalendarDates, FeedInfo, FeedRoute, FeedService, FeedStop, FeedStopTime, FeedTrip,
     },
@@ -13,7 +13,7 @@ use crate::{
     Error,
     model::{PublicTransitData, RaptorStopId, Route, RouteId, Stop, StopTime},
 };
-use crate::{loading::config::TransitModelConfig, model::transit::types::FeedMeta};
+use crate::{loading::config::TransitModelConfig, model::FeedMeta};
 
 /// Create public transit data model from GTFS files
 ///

@@ -2,5 +2,7 @@
 
 mod processor;
 
-#[allow(unused_imports)]
-pub(crate) use processor::{build_rtree, create_street_graph};
+#[cfg(test)]
+pub(crate) use processor::build_rtree;
+
+pub(crate) use processor::create_street_graph;

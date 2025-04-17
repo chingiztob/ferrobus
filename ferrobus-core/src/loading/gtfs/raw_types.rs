@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::parser::parse_time;
+use super::de::{deserialize_gtfs_date, deserialize_gtfs_time};
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
@@ -128,26 +128,4 @@ pub struct FeedInfo {
     #[serde(deserialize_with = "deserialize_gtfs_date")]
     pub feed_end_date: Option<chrono::NaiveDate>,
     pub feed_version: String,
-}
-
-fn deserialize_gtfs_date<'de, D>(deserializer: D) -> Result<Option<chrono::NaiveDate>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let date_str = String::deserialize(deserializer)?;
-    if date_str.is_empty() {
-        Ok(None)
-    } else {
-        chrono::NaiveDate::parse_from_str(&date_str, "%Y%m%d")
-            .map(Some)
-            .map_err(serde::de::Error::custom)
-    }
-}
-
-fn deserialize_gtfs_time<'de, D>(deserializer: D) -> Result<u32, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let time_str = String::deserialize(deserializer)?;
-    Ok(parse_time(&time_str))
 }

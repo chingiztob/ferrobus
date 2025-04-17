@@ -46,7 +46,7 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
     let mut graph = TransitModel::with_transit(
         street_graph,
         transit_data,
-        crate::model::transit_model::TransitModelMeta {
+        crate::model::TransitModelMeta {
             max_transfer_time: config.max_transfer_time,
         },
     );

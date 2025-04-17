@@ -3,9 +3,9 @@ use geo::Point;
 use hashbrown::HashMap;
 use petgraph::graph::NodeIndex;
 
-use crate::model::streets::network::IndexedPoint;
+use crate::model::streets::IndexedPoint;
 use crate::{Error, RaptorStopId, Time, routing::dijkstra::dijkstra_path_weights};
-use crate::{model::streets::network::StreetGraph, model::transit::data::PublicTransitData};
+use crate::{model::streets::StreetGraph, model::transit::data::PublicTransitData};
 use rstar::RTree;
 
 /// Unified transport network model containing data about public transit and street network
@@ -146,9 +146,9 @@ impl TransitPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::loading::osm::build_rtree;
-    use crate::model::streets::components::{StreetEdge, StreetNode};
-    use crate::model::{PublicTransitData, streets::network::StreetGraph};
+    use crate::loading::build_rtree;
+    use crate::model::streets::{StreetEdge, StreetNode};
+    use crate::model::{PublicTransitData, streets::StreetGraph};
     use geo::Point;
     use hashbrown::HashMap;
     use hashbrown::HashSet;

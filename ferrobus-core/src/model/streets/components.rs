@@ -1,7 +1,7 @@
 //! Street network components - nodes, edges, and transit points
 
 use geo::Point;
-use osm4routing::NodeId;
+pub use osm4routing::NodeId;
 
 use crate::Time;
 

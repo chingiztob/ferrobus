@@ -7,7 +7,7 @@ use std::path::Path;
 
 use crate::{
     Error, Time, WALKING_SPEED,
-    model::streets::{IndexedPoint, StreetEdge, StreetGraph, StreetNode},
+    model::{IndexedPoint, StreetEdge, StreetGraph, StreetNode},
 };
 
 /// Crate the street network graph based on an OSM .pbf file

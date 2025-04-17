@@ -2,7 +2,7 @@
 
 use geo::Point;
 
-use crate::loading::gtfs::FeedInfo;
+use crate::loading::FeedInfo;
 
 /// Type for stop indices
 pub type RaptorStopId = usize;

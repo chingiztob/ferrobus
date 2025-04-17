@@ -1,30 +1,11 @@
-use std::{cmp::Ordering, collections::BinaryHeap};
+use std::collections::BinaryHeap;
 
 use geo::Coord;
 use hashbrown::HashMap;
 use petgraph::{graph::NodeIndex, visit::EdgeRef};
 
+use super::state::State;
 use crate::model::StreetGraph;
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-struct State {
-    cost: u32,
-    node: NodeIndex,
-}
-
-// Implement Ord for State to use in BinaryHeap
-impl Ord for State {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // Min-heap by cost (reversed from standard Rust BinaryHeap)
-        other.cost.cmp(&self.cost)
-    }
-}
-
-impl PartialOrd for State {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
 
 /// Dijkstra's algorithm for finding shortest paths in the walking network
 /// Returns a map of node indices to walking paths
@@ -99,6 +80,15 @@ pub(crate) fn dijkstra_paths(
         }
     }
 
+    reconstruct_dijkstra_paths(graph, start, &distances, &predecessors)
+}
+
+fn reconstruct_dijkstra_paths(
+    graph: &StreetGraph,
+    start: NodeIndex,
+    distances: &HashMap<NodeIndex, u32>,
+    predecessors: &HashMap<NodeIndex, NodeIndex>,
+) -> HashMap<NodeIndex, WalkingPath> {
     let mut paths = HashMap::with_capacity(distances.len());
 
     // Construct paths for all reached nodes
@@ -159,7 +149,6 @@ pub(crate) fn dijkstra_paths(
             paths.insert(target_node, walking_path);
         }
     }
-
     paths
 }
 

@@ -3,14 +3,12 @@ use hashbrown::HashMap;
 use log::info;
 use rayon::prelude::*;
 
-use crate::{
-    Error, RaptorStopId, Time, TransitModel, model::transit::types::Transfer, routing::dijkstra,
-};
+use crate::{Error, RaptorStopId, Time, TransitModel, model::Transfer, routing::dijkstra};
 
 /// Calculate transfers between stops using the street network
 #[allow(clippy::missing_panics_doc)]
 #[allow(clippy::needless_range_loop)]
-pub fn calculate_transfers(graph: &mut TransitModel) -> Result<(), Error> {
+pub(crate) fn calculate_transfers(graph: &mut TransitModel) -> Result<(), Error> {
     // Structure for each stop's result
     type StopResult = (RaptorStopId, Vec<Transfer>);
 
