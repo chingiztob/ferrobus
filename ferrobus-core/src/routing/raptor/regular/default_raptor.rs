@@ -129,9 +129,16 @@ pub fn raptor(
     // Report final result.
     if let Some(target_stop) = target {
         let best_time = Some(state.best_arrival[target_stop]).filter(|&t| t != Time::MAX);
+        // Find the actual round where the best arrival was achieved
+        let transfers_used = (0..=max_transfers)
+            .find(|&round| {
+                state.arrival_times[round][target_stop] == state.best_arrival[target_stop]
+            })
+            .unwrap_or(max_transfers);
+
         Ok(RaptorResult::SingleTarget {
             arrival_time: best_time,
-            transfers_used: max_transfers,
+            transfers_used,
         })
     } else {
         Ok(RaptorResult::AllTargets(state.best_arrival))
