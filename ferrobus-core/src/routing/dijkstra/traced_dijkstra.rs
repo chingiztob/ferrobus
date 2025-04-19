@@ -15,7 +15,6 @@ pub(crate) fn dijkstra_paths(
     target: Option<NodeIndex>,
     max_cost: Option<f64>,
 ) -> HashMap<NodeIndex, WalkingPath> {
-    // Estimate capacity based on graph size (adjust as needed)
     let estimated_nodes = graph.graph.node_count().min(1000);
     let mut distances: HashMap<NodeIndex, u32> = HashMap::with_capacity(estimated_nodes);
     let mut predecessors: HashMap<NodeIndex, NodeIndex> = HashMap::with_capacity(estimated_nodes);
@@ -29,7 +28,6 @@ pub(crate) fn dijkstra_paths(
     distances.insert(start, 0);
 
     while let Some(State { cost, node }) = heap.pop() {
-        // Check if we've reached the target
         if let Some(target_node) = target {
             if node == target_node {
                 break;
@@ -43,20 +41,17 @@ pub(crate) fn dijkstra_paths(
             }
         }
 
-        // Check max cost constraint
         if let Some(max) = max_cost {
             if f64::from(cost) > max {
                 break;
             }
         }
 
-        // Examine neighbors
         for edge in graph.edges(node) {
             let next = edge.target();
             let walking_time = edge.weight().weight;
             let next_cost = cost + walking_time;
 
-            // Add or update distance if better using Entry API
             match distances.entry(next) {
                 hashbrown::hash_map::Entry::Vacant(entry) => {
                     entry.insert(next_cost);
@@ -95,23 +90,9 @@ fn reconstruct_dijkstra_paths(
     for &target_node in distances.keys() {
         // Only create path if we can reach the target (or it's the start)
         if predecessors.contains_key(&target_node) || target_node == start {
-            // Estimate path length for capacity pre-allocation
-            let mut path_len = 1;
+            let mut node_path = Vec::new();
+
             let mut current = target_node;
-            while current != start {
-                if let Some(&prev) = predecessors.get(&current) {
-                    path_len += 1;
-                    current = prev;
-                } else {
-                    break;
-                }
-            }
-
-            // Pre-allocate vectors with exact capacity needed
-            let mut node_path = Vec::with_capacity(path_len);
-
-            // Follow predecessors backward from target to start
-            current = target_node;
             while current != start {
                 node_path.push(current);
                 if let Some(&prev) = predecessors.get(&current) {
@@ -121,9 +102,8 @@ fn reconstruct_dijkstra_paths(
                 }
             }
             node_path.push(start);
-            node_path.reverse(); // Now path is from start to target
+            node_path.reverse();
 
-            // Create path coords directly - we know exact capacity
             let mut path_coords = Vec::with_capacity(node_path.len() + 2);
             // Placeholder for transfer source stop, which can be set only after whole itinerary is known
             path_coords.push(Coord {
@@ -131,7 +111,6 @@ fn reconstruct_dijkstra_paths(
                 y: f64::NAN,
             });
 
-            // Collect all nodes with their positions in one pass
             for &node_idx in &node_path {
                 if let Some(node_weight) = graph.graph.node_weight(node_idx) {
                     path_coords.push(node_weight.geometry.into());

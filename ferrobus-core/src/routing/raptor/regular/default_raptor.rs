@@ -54,14 +54,13 @@ pub fn raptor(
             let stops = data.get_route_stops(route_id)?;
 
             // Use shared function to find earliest trip
-            if let Some((trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
+            if let Some((mut trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
                 data,
                 route_id,
                 stops,
                 &state.board_times[prev_round],
                 start_pos,
             ) {
-                let mut trip_idx = trip_idx;
                 let mut trip = data.get_trip(route_id, trip_idx)?;
 
                 for (trip_stop_idx, &stop) in stops.iter().enumerate().skip(current_board_pos) {

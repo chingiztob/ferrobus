@@ -20,7 +20,7 @@
 
 use ferrobus_core::prelude::*;
 use ferrobus_macros::stubgen;
-use geo::{Coord, Geometry, LineString, Polygon};
+use geo::{Coord, LineString, Polygon};
 use pyo3::prelude::*;
 use wkt::{ToWkt, TryFromWkt};
 
@@ -105,7 +105,7 @@ impl PyIsochroneIndex {
 
     /// Get the resolution of the isochrone index
     ///
-    /// Returns the resolution of the hexagonal grid used in the isochrone index.
+    /// Returns the resolution of the `H3` hexagonal grid used in the isochrone index.
     /// Higher resolutions correspond to smaller hexagonal cells.
     ///
     /// Returns
@@ -217,7 +217,7 @@ pub fn calculate_isochrone(
     index: &PyIsochroneIndex,
 ) -> PyResult<String> {
     py.allow_threads(|| {
-        let isochrone = ferrobus_core::algo::isochrone::calculate_isochrone(
+        let isochrone = ferrobus_core::algo::calculate_isochrone(
             &transit_data.model,
             &start.inner,
             departure_time,
@@ -280,7 +280,7 @@ pub fn calculate_bulk_isochrones(
 ) -> PyResult<Vec<String>> {
     py.allow_threads(|| {
         let inners = starts.iter().map(|p| &p.inner).collect::<Vec<_>>();
-        let isochrones = ferrobus_core::algo::isochrone::bulk_isochrones(
+        let isochrones = ferrobus_core::algo::bulk_isochrones(
             &transit_data.model,
             inners.as_slice(),
             departure_time,
@@ -352,7 +352,7 @@ pub fn calculate_percent_access_isochrone(
     index: &PyIsochroneIndex,
 ) -> PyResult<String> {
     py.allow_threads(|| {
-        let percent_access = ferrobus_core::algo::isochrone::calculate_percent_access_isochrone(
+        let percent_access = ferrobus_core::algo::calculate_percent_access_isochrone(
             &transit_data.model,
             &start.inner,
             departure_range,
@@ -381,7 +381,7 @@ pub fn calculate_percent_access_isochrone(
                 })
                 .collect();
 
-            let polygon: Geometry = Polygon::new(boundary, vec![]).into();
+            let polygon = Polygon::new(boundary, vec![]);
             properties.insert("percent_access".to_owned(), (*percentage).into());
 
             features.push(Feature {

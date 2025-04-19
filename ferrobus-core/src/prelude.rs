@@ -1,7 +1,7 @@
 pub use crate::MAX_CANDIDATE_STOPS;
 
 // Re-export key components
-pub use crate::algo::isochrone::{IsochroneIndex, calculate_isochrone};
+pub use crate::algo::{IsochroneIndex, calculate_isochrone};
 pub use crate::loading::{TransitModelConfig, create_transit_model};
 pub use crate::model::{PublicTransitData, TransitModel, TransitPoint};
 pub use crate::routing::multimodal_routing::{

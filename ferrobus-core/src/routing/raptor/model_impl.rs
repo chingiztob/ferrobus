@@ -1,3 +1,5 @@
+//! Methods for `PublicTransitData`, requiered for Raptor
+
 use crate::PublicTransitData;
 
 use super::RaptorError;
