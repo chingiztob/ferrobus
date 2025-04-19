@@ -71,7 +71,6 @@ impl PyTransitPoint {
     }
 
     /// Get the coordinates of this transit point
-    #[getter]
     fn coordinates(&self) -> (f64, f64) {
         (self.inner.geometry.y(), self.inner.geometry.x()) // Return as (lat, lon)
     }

@@ -7,7 +7,12 @@ pub fn deserialize_gtfs_file<T>(path: &Path) -> Result<Vec<T>, std::io::Error>
 where
     T: for<'de> serde::Deserialize<'de>,
 {
-    let file = File::open(path)?;
+    let file = File::open(path).map_err(|e| {
+        std::io::Error::new(
+            e.kind(),
+            format!("Failed to open file '{}': {}", path.display(), e),
+        )
+    })?;
     Ok(csv::Reader::from_reader(file)
         .deserialize()
         .filter_map(Result::ok)

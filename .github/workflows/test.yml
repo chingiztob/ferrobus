@@ -60,3 +60,29 @@ jobs:
 
       - name: Clippy Check
         run: cargo clippy --workspace --all-targets --all-features -- -Dwarnings
+
+  pytest:
+    name: Pytest
+    needs: cargo-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Maturin
+        run: pip install maturin
+
+      - name: Install in editable mode
+        run: maturin develop
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run tests
+        run: pytest

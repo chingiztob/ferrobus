@@ -28,9 +28,11 @@ dev-dependencies = [
     "sphinx-book-theme",
 ]
 
+[project.optional-dependencies]
+tests = ["pytest>=8.0.1"]
 
 [tool.ruff]
-select = [
+lint.select = [
     "E", # pycodestyle errors
     "W", # pycodestyle warnings
     "F", # pyflakes
@@ -39,5 +41,12 @@ select = [
     "B", # flake8-bugbear
     "Q", # flake8-quotes
 ]
-ignore = ["W293"] # Ignore blank line contains whitespace
+lint.ignore = ["W293"] # Ignore blank line contains whitespace
 exclude = ["venv"]
+
+[tool.pytest.ini_options]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+    "tests/python/*.py",
+]

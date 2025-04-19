@@ -274,8 +274,11 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSmodel, Error> {
         trips.extend(deserialize_gtfs_file(&dir.join("trips.txt"))?);
         stop_times.extend(deserialize_gtfs_file(&dir.join("stop_times.txt"))?);
         services.extend(deserialize_gtfs_file(&dir.join("calendar.txt"))?);
-        feed_info_vec.extend(deserialize_gtfs_file(&dir.join("feed_info.txt"))?);
-        calendar_dates.extend(deserialize_gtfs_file(&dir.join("calendar_dates.txt"))?);
+
+        // This file is optional, so we can safely ignore errors
+        feed_info_vec.extend(deserialize_gtfs_file(&dir.join("feed_info.txt")).unwrap_or_default());
+        calendar_dates
+            .extend(deserialize_gtfs_file(&dir.join("calendar_dates.txt")).unwrap_or_default());
     }
     stops.shrink_to_fit();
     routes.shrink_to_fit();
