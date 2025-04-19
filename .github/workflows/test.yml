@@ -75,14 +75,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Maturin
-        run: pip install maturin
-
-      - name: Install in editable mode
-        run: maturin develop
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: Run tests
-        run: pytest
+      - name: Create virtualenv and run pytest
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install maturin
+          maturin develop
+          pip install pytest
+          pytest
