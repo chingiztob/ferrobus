@@ -1,6 +1,6 @@
 # Ferrobus: Multimodal Transit Routing Library
 
-Ferrobus is a Python library providing efficient multimodal transit routing capabilities for geospatial analysis workflows. Built with a Rust core, it delivers strong performance while maintaining a straightforward Python interface.
+High-performance multimodal routing library for geospatial analysis workflows. Built with a Rust core and providing a straightforward Python interface.
 
 Unlike alternatives such as R5 or OpenTripPlanner, Ferrobus doesn't require Java and installs without external dependencies, making it easier to integrate into existing workflows and use in tightly controlled environments.
 
@@ -69,7 +69,7 @@ print(f"Route found in {end_time - start_time:.3f} seconds")
 print(f"Travel time: {route['travel_time_seconds'] / 60:.1f} minutes")
 print(f"Transit time: {route['transit_time_seconds'] / 60:.1f} minutes")
 print(f"Walking time: {route['walking_time_seconds'] / 60:.1f} minutes")
-print(f"Number of transfers: {route['num_transfers']}")
+print(f"Number of transfers: {route['transfers']}")
 ```
 
 ## Advanced Features
@@ -119,7 +119,7 @@ isochrone = ferrobus.calculate_isochrone(
 
 ## Documentation
 
-For more detailed information, see the [full documentation](https://ferrobus.readthedocs.io/):
+For more detailed information, see the [full rendered documentation](https://ferrobus.readthedocs.io/):
 
 ## License
 

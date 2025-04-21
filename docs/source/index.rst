@@ -6,7 +6,7 @@
 Ferrobus |version|
 ==================
 
-Ferrobus is a Python library providing efficient multimodal transit routing capabilities for geospatial analysis workflows. Built with a Rust core, it delivers strong performance while maintaining a straightforward Python interface.
+High-performance multimodal routing library for geospatial analysis workflows. Built with a Rust core and providing a straightforward Python interface.
 
 Unlike alternatives such as R5 or OpenTripPlanner, Ferrobus doesn't require Java and installs without external dependencies, making it easier to integrate into existing workflows and use in tightly controlled environments.
 

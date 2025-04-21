@@ -21,7 +21,6 @@ def gtfs_dirs(test_data_dir):
 
 @pytest.fixture(scope="session")
 def model(osm_path, gtfs_dirs):
-    # Adjust date and max_transfer_time as needed
     print("osm_path", osm_path)
     print("gtfs_dirs", gtfs_dirs)
     return ferrobus.create_transit_model(

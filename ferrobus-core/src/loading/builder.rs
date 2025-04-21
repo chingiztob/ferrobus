@@ -18,6 +18,12 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
         config.osm_path.display()
     );
 
+    if config.gtfs_dirs.is_empty() {
+        return Err(Error::InvalidData(
+            "No GTFS directories provided in the configuration".to_string(),
+        ));
+    }
+
     let (street_sender, street_receiver) = mpsc::channel();
 
     // Start OSM data processing in a separate thread
