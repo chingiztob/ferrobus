@@ -22,7 +22,7 @@ crate-type = ["cdylib", "rlib"]
 doctest = false
 
 [dependencies]
-pyo3 = { version = "0.24", features = ["chrono", "extension-module"] }
+pyo3 = { version = "0.24", features = ["chrono"] }
 pyo3-log = "0.12"
 ferrobus_core = { path = "ferrobus-core" }
 ferrobus_macros = { path = "ferrobus-macros" }
@@ -49,6 +49,8 @@ optional = true
 
 [features]
 stubgen = ["pyo3-stub-gen"]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]
 
 [profile.release]
 lto = "fat"

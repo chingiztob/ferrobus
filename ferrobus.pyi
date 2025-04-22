@@ -78,7 +78,7 @@ class IsochroneIndex:
         r"""
         Get the resolution of the isochrone index
 
-        Returns the resolution of the hexagonal grid used in the isochrone index.
+        Returns the resolution of the `H3` hexagonal grid used in the isochrone index.
         Higher resolutions correspond to smaller hexagonal cells.
 
         Returns
@@ -193,7 +193,7 @@ class TransitPoint:
         )
 
         # Use the point for routing
-        route = ferrobus.find_route(model, start_point, end_point, departure_time)
+        route = ferrobus.find_route(model, stёart_point, end_point, departure_time)
 
     The ``max_walking_time`` parameter controls how far the point can connect to the transit
     network, while ``max_nearest_stops`` limits the number of stops considered during routing.
@@ -395,7 +395,7 @@ def create_transit_model(
     osm_path: builtins.str,
     gtfs_dirs: typing.Sequence[builtins.str],
     date: typing.Optional[datetime.date],
-    max_transfer_time: builtins.int = 1800,
+    max_transfer_time: builtins.int = 1200,
 ) -> TransitModel:
     r"""
     Create a unified transit model from OSM and GTFS data
