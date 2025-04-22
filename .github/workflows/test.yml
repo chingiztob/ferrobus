@@ -73,21 +73,14 @@ jobs:
         with:
           version: "0.6.16"
 
-      - name: Install Python ${{ matrix.python-version }}
+      - name: Build & Test Python Extension
         run: |
-          uv python install ${{ matrix.python-version }}
+          uv python install "${{ matrix.python-version }}"
 
-      - name: Create & activate UV venv
-        run: |
-          uv venv -p ${{ matrix.python-version }} .venv
+          uv venv -p "${{ matrix.python-version }}" .venv
           source .venv/bin/activate
 
-      - name: Build and test Python extension
-        run: |
-          uv pip install --upgrade pip
-          uv pip install maturin
-          maturin develop
+          uv pip install maturin pytest
 
-          # install pytest and run tests
-          uv pip install pytest
+          maturin develop
           pytest
