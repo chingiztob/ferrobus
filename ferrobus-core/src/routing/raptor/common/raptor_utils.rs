@@ -1,9 +1,8 @@
 use fixedbitset::FixedBitSet;
 use std::collections::VecDeque;
 
-use crate::model::Transfer;
 use crate::routing::raptor::common::{RaptorError, RaptorState};
-use crate::{PublicTransitData, RaptorStopId, RouteId, Time};
+use crate::{PublicTransitData, RouteId, Time};
 
 // When searching for a trip, we now use the board_times value from the previous round.
 pub fn find_earliest_trip(
@@ -21,7 +20,7 @@ pub fn find_earliest_trip(
     while low < high {
         let mid = (low + high) / 2;
         let trip_start = trips_offset + mid * num_stops;
-        // Here, we consider the departure time for boarding.
+
         let departure = data.stop_times[trip_start + stop_idx].departure;
         if departure >= earliest_board {
             result = Some(mid);
@@ -68,32 +67,38 @@ pub(crate) fn process_foot_paths(
     state: &mut RaptorState,
     round: usize,
 ) -> Result<FixedBitSet, RaptorError> {
-    let current_marks: Vec<RaptorStopId> = state.marked_stops[round].ones().collect();
+    // 1) reserve up front
+    let mut current_marks = Vec::with_capacity(state.marked_stops[round].count_ones(..));
+    for stop in state.marked_stops[round].ones() {
+        current_marks.push(stop);
+    }
+
     let mut new_marks = FixedBitSet::with_capacity(num_stops);
-    let target_bound = if let Some(target_stop) = target {
-        state.best_arrival[target_stop]
+
+    let target_bound = if let Some(ts) = target {
+        state.best_arrival[ts]
     } else {
         Time::MAX
     };
+
     for stop in current_marks {
         let current_board = state.board_times[round][stop];
         let transfers = data.get_stop_transfers(stop)?;
-        for &Transfer {
-            target_stop,
-            duration,
-            ..
-        } in transfers
-        {
-            let new_time = current_board.saturating_add(duration);
-            if new_time >= state.board_times[round][target_stop] || new_time >= target_bound {
+        for tr in transfers {
+            let target_stop = tr.target_stop;
+            let new_time = current_board.saturating_add(tr.duration);
+
+            let prev = state.board_times[round][target_stop];
+            if new_time >= prev || new_time >= target_bound {
                 continue;
             }
-            // For transfers, assume arrival equals boarding.
+
             if state.update(round, target_stop, new_time, new_time)? {
                 new_marks.set(target_stop, true);
             }
         }
     }
+
     Ok(new_marks)
 }
 

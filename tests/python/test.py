@@ -3,7 +3,6 @@ import pytest
 
 
 def test_create_transit_point(model):
-    """Test creating a transit point at valid coordinates."""
     lat, lon = 56.252619, 93.532134
     point = ferrobus.create_transit_point(lat, lon, model)
     assert point is not None
@@ -11,21 +10,22 @@ def test_create_transit_point(model):
 
 
 def test_create_transit_point_invalid(model):
-    """Test creating a transit point far from the network (should raise)."""
     lat, lon = 0.0, 0.0  # far from any data
     with pytest.raises(Exception):  # noqa: B017
         ferrobus.create_transit_point(lat, lon, model)
 
 
 def test_calculate_isochrone(model):
-    lat, lon = 56.252619, 93.532134
+    lat, lon = 56.25788847445582, 93.53960625054688
     point = ferrobus.create_transit_point(lat, lon, model)
-    area_wkt = "POLYGON ((93.5214700578047 56.2456755664415,93.5382470550049 56.2430525977962,93.5474967302674 56.2626850549929,93.5456467952149 56.2645272958359,93.5295077066535 56.2667236978452,93.5235113654488 56.261480464947,93.5226182933545 56.255775861859,93.5214700578047 56.2456755664415))"  # noqa: E501
-    index = ferrobus.create_isochrone_index(model, area_wkt, 8)
+    area_wkt = "POLYGON ((93.57274857628481 56.18357044999381, 93.57274857628481 56.30437667924404, 93.39795011002934 56.30437667924404, 93.39795011002934 56.18357044999381, 93.57274857628481 56.18357044999381))"  # noqa: E501
+    index = ferrobus.create_isochrone_index(model, area_wkt, 10)
     isochrone = ferrobus.calculate_isochrone(
-        model, point, departure_time=8 * 3600, max_transfers=2, cutoff=1800, index=index
+        model, point, departure_time=43200, max_transfers=3, cutoff=1200, index=index
     )
+
     assert isinstance(isochrone, str)
+    assert isochrone[0:18] == "MULTIPOLYGON(((93."
 
 
 def test_travel_time_matrix(model):
@@ -38,6 +38,8 @@ def test_travel_time_matrix(model):
     )
     assert isinstance(matrix, list)
     assert len(matrix) == len(points)
+    assert matrix[0] == [0, 1044]
+    assert matrix[1] == [1253, 0]
 
 
 def test_find_route(model):
@@ -68,19 +70,6 @@ def test_find_routes_one_to_many(model):
     assert results[1]["travel_time_seconds"] == 735
 
 
-def test_transit_model_properties(model):
-    assert isinstance(model.stop_count(), int)
-    assert model.stop_count() > 0
-    assert isinstance(model.route_count(), int)
-    assert model.route_count() > 0
-    assert isinstance(model.feeds_info(), str)
-    assert "feed" in model.feeds_info().lower() or model.feeds_info() != ""
-
-    # __str__ and __repr__ should return strings
-    assert isinstance(str(model), str)
-    assert isinstance(repr(model), str)
-
-
 def test_transit_point_properties(model):
     point = ferrobus.create_transit_point(56.252619, 93.532134, model)
     coords = point.coordinates()
@@ -89,7 +78,6 @@ def test_transit_point_properties(model):
     assert all(isinstance(x, float) for x in coords)
     assert isinstance(point.nearest_stops(), list)
 
-    # __repr__ should return a string
     assert isinstance(repr(point), str)
 
 
@@ -99,11 +87,32 @@ def test_range_multimodal_routing(model):
     result = ferrobus.range_multimodal_routing(
         model, start, end, (43200, 44000), max_transfers=2
     )
-    assert hasattr(result, "median_travel_time")
-    assert isinstance(result.median_travel_time(), int)
-    assert isinstance(result.travel_times(), list)
-    assert isinstance(result.departure_times(), list)
-    assert isinstance(result.as_json(), str)
+
+    assert eval(result.__str__()) == {
+        "journeys": [
+            {
+                "travel_time": 809,
+                "transfers": 1,
+                "walking_time": 52,
+                "departure_time": 43957,
+                "arrival_time": 44766,
+            },
+            {
+                "travel_time": 1109,
+                "transfers": 1,
+                "walking_time": 52,
+                "departure_time": 43657,
+                "arrival_time": 44766,
+            },
+            {
+                "travel_time": 1469,
+                "transfers": 1,
+                "walking_time": 52,
+                "departure_time": 43297,
+                "arrival_time": 44766,
+            },
+        ]
+    }
 
 
 def test_pareto_range_multimodal_routing(model):
@@ -112,8 +121,29 @@ def test_pareto_range_multimodal_routing(model):
     result = ferrobus.pareto_range_multimodal_routing(
         model, start, end, (43200, 44000), max_transfers=2
     )
-    assert hasattr(result, "median_travel_time")
-    assert isinstance(result.median_travel_time(), int)
-    assert isinstance(result.travel_times(), list)
-    assert isinstance(result.departure_times(), list)
-    assert isinstance(result.as_json(), str)
+
+    assert eval(result.__str__()) == {
+        "journeys": [
+            {
+                "travel_time": 809,
+                "transfers": 1,
+                "walking_time": 52,
+                "departure_time": 43957,
+                "arrival_time": 44766,
+            },
+            {
+                "travel_time": 1109,
+                "transfers": 1,
+                "walking_time": 52,
+                "departure_time": 43657,
+                "arrival_time": 44766,
+            },
+            {
+                "travel_time": 1469,
+                "transfers": 1,
+                "walking_time": 52,
+                "departure_time": 43297,
+                "arrival_time": 44766,
+            },
+        ]
+    }

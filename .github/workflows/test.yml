@@ -45,14 +45,17 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -Dwarnings
 
   build-and-pytest:
-    name: Build & Pytest
+    name: Build & Test
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.11", "3.13t" ]
 
     steps:
       - name: Fetch Repository
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
+      - name: Install stable Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install cargo-nextest
@@ -65,17 +68,26 @@ jobs:
           cd ferrobus-core
           cargo nextest run
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.11'
+          version: "0.6.16"
 
-      - name: Create virtualenv and run pytest
+      - name: Install Python ${{ matrix.python-version }}
         run: |
-          python -m venv .venv
+          uv python install ${{ matrix.python-version }}
+
+      - name: Create & activate UV venv
+        run: |
+          uv venv -p ${{ matrix.python-version }} .venv
           source .venv/bin/activate
-          pip install --upgrade pip
-          pip install maturin
+
+      - name: Build and test Python extension
+        run: |
+          uv pip install --upgrade pip
+          uv pip install maturin
           maturin develop
-          pip install pytest
+
+          # install pytest and run tests
+          uv pip install pytest
           pytest

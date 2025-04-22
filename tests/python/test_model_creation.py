@@ -7,7 +7,6 @@ import pytest
 
 
 def test_model_creation_valid(osm_path, gtfs_dirs):
-    """Test creating a transit model with valid OSM and GTFS data."""
     model = ferrobus.create_transit_model(
         osm_path=osm_path,
         gtfs_dirs=gtfs_dirs,
@@ -21,7 +20,6 @@ def test_model_creation_valid(osm_path, gtfs_dirs):
 
 
 def test_model_creation_with_calendar(osm_path, gtfs_dirs):
-    """Test creating a transit model with valid OSM and GTFS data."""
     model = ferrobus.create_transit_model(
         osm_path=osm_path,
         gtfs_dirs=gtfs_dirs,
@@ -35,7 +33,6 @@ def test_model_creation_with_calendar(osm_path, gtfs_dirs):
 
 
 def test_model_creation_invalid_osm(gtfs_dirs):
-    """Test creating a transit model with an invalid OSM path."""
     with pytest.raises(Exception):
         ferrobus.create_transit_model(
             osm_path="invalid_path.pbf",
@@ -46,7 +43,6 @@ def test_model_creation_invalid_osm(gtfs_dirs):
 
 
 def test_model_creation_invalid_gtfs(osm_path):
-    """Test creating a transit model with an invalid GTFS directory."""
     with pytest.raises(Exception):
         ferrobus.create_transit_model(
             osm_path=osm_path,

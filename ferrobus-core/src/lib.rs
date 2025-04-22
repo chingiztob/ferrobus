@@ -16,7 +16,6 @@ pub const MAX_CANDIDATE_STOPS: usize = 1;
 /// Pedestrian speed in meters per second (1.4 m/s ~ 5 km/h)
 pub const WALKING_SPEED: f64 = 1.4;
 
-// Re-export key components
 pub use error::Error;
 pub use loading::{TransitModelConfig, create_transit_model};
 pub use model::{PublicTransitData, TransitModel, TransitPoint};
@@ -26,7 +25,6 @@ pub use routing::multimodal_routing::{
 
 // Core types for the street network
 pub type StreetNodeId = NodeIndex;
-pub type WalkingTime = u32; // seconds
 
 // Core types for transit routing
 pub type RaptorStopId = usize;
