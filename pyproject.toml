@@ -19,17 +19,9 @@ features = ["pyo3/extension-module"]
 [tool.uv]
 dev-dependencies = [
     "maturin",
-    "geopandas",
-    "matplotlib",
-    "folium",
-    "mapclassify",
-    "sphinx",
-    "myst-nb",
-    "sphinx-book-theme",
+    "pytest-codspeed>=2.2.1",
+    "pytest>=8.0.1"
 ]
-
-[project.optional-dependencies]
-tests = ["pytest>=8.0.1"]
 
 [tool.ruff]
 lint.select = [

@@ -80,7 +80,7 @@ jobs:
           uv venv -p "${{ matrix.python-version }}" .venv
           source .venv/bin/activate
 
-          uv pip install maturin pytest
+          uv pip install maturin pytest pytest-codspeed
 
           maturin develop
           pytest

@@ -29,3 +29,11 @@ def model(osm_path, gtfs_dirs):
         date=None,
         max_transfer_time=600,
     )
+
+
+@pytest.fixture(scope="session")
+def isochrone_index(model):
+    area_wkt = "POLYGON ((93.57274857628481 56.18357044999381, 93.57274857628481 56.30437667924404, 93.39795011002934 56.30437667924404, 93.39795011002934 56.18357044999381, 93.57274857628481 56.18357044999381))"  # noqa: E501
+    index = ferrobus.create_isochrone_index(model, area_wkt, 10)
+
+    return index
