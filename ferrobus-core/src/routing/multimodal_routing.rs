@@ -21,7 +21,7 @@ pub struct MultiModalResult {
 
 /// Internal struct to track transit route candidates
 #[derive(Debug, Clone)]
-pub(crate) struct TransitCandidate {
+pub(crate) struct CandidateJourney {
     pub(crate) total_time: Time,
     pub(crate) transit_time: Time,
     pub(crate) transfers_used: usize,
@@ -30,7 +30,7 @@ pub(crate) struct TransitCandidate {
 /// Checks if direct walking is better than the transit option
 pub(crate) fn is_walking_better(
     walking_time: Option<Time>,
-    transit_candidate: Option<&TransitCandidate>,
+    transit_candidate: Option<&CandidateJourney>,
 ) -> bool {
     match (walking_time, transit_candidate) {
         (Some(walking), Some(transit)) => walking <= transit.total_time,
@@ -50,7 +50,7 @@ pub(crate) fn create_walking_result(walking_time: Time) -> MultiModalResult {
 }
 
 /// Creates a `MultiModalResult` for a transit journey
-pub(crate) fn create_transit_result(candidate: &TransitCandidate) -> MultiModalResult {
+pub(crate) fn create_transit_result(candidate: &CandidateJourney) -> MultiModalResult {
     let walking_time = candidate.total_time - candidate.transit_time;
 
     MultiModalResult {
@@ -72,7 +72,7 @@ pub fn multimodal_routing(
     let transit_data = &transit_data.transit_data;
     let direct_walking = start.walking_time_to(end);
 
-    let mut best_candidate: Option<TransitCandidate> = None;
+    let mut best_candidate: Option<CandidateJourney> = None;
 
     for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
         for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
@@ -105,7 +105,7 @@ pub fn multimodal_routing(
                         let transit_journey_time = arrival_time - (departure_time + access_time);
                         let total_time = access_time + transit_journey_time + egress_time;
 
-                        let candidate = TransitCandidate {
+                        let candidate = CandidateJourney {
                             total_time,
                             transit_time: transit_journey_time,
                             transfers_used,
@@ -128,17 +128,15 @@ pub fn multimodal_routing(
         }
     }
 
-    // Generate the final result
-    if is_walking_better(direct_walking, best_candidate.as_ref()) {
-        // Walking is faster
-        if let Some(walking_time) = direct_walking {
-            return Ok(Some(create_walking_result(walking_time)));
+    // If some candidate transit route was found, check if it's better than walking
+    if let Some(candidate) = best_candidate {
+        if !is_walking_better(direct_walking, Some(&candidate)) {
+            return Ok(Some(create_transit_result(&candidate)));
         }
-    } else if let Some(candidate) = best_candidate {
-        // Transit route is best
-        return Ok(Some(create_transit_result(&candidate)));
-    } else if let Some(walking_time) = direct_walking {
-        // No transit option, but we can walk
+    }
+
+    // if not - return walking result
+    if let Some(walking_time) = direct_walking {
         return Ok(Some(create_walking_result(walking_time)));
     }
 
@@ -149,12 +147,14 @@ pub fn multimodal_routing(
 pub fn multimodal_routing_one_to_many(
     transit_data: &TransitModel,
     start: &TransitPoint,
-    end_points: &[TransitPoint],
+    targets: &[TransitPoint],
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<Vec<Option<MultiModalResult>>, Error> {
     let transit_data = &transit_data.transit_data;
-    let mut results = vec![None; end_points.len()];
+    // This vec holds the results for each target, in main loop positions in it
+    // will be reset with Some() if route is found
+    let mut results = vec![None; targets.len()];
 
     // Run RAPTOR to all stops for each initial access point
     let mut transit_results = HashMap::new();
@@ -171,11 +171,10 @@ pub fn multimodal_routing_one_to_many(
         }
     }
 
-    // Find the best route for each destination point
-    for (end_idx, end_point) in end_points.iter().enumerate() {
+    for (end_idx, end_point) in targets.iter().enumerate() {
         // Check direct walking route
         let direct_walking = start.walking_time_to(end_point);
-        let mut best_candidate: Option<TransitCandidate> = None;
+        let mut best_candidate: Option<CandidateJourney> = None;
 
         for (_access_stop, (access_time, transit_times)) in &transit_results {
             for &(egress_stop, egress_time) in &end_point.nearest_stops {
@@ -196,17 +195,15 @@ pub fn multimodal_routing_one_to_many(
                 let transit_time = transit_times[egress_stop];
 
                 if transit_time != Time::MAX {
-                    // Calculate journey times
                     let transit_journey_time = transit_time - (departure_time + *access_time);
                     let total_time = *access_time + transit_journey_time + egress_time;
 
-                    let candidate = TransitCandidate {
+                    let candidate = CandidateJourney {
                         total_time,
                         transit_time: transit_journey_time,
-                        transfers_used: max_transfers, // Note: We don't have actual transfer count in this version
+                        transfers_used: max_transfers, // to-do! Calculate real amount of transfers
                     };
 
-                    // Update if this is better than our current best
                     if best_candidate
                         .as_ref()
                         .is_none_or(|best| candidate.total_time < best.total_time)
@@ -217,17 +214,15 @@ pub fn multimodal_routing_one_to_many(
             }
         }
 
-        // Generate the result for this end point
-        if is_walking_better(direct_walking, best_candidate.as_ref()) {
-            // Walking is faster
-            if let Some(walking_time) = direct_walking {
-                results[end_idx] = Some(create_walking_result(walking_time));
+        if let Some(candidate) = best_candidate {
+            if !is_walking_better(direct_walking, Some(&candidate)) {
+                results[end_idx] = Some(create_transit_result(&candidate));
+                continue;
             }
-        } else if let Some(candidate) = best_candidate {
-            // Transit route is best
-            results[end_idx] = Some(create_transit_result(&candidate));
-        } else if let Some(walking_time) = direct_walking {
-            // No transit option, but we can walk
+        }
+
+        // Either walking is better or no transit option exists
+        if let Some(walking_time) = direct_walking {
             results[end_idx] = Some(create_walking_result(walking_time));
         }
     }

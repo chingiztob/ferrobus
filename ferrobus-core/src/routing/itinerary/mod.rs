@@ -9,7 +9,7 @@ use crate::{
     Error, MAX_CANDIDATE_STOPS, RaptorStopId, Time, TransitModel,
     model::TransitPoint,
     routing::{
-        multimodal_routing::TransitCandidate,
+        multimodal_routing::CandidateJourney,
         raptor::{Journey, TracedRaptorResult, traced_raptor},
     },
 };
@@ -25,7 +25,7 @@ pub fn traced_multimodal_routing(
 ) -> Result<Option<DetailedJourney>, Error> {
     let transit_data = &transit_model.transit_data;
     let direct_walking = start.walking_time_to(end);
-    let mut best_candidate: Option<(TransitCandidate, Journey, RaptorStopId, RaptorStopId)> = None;
+    let mut best_candidate: Option<(CandidateJourney, Journey, RaptorStopId, RaptorStopId)> = None;
 
     for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
         for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
@@ -48,7 +48,7 @@ pub fn traced_multimodal_routing(
             ) {
                 let transit_time = journey.arrival_time - (departure_time + access_time);
                 let total_time = access_time + transit_time + egress_time;
-                let candidate = TransitCandidate {
+                let candidate = CandidateJourney {
                     total_time,
                     transit_time,
                     transfers_used: journey.transfers_count,

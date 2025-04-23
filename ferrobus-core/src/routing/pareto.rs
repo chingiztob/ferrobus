@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::{
-    multimodal_routing::{TransitCandidate, create_transit_result, create_walking_result},
+    multimodal_routing::{CandidateJourney, create_transit_result, create_walking_result},
     raptor::RaptorRangeJourney,
 };
 
@@ -104,7 +104,7 @@ fn process_rraptor_journey(
         let total_time = destination_arrival - origin_departure;
         let transfers_used = journey.transfers_used;
 
-        let candidate = TransitCandidate {
+        let candidate = CandidateJourney {
             total_time,
             transit_time,
             transfers_used,

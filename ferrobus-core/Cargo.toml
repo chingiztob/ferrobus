@@ -24,13 +24,12 @@ osm4routing = { git = "https://github.com/chingiztob/osm4routing2.git", branch =
 geo.workspace = true
 geojson.workspace = true
 rayon.workspace = true
-libc = { version = "0.2", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
 
 [dev-dependencies]
-criterion = "0.5"
+divan = "0.1.21"
 
 [[bench]]
 name = "bench_main"
