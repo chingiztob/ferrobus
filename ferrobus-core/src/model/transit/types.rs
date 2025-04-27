@@ -45,13 +45,13 @@ pub struct Stop {
     /// Geographic coordinates of the stop
     pub geometry: Point<f64>,
     /// Index of the start of the route list in the general array
-    pub routes_start: usize,
-    /// Number of routes through the stop
-    pub routes_len: usize,
+    pub(crate) routes_start: usize,
+    ///) Number of routes through the stop
+    pub(crate) routes_len: usize,
     /// Index of the start of the transfer list in the general array
-    pub transfers_start: usize,
+    pub(crate) transfers_start: usize,
     /// Number of available transfers
-    pub transfers_len: usize,
+    pub(crate) transfers_len: usize,
 }
 
 #[derive(Debug, Clone)]

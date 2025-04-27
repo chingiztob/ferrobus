@@ -8,6 +8,8 @@ use crate::{Error, RaptorStopId, Time, routing::dijkstra::dijkstra_path_weights}
 use crate::{model::streets::StreetGraph, model::transit::data::PublicTransitData};
 use rstar::RTree;
 
+use super::Stop;
+
 /// Unified transport network model containing data about public transit and street network
 #[derive(Debug)]
 pub struct TransitModel {
@@ -56,6 +58,10 @@ impl TransitModel {
 
     pub fn feeds_info(&self) -> String {
         format!("{:#?}", self.transit_data.feeds_meta)
+    }
+
+    pub fn stops(&self) -> &[Stop] {
+        &self.transit_data.stops
     }
 }
 

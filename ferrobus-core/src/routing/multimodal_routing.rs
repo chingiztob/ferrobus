@@ -147,7 +147,9 @@ pub fn multimodal_routing(
     Ok(None)
 }
 
-/// Routing from one point to many with preliminary calculations
+/// Routing from one point to many. It exploits basic RAPTOR principles to
+/// calculate transit routes to all stops from the access point, so whole calculation
+/// can be done in one raptor run.
 pub fn multimodal_routing_one_to_many(
     transit_data: &TransitModel,
     start: &TransitPoint,
@@ -156,8 +158,6 @@ pub fn multimodal_routing_one_to_many(
     max_transfers: usize,
 ) -> Result<Vec<Option<MultiModalResult>>, Error> {
     let transit_data = &transit_data.transit_data;
-    // This vec holds the results for each target, in main loop positions in it
-    // will be reset with Some() if route is found
     let mut results = vec![None; targets.len()];
 
     // Run RAPTOR to all stops for each initial access point

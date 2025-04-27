@@ -18,7 +18,7 @@ pub const WALKING_SPEED: f64 = 1.4;
 
 pub use error::Error;
 pub use loading::{TransitModelConfig, create_transit_model};
-pub use model::{PublicTransitData, TransitModel, TransitPoint};
+pub use model::{PublicTransitData, Route, Stop, TransitModel, TransitPoint};
 pub use routing::multimodal_routing::{
     MultiModalResult, multimodal_routing, multimodal_routing_one_to_many,
 };

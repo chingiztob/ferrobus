@@ -80,7 +80,7 @@ pub fn rraptor(
         // For rounds 1..max_rounds, first carry over improvements from the previous round.
         for round in 1..max_rounds {
             let prev_round = round - 1;
-            // Carry-over step: if the previous round has a better boarding time, propagate it.
+            // if the previous round has a better boarding time, propagate it.
             for stop in 0..num_stops {
                 if state.board_times[prev_round][stop] < state.board_times[round][stop] {
                     state.arrival_times[round][stop] = state.arrival_times[prev_round][stop];
@@ -97,13 +97,11 @@ pub fn rraptor(
             let mut queue = create_route_queue(data, &state.marked_stops[prev_round])?;
             state.marked_stops[prev_round].clear();
 
-            // Use common function to get target bound
             let target_bound = get_target_bound(&state, target);
 
             while let Some((route_id, start_pos)) = queue.pop_front() {
                 let stops = data.get_route_stops(route_id)?;
 
-                // Use common function to find earliest trip
                 if let Some((trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
                     data,
                     route_id,
@@ -134,7 +132,7 @@ pub fn rraptor(
                         // For further connections, use the departure time.
                         let effective_board = if let Some(target_stop) = target {
                             if stop == target_stop {
-                                actual_arrival // For target, we report arrival.
+                                actual_arrival
                             } else {
                                 trip[trip_stop_idx].departure
                             }
