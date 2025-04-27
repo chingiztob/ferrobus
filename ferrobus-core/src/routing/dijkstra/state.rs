@@ -8,10 +8,9 @@ pub(super) struct State {
     pub(super) node: NodeIndex,
 }
 
-// Implement Ord for State to use in BinaryHeap
 impl Ord for State {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Min-heap by cost (reversed from standard Rust BinaryHeap)
+        // Min-heap by cost
         other.cost.cmp(&self.cost)
     }
 }

@@ -13,7 +13,6 @@ pub fn raptor(
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<RaptorResult, RaptorError> {
-    // Validate inputs using the common function
     validate_raptor_inputs(data, source, target, departure_time)?;
 
     let num_stops = data.stops.len();
@@ -53,7 +52,7 @@ pub fn raptor(
         while let Some((route_id, start_pos)) = queue.pop_front() {
             let stops = data.get_route_stops(route_id)?;
 
-            // Use shared function to find earliest trip
+            // find earlist possible "hop" on the route
             if let Some((mut trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
                 data,
                 route_id,
@@ -61,10 +60,14 @@ pub fn raptor(
                 &state.board_times[prev_round],
                 start_pos,
             ) {
+                // Attempt to improve downstream stops arrival times with the current trip
                 let mut trip = data.get_trip(route_id, trip_idx)?;
 
+                // Propagate the trip downstream.
                 for (trip_stop_idx, &stop) in stops.iter().enumerate().skip(current_board_pos) {
                     // Check if we can "upgrade" the trip at this stop.
+                    // This is possible, if one of the stops can be reached earlier
+                    // with a different chain of transfers.
                     let prev_board = state.board_times[prev_round][stop];
                     if prev_board < trip[trip_stop_idx].departure {
                         if let Some(new_trip_idx) =
@@ -82,7 +85,7 @@ pub fn raptor(
                     // For further connections, use the departure time.
                     let effective_board = if let Some(target_stop) = target {
                         if stop == target_stop {
-                            actual_arrival // For target, we report arrival.
+                            actual_arrival // For target, report arrival.
                         } else {
                             trip[trip_stop_idx].departure
                         }

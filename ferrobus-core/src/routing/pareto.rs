@@ -120,37 +120,22 @@ fn process_rraptor_journey(
 fn apply_pareto_filtering(journeys: RangeRoutingResult) -> RangeRoutingResult {
     let mut pareto_front: Vec<RangeJourney> = Vec::new();
 
-    for journey in journeys.journeys {
-        let mut is_dominated = false;
-        let mut dominated_indices = Vec::new();
+    let mut sorted_journeys = journeys.journeys;
+    sorted_journeys.sort_by_key(|j| j.departure_time);
 
-        // Compare with existing Pareto front
-        for (i, existing) in pareto_front.iter().enumerate() {
-            if is_pareto_dominant(existing, &journey)
-                && existing.departure_time <= journey.departure_time
-                && existing.arrival_time <= journey.arrival_time
-            {
-                is_dominated = true;
-                break;
-            } else if is_pareto_dominant(&journey, existing)
-                && journey.departure_time <= existing.departure_time
-                && journey.arrival_time <= existing.arrival_time
-            {
-                dominated_indices.push(i);
-            }
-        }
+    for journey in sorted_journeys {
+        // Check if the new journey is dominated by any existing journey in the front
+        let is_dominated = pareto_front.iter().any(|existing| {
+            is_pareto_dominant(existing, &journey) && existing.arrival_time <= journey.arrival_time
+        });
 
-        // Remove dominated solutions
-        if !dominated_indices.is_empty() {
-            dominated_indices.sort_unstable();
-            dominated_indices.reverse();
-            for idx in dominated_indices {
-                pareto_front.remove(idx);
-            }
-        }
-
-        // Add to Pareto front if not dominated
         if !is_dominated {
+            // Remove journeys from the front that are dominated by the new journey
+            pareto_front.retain(|existing| {
+                !(is_pareto_dominant(&journey, existing)
+                    && journey.arrival_time <= existing.arrival_time)
+            });
+            // Add the new non-dominated journey
             pareto_front.push(journey);
         }
     }

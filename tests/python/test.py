@@ -130,20 +130,6 @@ def test_pareto_range_multimodal_routing(model):
                 "walking_time": 52,
                 "departure_time": 43957,
                 "arrival_time": 44766,
-            },
-            {
-                "travel_time": 1109,
-                "transfers": 1,
-                "walking_time": 52,
-                "departure_time": 43657,
-                "arrival_time": 44766,
-            },
-            {
-                "travel_time": 1469,
-                "transfers": 1,
-                "walking_time": 52,
-                "departure_time": 43297,
-                "arrival_time": 44766,
-            },
+            }
         ]
     }

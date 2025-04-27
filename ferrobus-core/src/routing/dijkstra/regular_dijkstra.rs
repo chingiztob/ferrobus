@@ -46,13 +46,11 @@ pub fn dijkstra_path_weights(
             }
         }
 
-        // Examine neighbors
         for edge in graph.edges(node) {
             let next = edge.target();
             let walking_time = edge.weight().weight;
             let next_cost = cost + walking_time;
 
-            // Add or update distance if better using Entry API
             match distances.entry(next) {
                 hashbrown::hash_map::Entry::Vacant(entry) => {
                     entry.insert(next_cost);

@@ -59,8 +59,6 @@ class IsochroneIndex:
         int
             The number of cells in the index.
         """
-        ...
-
     def is_empty(self) -> builtins.bool:
         r"""
         Check if the isochrone index is empty
@@ -72,8 +70,6 @@ class IsochroneIndex:
         bool
             True if the index is empty, False otherwise.
         """
-        ...
-
     def resolution(self) -> builtins.int:
         r"""
         Get the resolution of the isochrone index
@@ -86,7 +82,6 @@ class IsochroneIndex:
         int
             The resolution of the hexagonal grid (0-15).
         """
-        ...
 
 class RangeRoutingResult:
     def median_travel_time(self) -> builtins.int: ...
@@ -125,14 +120,10 @@ class TransitModel:
         r"""
         Get total stop count of all feeds in the model
         """
-        ...
-
     def route_count(self) -> builtins.int:
         r"""
         Get total route count of all feeds in the model
         """
-        ...
-
     def feeds_info(self) -> builtins.str:
         r"""
         Get information about the GTFS feeds in the transit model
@@ -164,8 +155,6 @@ class TransitModel:
             #     }
             # ]
         """
-        ...
-
     def __repr__(self) -> builtins.str: ...
     def __str__(self) -> builtins.str: ...
 
@@ -198,32 +187,15 @@ class TransitPoint:
     The ``max_walking_time`` parameter controls how far the point can connect to the transit
     network, while ``max_nearest_stops`` limits the number of stops considered during routing.
     """
-    def new(
-        self,
-        lat: builtins.float,
-        lon: builtins.float,
-        transit_model: TransitModel,
-        max_walking_time: builtins.int,
-        max_nearest_stops: builtins.int,
-    ) -> TransitPoint: ...
+    def new(self, lat:builtins.float, lon:builtins.float, transit_model:TransitModel, max_walking_time:builtins.int, max_nearest_stops:builtins.int) -> TransitPoint: ...
     def coordinates(self) -> tuple[builtins.float, builtins.float]:
         r"""
         Get the coordinates of this transit point
         """
-        ...
-
     def __repr__(self) -> builtins.str: ...
     def nearest_stops(self) -> builtins.list[builtins.int]: ...
 
-def calculate_bulk_isochrones(
-    transit_data: TransitModel,
-    starts: typing.Sequence[TransitPoint],
-    departure_time: builtins.int,
-    max_transfers: builtins.int,
-    cutoff: builtins.int,
-    index: IsochroneIndex,
-) -> builtins.list[builtins.str]:
-    r"""
+def calculate_bulk_isochrones(transit_data:TransitModel, starts:typing.Sequence[TransitPoint], departure_time:builtins.int, max_transfers:builtins.int, cutoff:builtins.int, index:IsochroneIndex) -> builtins.list[builtins.str]:    r"""
     Calculate isochrones from multiple starting points in batch mode
 
     This is an optimized bulk version of calculate_isochrone that processes
@@ -256,17 +228,8 @@ def calculate_bulk_isochrones(
     RuntimeError
         If the batch isochrone calculation fails.
     """
-    ...
 
-def calculate_isochrone(
-    transit_data: TransitModel,
-    start: TransitPoint,
-    departure_time: builtins.int,
-    max_transfers: builtins.int,
-    cutoff: builtins.int,
-    index: IsochroneIndex,
-) -> builtins.str:
-    r"""
+def calculate_isochrone(transit_data:TransitModel, start:TransitPoint, departure_time:builtins.int, max_transfers:builtins.int, cutoff:builtins.int, index:IsochroneIndex) -> builtins.str:    r"""
     Calculate an isochrone from a single starting point
 
     Computes an accessibility isochrone (travel-time polygon) using the provided
@@ -297,18 +260,8 @@ def calculate_isochrone(
     RuntimeError
         If the isochrone calculation fails.
     """
-    ...
 
-def calculate_percent_access_isochrone(
-    transit_data: TransitModel,
-    start: TransitPoint,
-    departure_range: tuple[builtins.int, builtins.int],
-    sample_interval: builtins.int,
-    max_transfers: builtins.int,
-    cutoff: builtins.int,
-    index: IsochroneIndex,
-) -> builtins.str:
-    r"""
+def calculate_percent_access_isochrone(transit_data:TransitModel, start:TransitPoint, departure_range:tuple[builtins.int, builtins.int], sample_interval:builtins.int, max_transfers:builtins.int, cutoff:builtins.int, index:IsochroneIndex) -> builtins.str:    r"""
     Calculate percentage-based accessibility across multiple departure times
 
     Computes how frequently each cell in the area is accessible across a range
@@ -348,15 +301,8 @@ def calculate_percent_access_isochrone(
     This function is useful for analyzing transit reliability and service
     frequency across different times of day.
     """
-    ...
 
-def create_isochrone_index(
-    transit_data: TransitModel,
-    area: builtins.str,
-    cell_resolution: builtins.int,
-    max_walking_time: builtins.int = 1200,
-) -> IsochroneIndex:
-    r"""
+def create_isochrone_index(transit_data:TransitModel, area:builtins.str, cell_resolution:builtins.int, max_walking_time:builtins.int=1200) -> IsochroneIndex:    r"""
     Create a spatial index for isochrone calculations
 
     Parameters
@@ -389,15 +335,8 @@ def create_isochrone_index(
     subsequent isochrone calculations, making it ideal for interactive applications
     or batch processing multiple isochrones from different starting points.
     """
-    ...
 
-def create_transit_model(
-    osm_path: builtins.str,
-    gtfs_dirs: typing.Sequence[builtins.str],
-    date: typing.Optional[datetime.date],
-    max_transfer_time: builtins.int = 1200,
-) -> TransitModel:
-    r"""
+def create_transit_model(osm_path:builtins.str, gtfs_dirs:typing.Sequence[builtins.str], date:typing.Optional[datetime.date], max_transfer_time:builtins.int=1200) -> TransitModel:    r"""
     Create a unified transit model from OSM and GTFS data
 
     This function builds a complete multimodal transportation model by:
@@ -436,16 +375,8 @@ def create_transit_model(
     -----
     The function releases the GIL during processing to allow other Python threads to continue execution.
     """
-    ...
 
-def create_transit_point(
-    lat: builtins.float,
-    lon: builtins.float,
-    transit_model: TransitModel,
-    max_walking_time: builtins.int = 1200,
-    max_nearest_stops: builtins.int = 10,
-) -> TransitPoint:
-    r"""
+def create_transit_point(lat:builtins.float, lon:builtins.float, transit_model:TransitModel, max_walking_time:builtins.int=1200, max_nearest_stops:builtins.int=10) -> TransitPoint:    r"""
     Create a transit point at specified geographic coordinates
 
     Creates a location entity connected to the transit network that can be used
@@ -478,16 +409,8 @@ def create_transit_point(
     --------
     TransitPoint : For more details about transit points.
     """
-    ...
 
-def detailed_journey(
-    transit_model: TransitModel,
-    start_point: TransitPoint,
-    end_point: TransitPoint,
-    departure_time: builtins.int,
-    max_transfers: builtins.int = 3,
-) -> typing.Optional[builtins.str]:
-    r"""
+def detailed_journey(transit_model:TransitModel, start_point:TransitPoint, end_point:TransitPoint, departure_time:builtins.int, max_transfers:builtins.int=3) -> typing.Optional[builtins.str]:    r"""
     Find a detailed journey between two points in a transit network
 
     Calculates a detailed multimodal route between two points, including walking
@@ -519,16 +442,8 @@ def detailed_journey(
     RuntimeError
         If the journey calculation fails.
     """
-    ...
 
-def find_route(
-    transit_model: TransitModel,
-    start_point: TransitPoint,
-    end_point: TransitPoint,
-    departure_time: builtins.int,
-    max_transfers: builtins.int = 3,
-) -> typing.Any:
-    r"""
+def find_route(transit_model:TransitModel, start_point:TransitPoint, end_point:TransitPoint, departure_time:builtins.int, max_transfers:builtins.int=3) -> typing.Any:    r"""
     Find an optimal route between two points in a transit network
 
     Calculates the fastest route between two points using a multimodal approach
@@ -582,16 +497,8 @@ def find_route(
         else:
             print("No route found")
     """
-    ...
 
-def find_routes_one_to_many(
-    transit_model: TransitModel,
-    start_point: TransitPoint,
-    end_points: typing.Sequence[TransitPoint],
-    departure_time: builtins.int,
-    max_transfers: builtins.int = 3,
-) -> builtins.list[typing.Any]:
-    r"""
+def find_routes_one_to_many(transit_model:TransitModel, start_point:TransitPoint, end_points:typing.Sequence[TransitPoint], departure_time:builtins.int, max_transfers:builtins.int=3) -> builtins.list[typing.Any]:    r"""
     Find routes from one point to multiple destinations
 
     Efficiently calculates routes from a single starting point to multiple
@@ -684,29 +591,12 @@ def find_routes_one_to_many(
     -----
     This function releases the GIL during computation to allow other Python threads to run.
     """
-    ...
 
-def pareto_range_multimodal_routing(
-    transit_model: TransitModel,
-    start: TransitPoint,
-    end: TransitPoint,
-    departure_range: tuple[builtins.int, builtins.int],
-    max_transfers: builtins.int = 3,
-) -> RangeRoutingResult: ...
-def range_multimodal_routing(
-    transit_model: TransitModel,
-    start: TransitPoint,
-    end: TransitPoint,
-    departure_range: tuple[builtins.int, builtins.int],
-    max_transfers: builtins.int = 3,
-) -> RangeRoutingResult: ...
-def travel_time_matrix(
-    transit_model: TransitModel,
-    points: typing.Sequence[TransitPoint],
-    departure_time: builtins.int,
-    max_transfers: builtins.int,
-) -> builtins.list[builtins.list[typing.Optional[builtins.int]]]:
-    r"""
+def pareto_range_multimodal_routing(transit_model:TransitModel, start:TransitPoint, end:TransitPoint, departure_range:tuple[builtins.int, builtins.int], max_transfers:builtins.int=3) -> RangeRoutingResult: ...
+
+def range_multimodal_routing(transit_model:TransitModel, start:TransitPoint, end:TransitPoint, departure_range:tuple[builtins.int, builtins.int], max_transfers:builtins.int=3) -> RangeRoutingResult: ...
+
+def travel_time_matrix(transit_model:TransitModel, points:typing.Sequence[TransitPoint], departure_time:builtins.int, max_transfers:builtins.int) -> builtins.list[builtins.list[typing.Optional[builtins.int]]]:    r"""
     Computes a matrix of travel times between
     all points in the input set in parallel.
 
@@ -727,4 +617,3 @@ def travel_time_matrix(
         A 2D matrix where each cell [i][j] contains the travel time in seconds
         from point i to point j, or None if the point is unreachable.
     """
-    ...

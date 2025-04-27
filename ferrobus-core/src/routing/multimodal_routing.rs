@@ -69,6 +69,10 @@ pub fn multimodal_routing(
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<Option<MultiModalResult>, Error> {
+    if departure_time > 86400 * 2 {
+        return Err(Error::InvalidData("Invalid departure time".to_string()));
+    }
+
     let transit_data = &transit_data.transit_data;
     let direct_walking = start.walking_time_to(end);
 
