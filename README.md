@@ -3,9 +3,9 @@
 [![CodSpeed Badge](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/chingiztob/ferrobus)
 
 > [!NOTE]
-> This is a work in progress. The API is not yet stable and may change in the future. Please check the [documentation](https://ferrobus.readthedocs.io/) for the latest updates.
+> This project is still in its early stages, and the API is subject to changes. Please check the [documentation](https://ferrobus.readthedocs.io/) for the latest updates.
 
-High-performance multimodal routing library for geospatial analysis workflows. Built with a Rust core and providing a straightforward Python interface.
+High-performance multimodal routing library for geospatial analysis workflows. Built with a Rust core and providing a straightforward Python interface. It aims to be orders of magnitude faster than existing tools.
 
 Unlike alternatives such as R5 or OpenTripPlanner, Ferrobus doesn't require Java and installs without external dependencies.
 
@@ -14,12 +14,12 @@ Core routing functionality is based on the RAPTOR (Round-based Public Transit Op
 ## Features
 
 - **Multimodal Routing**: Find optimal paths combining walking and public transit
-- **Detailed Journey Information**: Get complete trip details including transit legs, walking segments, and transfers
-- **Isochrone Generation**: Create travel-time polygons to visualize accessibility
+- **Isochrones**: Fast and uncertainty-aware
 - **Travel Time Matrices**: Compute travel times between multiple origin-destination pairs
-- **Batch Processing**: Process multiple routes or isochrones efficiently with parallel execution
-- **Time-Range Routing**: Find journeys across a range of departure times
-- **Pareto-Optimal Routes**: Discover multiple optimal routes with different trade-offs
+- **Batch Processing**: Efficient native multithreading
+- **Time-Range Routing**: Find journeys across a range of departure times with rRAPTOR
+- **Detailed Journey Information**: Get complete trip details *(in progress ...)*
+- **Pareto-Optimal Routes**: Discover multiple optimal routes with different trade-offs *(in progress ...)*
 
 ## Installation
 
@@ -41,8 +41,6 @@ If a pre-built binary is not available, the package will be built from source, r
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
-
-For more details, see the [installation guide](https://ferrobus.readthedocs.io/en/latest/installation.html).
 
 ## Quick Start
 

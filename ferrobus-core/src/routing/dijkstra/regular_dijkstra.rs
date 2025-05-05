@@ -17,7 +17,6 @@ pub fn dijkstra_path_weights(
     let mut distances: HashMap<NodeIndex, u32> = HashMap::new();
     let mut heap = BinaryHeap::new();
 
-    // Start node has distance 0
     heap.push(State {
         cost: 0,
         node: start,
@@ -25,21 +24,18 @@ pub fn dijkstra_path_weights(
     distances.insert(start, 0);
 
     while let Some(State { cost, node }) = heap.pop() {
-        // Check if we've reached the target
         if let Some(target_node) = target {
             if node == target_node {
                 break;
             }
         }
 
-        // Skip if we've found a better path
         if let Some(&best) = distances.get(&node) {
             if cost > best {
                 continue;
             }
         }
 
-        // Check max cost constraint
         if let Some(max) = max_cost {
             if f64::from(cost) > max {
                 continue;

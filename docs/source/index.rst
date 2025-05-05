@@ -8,7 +8,7 @@ Ferrobus |version|
 
 High-performance multimodal routing library for geospatial analysis workflows. Built with a Rust core and providing a straightforward Python interface.
 
-Unlike alternatives such as R5 or OpenTripPlanner, Ferrobus doesn't require Java and installs without external dependencies, making it easier to integrate into existing workflows and use in tightly controlled environments.
+Unlike alternatives such as R5 or OpenTripPlanner, Ferrobus doesn't require Java and installs without external dependencies.
 
 Core routing functionality is based on RAPTOR (Round-based Public Transit Optimized Router) algorithm developed by Microsoft Research. For details, see `Microsoft's research paper <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/01/raptor_alenex.pdf>`_.
 
@@ -16,11 +16,13 @@ Core routing functionality is based on RAPTOR (Round-based Public Transit Optimi
 Functionality
 -------------
 
-- **Routing**: Find optimal paths combining walking and public transit.
-- **Isochrone generation**: Create travel-time polygons using a h3-based spatial index.
-- **Travel time matrices**: Compute travel times between multiple points.
-- **Batch processing**: Process multiple routes or isochrones efficiently with native pure-rust multithreading.
-- **Time-range routing**: Find journeys across a range of departure times.
+- **Multimodal Routing**: Find optimal paths combining walking and public transit
+- **Detailed Journey Information**: Get complete trip details including transit legs, walking segments, and transfers
+- **Isochrone Generation**: Create travel-time polygons to visualize accessibility
+- **Travel Time Matrices**: Compute travel times between multiple origin-destination pairs
+- **Batch Processing**: Process multiple routes or isochrones efficiently with parallel execution
+- **Time-Range Routing**: Find journeys across a range of departure times
+- **Pareto-Optimal Routes**: Discover multiple optimal routes with different trade-offs
 
 .. toctree::
    :maxdepth: 2

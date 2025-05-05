@@ -49,7 +49,7 @@ pub(crate) fn calculate_transfers(graph: &mut TransitModel) -> Result<(), Error>
         .filter_map(|source_idx| {
             let source_node = stop_nodes_indices[source_idx];
 
-            // Use Dijkstra to find paths to all other stops within cutoff
+            // find paths to all other stops within cutoff
             let reachable = dijkstra::dijkstra_path_weights(
                 &graph.street_graph,
                 source_node,
@@ -98,18 +98,15 @@ pub(crate) fn calculate_transfers(graph: &mut TransitModel) -> Result<(), Error>
         transfer_indices.insert(source_idx, (start_idx, count));
     }
 
-    // Update the transfer data in transit_data
     for (stop_id, (start, count)) in &transfer_indices {
         transit_data.stops[*stop_id].transfers_start = *start;
         transit_data.stops[*stop_id].transfers_len = *count;
     }
 
-    // Update the stop to node mapping
     for (stop_idx, stop_point) in stop_nodes.iter().enumerate() {
         transit_data.node_to_stop.insert(*stop_point, stop_idx);
     }
 
-    // Update the transfers vector in transit_data
     transit_data.transfers.clone_from(&transfers);
 
     Ok(())

@@ -56,7 +56,6 @@ pub fn traced_raptor(
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<TracedRaptorResult, RaptorError> {
-    // Validate inputs using common function from the common module
     crate::routing::raptor::common::validate_raptor_inputs(data, source, target, departure_time)?;
 
     let num_stops = data.stops.len();
@@ -104,10 +103,8 @@ pub fn traced_raptor(
         let mut queue = create_route_queue(data, &state.marked_stops[prev_round])?;
         state.marked_stops[prev_round].clear();
 
-        // Target pruning bound using state's method
         let target_bound = state.get_target_bound(target);
 
-        // Process routes
         while let Some((route_id, start_pos)) = queue.pop_front() {
             let stops = data.get_route_stops(route_id)?;
 
@@ -185,7 +182,6 @@ pub fn traced_raptor(
         if let Some(target_stop) = target {
             let arrival_time = state.arrival_times[round][target_stop];
             if arrival_time != Time::MAX && arrival_time > state.best_arrival[target_stop] {
-                // Reconstruct the journey
                 let journey = reconstruct_journey(data, &state, source, target_stop)?;
                 return Ok(TracedRaptorResult::SingleTarget(Some(journey)));
             }
@@ -370,7 +366,7 @@ fn reconstruct_journey(
             ));
         }
     }
-    // Shift accounts for elements shifting on each insert, +1 alligns waits to correct position
+    // Shift accounts for elements shifting on each insert, +1 alligns waits to correct position (cringe)
     for (shift, (idx, leg)) in walking_legs.into_iter().enumerate() {
         legs.insert(idx + shift + 1, leg);
     }

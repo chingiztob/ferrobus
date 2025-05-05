@@ -47,7 +47,6 @@ pub fn validate_raptor_inputs(
     target: Option<usize>,
     departure_time: Time,
 ) -> Result<(), RaptorError> {
-    // Validate inputs
     data.validate_stop(source)?;
     if let Some(target_stop) = target {
         data.validate_stop(target_stop)?;
@@ -98,7 +97,7 @@ impl RaptorState {
             // Update best_arrival if this is better than any previous round
             if arrival < self.best_arrival[stop] {
                 self.best_arrival[stop] = arrival;
-                return Ok(true); // Return true ONLY if we made a true improvement
+                return Ok(true);
             }
         }
         Ok(false) // No improvement

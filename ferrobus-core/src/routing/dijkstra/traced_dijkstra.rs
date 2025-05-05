@@ -20,7 +20,6 @@ pub(crate) fn dijkstra_paths(
     let mut predecessors: HashMap<NodeIndex, NodeIndex> = HashMap::with_capacity(estimated_nodes);
     let mut heap = BinaryHeap::with_capacity(estimated_nodes / 4);
 
-    // Start node has distance 0
     heap.push(State {
         cost: 0,
         node: start,
@@ -34,7 +33,6 @@ pub(crate) fn dijkstra_paths(
             }
         }
 
-        // Skip if we've found a better path
         if let Some(&best) = distances.get(&node) {
             if cost > best {
                 continue;
@@ -86,7 +84,6 @@ fn reconstruct_dijkstra_paths(
 ) -> HashMap<NodeIndex, WalkingPath> {
     let mut paths = HashMap::with_capacity(distances.len());
 
-    // Construct paths for all reached nodes
     for &target_node in distances.keys() {
         // Only create path if we can reach the target (or it's the start)
         if predecessors.contains_key(&target_node) || target_node == start {

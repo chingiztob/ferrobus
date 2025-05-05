@@ -176,7 +176,6 @@ pub fn multimodal_routing_one_to_many(
     }
 
     for (end_idx, end_point) in targets.iter().enumerate() {
-        // Check direct walking route
         let direct_walking = start.walking_time_to(end_point);
         let mut best_candidate: Option<CandidateJourney> = None;
 

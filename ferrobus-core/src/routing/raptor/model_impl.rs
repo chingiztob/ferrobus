@@ -50,16 +50,13 @@ impl PublicTransitData {
         min_departure: Time,
         max_departure: Time,
     ) -> Result<Vec<Time>, RaptorError> {
-        // Validate the source stop
         self.validate_stop(source)?;
 
         let mut departures = Vec::new();
 
-        // Get all routes through this stop
         let routes = self.routes_for_stop(source);
 
         for &route_id in routes {
-            // Get stops for the route to find the index of the source stop in the route
             let route_stops = self.get_route_stops(route_id)?;
 
             // Find the index of the source stop in the route

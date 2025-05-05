@@ -63,7 +63,7 @@ impl TracedRaptorState {
         // Update arrival time if better
         if arrival < self.arrival_times[round][stop] {
             self.arrival_times[round][stop] = arrival;
-            self.predecessors[round][stop] = predecessor.clone();
+            self.predecessors[round][stop] = predecessor;
             updated = true;
         }
 

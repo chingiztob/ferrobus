@@ -34,7 +34,6 @@ pub fn rraptor(
     departure_range: (Time, Time),
     max_transfers: usize,
 ) -> Result<Vec<RaptorRangeJourney>, RaptorError> {
-    // Validate source and target using common function
     validate_raptor_inputs(data, source, target, departure_range.1)?;
 
     // For the range, we assume departure_range = (min_departure, max_departure)
@@ -48,7 +47,6 @@ pub fn rraptor(
     // Process departures from latest to earliest.
     departures.sort_by(|a, b| b.cmp(a));
 
-    // Initialize the RAPTOR state.
     let mut state = RaptorState::new(num_stops, max_rounds);
     let mut journeys = Vec::with_capacity(departures.len());
 
