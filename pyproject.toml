@@ -25,6 +25,9 @@ dynamic = ["version"]
 license = { text = "MIT OR Apache-2.0" }
 readme = "README.md"
 
+[project.optional-dependencies]
+docs = ["myst_nb", "sphinx-book-theme"]
+
 [tool.maturin]
 features = ["pyo3/extension-module"]
 
