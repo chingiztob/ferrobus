@@ -135,17 +135,7 @@ For more detailed information, see the [full rendered documentation](https://fer
 
 ## Benchmarks
 
-Ferrobus is designed for high performance and low memory footprint. Benchmarks are continuously run using [CodSpeed](https://codspeed.io/chingiztob/ferrobus) to avoid regressions.
-
-Typical routing queries (including multimodal and batch operations) complete in milliseconds on modern hardware. For detailed benchmark results and up-to-date performance metrics, visit the [CodSpeed dashboard](https://codspeed.io/chingiztob/ferrobus).
-
-If you wish to run benchmarks locally:
-
-```bash
-git clone https://github.com/chingiztob/ferrobus.git
-cd ferrobus
-cargo bench
-```
+Ferrobus is designed for high performance and low memory footprint. Benchmarks are continuously run using [CodSpeed](https://codspeed.io/chingiztob/ferrobus) to avoid regressions. Typical routing queries (including multimodal and batch operations) complete in milliseconds on modern hardware.
 
 ### Comparative Benchmarks
 
