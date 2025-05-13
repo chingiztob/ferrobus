@@ -2,10 +2,9 @@ use log::warn;
 
 use crate::model::Transfer;
 use crate::routing::raptor::common::{
-    RaptorError, RaptorState, find_earliest_trip, find_earliest_trip_at_stop, get_target_bound,
-    validate_raptor_inputs,
+    RaptorError, RaptorState, create_route_queue, find_earliest_trip, find_earliest_trip_at_stop,
+    get_target_bound, process_foot_paths, validate_raptor_inputs,
 };
-use crate::routing::raptor::common::{create_route_queue, process_foot_paths};
 use crate::{PublicTransitData, RaptorStopId, Time};
 
 #[derive(Debug)]
@@ -17,6 +16,27 @@ pub struct RaptorRangeJourney {
     pub arrival_time: Option<Time>,
     /// The number of transfers used in the journey.
     pub transfers_used: usize,
+}
+
+impl RaptorState {
+    // Special method for rRAPTOR to carry over improvements from previous round
+    fn carry_over_improvements(&mut self, stop: usize) -> bool {
+        if self.prev_board_times[stop] < self.curr_board_times[stop] {
+            self.curr_arrival_times[stop] = self.prev_arrival_times[stop];
+            self.curr_board_times[stop] = self.prev_board_times[stop];
+            return true;
+        }
+        false
+    }
+
+    // Reset the state for a new departure time while preserving best arrivals
+    fn reset_for_new_departure(&mut self) {
+        self.prev_arrival_times.fill(Time::MAX);
+        self.prev_board_times.fill(Time::MAX);
+        self.curr_arrival_times.fill(Time::MAX);
+        self.curr_board_times.fill(Time::MAX);
+        self.marked_stops.clear();
+    }
 }
 
 /// rRAPTOR: Range Query Version of RAPTOR.
@@ -52,9 +72,12 @@ pub fn rraptor(
 
     // For each departure time, update state and run RAPTOR rounds.
     for &dep_time in &departures {
+        // Reset the state for a new departure time (keeping best arrivals)
+        state.reset_for_new_departure();
+
         // Inject the new departure at the source for round 0.
         state.update(0, source, dep_time, dep_time)?;
-        state.marked_stops[0].set(source, true);
+        state.marked_stops.set(source, true);
 
         // Process foot-path transfers from the source.
         let transfers = data.get_stop_transfers(source)?;
@@ -71,48 +94,50 @@ pub fn rraptor(
             let new_time = dep_time.saturating_add(duration);
             // For foot-paths we assume no waiting time (arrival equals boarding).
             if state.update(0, target_stop, new_time, new_time)? {
-                state.marked_stops[0].set(target_stop, true);
+                state.marked_stops.set(target_stop, true);
             }
         }
 
-        // For rounds 1..max_rounds, first carry over improvements from the previous round.
+        // Main rounds.
         for round in 1..max_rounds {
-            let prev_round = round - 1;
-            // if the previous round has a better boarding time, propagate it.
+            // Advance to next round - swap current and previous
+            state.advance_round();
+
+            // Create queue from original marked stops (from previous operations)
+            let mut queue = create_route_queue(data, &state.marked_stops)?;
+
+            // Clear marked stops first
+            state.marked_stops.clear();
+
+            // Directly repopulate marked_stops with stops that have improvements carried over
             for stop in 0..num_stops {
-                if state.board_times[prev_round][stop] < state.board_times[round][stop] {
-                    state.arrival_times[round][stop] = state.arrival_times[prev_round][stop];
-                    state.board_times[round][stop] = state.board_times[prev_round][stop];
-                    state.marked_stops[round].set(stop, true);
+                if state.carry_over_improvements(stop) {
+                    state.marked_stops.set(stop, true);
                 }
             }
 
-            // If no stops were marked in the previous round, we can break early
-            if state.marked_stops[prev_round].is_clear() {
+            // If no stops were marked from carry-over AND no stops were in the queue, we can break early
+            if queue.is_empty() && state.marked_stops.is_clear() {
                 break;
             }
-
-            let mut queue = create_route_queue(data, &state.marked_stops[prev_round])?;
-            state.marked_stops[prev_round].clear();
 
             let target_bound = get_target_bound(&state, target);
 
             while let Some((route_id, start_pos)) = queue.pop_front() {
                 let stops = data.get_route_stops(route_id)?;
 
-                if let Some((trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
+                if let Some((mut trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
                     data,
                     route_id,
                     stops,
-                    &state.board_times[prev_round],
+                    &state.prev_board_times,
                     start_pos,
                 ) {
-                    let mut trip_idx = trip_idx;
                     let mut trip = data.get_trip(route_id, trip_idx)?;
 
                     for (trip_stop_idx, &stop) in stops.iter().enumerate().skip(current_board_pos) {
                         // Check if we can "upgrade" the trip at this stop.
-                        let prev_board = state.board_times[prev_round][stop];
+                        let prev_board = state.prev_board_times[stop];
                         if prev_board < trip[trip_stop_idx].departure {
                             if let Some(new_trip_idx) =
                                 find_earliest_trip(data, route_id, trip_stop_idx, prev_board)
@@ -120,7 +145,6 @@ pub fn rraptor(
                                 if new_trip_idx != trip_idx {
                                     trip_idx = new_trip_idx;
                                     trip = data.get_trip(route_id, new_trip_idx)?;
-                                    //current_board_pos = trip_stop_idx;
                                 }
                             }
                         }
@@ -140,7 +164,7 @@ pub fn rraptor(
 
                         // Only update if this effective boarding time is an improvement.
                         if state.update(round, stop, actual_arrival, effective_board)? {
-                            state.marked_stops[round].set(stop, true);
+                            state.marked_stops.set(stop, true);
                         }
                         // Prune if we've already exceeded the target bound.
                         if effective_board >= target_bound {
@@ -151,11 +175,11 @@ pub fn rraptor(
             }
 
             let new_marks = process_foot_paths(data, target, num_stops, &mut state, round)?;
-            state.marked_stops[round].union_with(&new_marks);
+            state.marked_stops.union_with(&new_marks);
 
             // Check if we should continue with this round
             if let Some(target_stop) = target {
-                let arrival_time = state.arrival_times[round][target_stop];
+                let arrival_time = state.curr_arrival_times[target_stop];
                 let target_bound = state.best_arrival[target_stop];
 
                 // If the arrival time in this round is worse than our best known time,
@@ -166,34 +190,31 @@ pub fn rraptor(
             }
 
             // If no stops were marked in this round, we can stop.
-            if state.marked_stops[round].is_clear() {
+            if state.marked_stops.is_clear() {
                 break;
             }
         }
 
         // After processing rounds for this departure, record the result for the target.
-        let mut best_arr = Time::MAX;
-        let mut best_round = 0;
         if let Some(target_stop) = target {
-            for round in 0..max_rounds {
-                let t = state.arrival_times[round][target_stop];
-                if t != Time::MAX && t < best_arr {
-                    best_arr = t;
-                    best_round = round;
-                }
-            }
-        }
-
-        let journey = RaptorRangeJourney {
-            departure_time: dep_time,
-            arrival_time: if best_arr == Time::MAX {
-                None
+            let best_arr = state.best_arrival[target_stop];
+            let best_round = if best_arr == Time::MAX {
+                0
             } else {
-                Some(best_arr)
-            },
-            transfers_used: best_round,
-        };
-        journeys.push(journey);
+                state.best_transfer_count[target_stop]
+            };
+
+            let journey = RaptorRangeJourney {
+                departure_time: dep_time,
+                arrival_time: if best_arr == Time::MAX {
+                    None
+                } else {
+                    Some(best_arr)
+                },
+                transfers_used: best_round,
+            };
+            journeys.push(journey);
+        }
     }
 
     Ok(journeys)
