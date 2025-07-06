@@ -31,7 +31,7 @@ geojson.workspace = true
 rayon.workspace = true
 chrono.workspace = true
 serde_json.workspace = true
-wkt = "0.13.0"
+wkt = "0.14.0"
 
 [workspace.dependencies]
 geo = "0.30.0"

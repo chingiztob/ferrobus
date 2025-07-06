@@ -18,7 +18,7 @@ pub fn find_earliest_trip(
     let mut high = route.num_trips;
     let mut result = None;
     while low < high {
-        let mid = (low + high) / 2;
+        let mid = usize::midpoint(low, high);
         let trip_start = trips_offset + mid * num_stops;
 
         let departure = data.stop_times[trip_start + stop_idx].departure;
