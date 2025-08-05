@@ -385,7 +385,7 @@ fn reconstruct_journey(
 }
 
 /// Find the earliest trip at a given stop on a route for traced implementation
-/// Returns (`trip_idx``board_pos`, `boarding_stop`, `boarding_time`) if found, None otherwise
+/// Returns (`trip_idx`, `board_pos`, `boarding_stop`, `boarding_time`) if found, None otherwise
 fn find_traced_trip_at_stop(
     data: &PublicTransitData,
     route_id: usize,
@@ -410,5 +410,5 @@ fn find_traced_trip_at_stop(
         }
     }
 
-    Ok(current_trip_opt.map(|(idx, _, stop, time)| (idx, current_board_pos, stop, time)))
+    Ok(current_trip_opt.map(|(trip_idx, _, stop, time)| (trip_idx, current_board_pos, stop, time)))
 }

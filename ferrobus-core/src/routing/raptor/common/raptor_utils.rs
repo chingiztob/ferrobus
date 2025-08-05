@@ -18,7 +18,7 @@ pub fn find_earliest_trip(
     let mut high = route.num_trips;
     let mut result = None;
     while low < high {
-        let mid = (low + high) / 2;
+        let mid = usize::midpoint(low, high);
         let trip_start = trips_offset + mid * num_stops;
 
         let departure = data.stop_times[trip_start + stop_idx].departure;
@@ -68,8 +68,8 @@ pub(crate) fn process_foot_paths(
     round: usize,
 ) -> Result<FixedBitSet, RaptorError> {
     // 1) reserve up front
-    let mut current_marks = Vec::with_capacity(state.marked_stops[round].count_ones(..));
-    for stop in state.marked_stops[round].ones() {
+    let mut current_marks = Vec::with_capacity(state.marked_stops.count_ones(..));
+    for stop in state.marked_stops.ones() {
         current_marks.push(stop);
     }
 
@@ -82,17 +82,18 @@ pub(crate) fn process_foot_paths(
     };
 
     for stop in current_marks {
-        let current_board = state.board_times[round][stop];
+        let current_board = state.curr_board_times[stop];
         let transfers = data.get_stop_transfers(stop)?;
         for tr in transfers {
             let target_stop = tr.target_stop;
             let new_time = current_board.saturating_add(tr.duration);
 
-            let prev = state.board_times[round][target_stop];
+            let prev = state.curr_board_times[target_stop];
             if new_time >= prev || new_time >= target_bound {
                 continue;
             }
 
+            // Note: still using the current round number from the caller
             if state.update(round, target_stop, new_time, new_time)? {
                 new_marks.set(target_stop, true);
             }

@@ -1,3 +1,5 @@
+use std::mem;
+
 use fixedbitset::FixedBitSet;
 use thiserror::Error;
 
@@ -5,13 +7,62 @@ use crate::{PublicTransitData, Time};
 
 #[derive(Debug)]
 pub struct RaptorState {
-    // For each round and stop, we now store both the journey’s arrival time
-    // and the effective boarding time (usually the trip’s departure time).
-    pub arrival_times: Vec<Vec<Time>>,
-    pub board_times: Vec<Vec<Time>>,
-    pub marked_stops: Vec<FixedBitSet>,
-    // For reporting the final journey arrival time.
+    pub prev_arrival_times: Vec<Time>,
+    pub prev_board_times: Vec<Time>,
+    pub curr_arrival_times: Vec<Time>,
+    pub curr_board_times: Vec<Time>,
+    pub marked_stops: FixedBitSet,
     pub best_arrival: Vec<Time>,
+    pub best_transfer_count: Vec<usize>,
+}
+
+impl RaptorState {
+    pub fn new(num_stops: usize, _max_rounds: usize) -> Self {
+        RaptorState {
+            prev_arrival_times: vec![Time::MAX; num_stops],
+            prev_board_times: vec![Time::MAX; num_stops],
+            curr_arrival_times: vec![Time::MAX; num_stops],
+            curr_board_times: vec![Time::MAX; num_stops],
+            marked_stops: FixedBitSet::with_capacity(num_stops),
+            best_arrival: vec![Time::MAX; num_stops],
+            best_transfer_count: vec![0; num_stops],
+        }
+    }
+
+    pub fn update(
+        &mut self,
+        round: usize,
+        stop: usize,
+        arrival: Time,
+        board: Time,
+    ) -> Result<bool, RaptorError> {
+        if stop >= self.curr_arrival_times.len() {
+            return Err(RaptorError::MaxTransfersExceeded);
+        }
+
+        // Only update if the new arrival time is better than what we've seen in this round
+        if arrival < self.curr_arrival_times[stop] {
+            self.curr_arrival_times[stop] = arrival;
+            self.curr_board_times[stop] = board;
+
+            // Update best_arrival if this is better than any previous round
+            if arrival < self.best_arrival[stop] {
+                self.best_arrival[stop] = arrival;
+                self.best_transfer_count[stop] = round;
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    // Prepare for next round by swapping current and previous data
+    pub fn advance_round(&mut self) {
+        mem::swap(&mut self.prev_arrival_times, &mut self.curr_arrival_times);
+        mem::swap(&mut self.prev_board_times, &mut self.curr_board_times);
+
+        self.curr_arrival_times.fill(Time::MAX);
+        self.curr_board_times.fill(Time::MAX);
+    }
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -64,42 +115,5 @@ pub fn get_target_bound(state: &RaptorState, target: Option<usize>) -> Time {
         state.best_arrival[target_stop]
     } else {
         Time::MAX
-    }
-}
-
-impl RaptorState {
-    pub fn new(num_stops: usize, max_rounds: usize) -> Self {
-        RaptorState {
-            arrival_times: vec![vec![Time::MAX; num_stops]; max_rounds],
-            board_times: vec![vec![Time::MAX; num_stops]; max_rounds],
-            marked_stops: (0..max_rounds)
-                .map(|_| FixedBitSet::with_capacity(num_stops))
-                .collect(),
-            best_arrival: vec![Time::MAX; num_stops],
-        }
-    }
-
-    pub fn update(
-        &mut self,
-        round: usize,
-        stop: usize,
-        arrival: Time,
-        board: Time,
-    ) -> Result<bool, RaptorError> {
-        if round >= self.arrival_times.len() || stop >= self.arrival_times[0].len() {
-            return Err(RaptorError::MaxTransfersExceeded);
-        }
-        // Only update if the new arrival time is better than what we've seen in this round
-        if arrival < self.arrival_times[round][stop] {
-            self.arrival_times[round][stop] = arrival;
-            self.board_times[round][stop] = board;
-
-            // Update best_arrival if this is better than any previous round
-            if arrival < self.best_arrival[stop] {
-                self.best_arrival[stop] = arrival;
-                return Ok(true);
-            }
-        }
-        Ok(false) // No improvement
     }
 }
