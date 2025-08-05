@@ -65,7 +65,7 @@ pub(crate) fn process_foot_paths(
     target: Option<usize>,
     num_stops: usize,
     state: &mut RaptorState,
-    _round: usize,
+    round: usize,
 ) -> Result<FixedBitSet, RaptorError> {
     // 1) reserve up front
     let mut current_marks = Vec::with_capacity(state.marked_stops.count_ones(..));
@@ -94,12 +94,7 @@ pub(crate) fn process_foot_paths(
             }
 
             // Note: still using the current round number from the caller
-            if state.update(
-                state.best_transfer_count[stop],
-                target_stop,
-                new_time,
-                new_time,
-            )? {
+            if state.update(round, target_stop, new_time, new_time)? {
                 new_marks.set(target_stop, true);
             }
         }
