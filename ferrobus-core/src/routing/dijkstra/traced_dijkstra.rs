@@ -119,7 +119,6 @@ fn reconstruct_dijkstra_paths(
                 y: f64::NAN,
             });
 
-            // We already know total cost from distances map
             let walking_path = WalkingPath { nodes: path_coords };
 
             paths.insert(target_node, walking_path);

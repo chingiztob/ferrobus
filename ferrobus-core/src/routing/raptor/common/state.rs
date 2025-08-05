@@ -52,7 +52,7 @@ impl RaptorState {
                 return Ok(true);
             }
         }
-        Ok(false) // No improvement
+        Ok(false)
     }
 
     // Prepare for next round by swapping current and previous data
