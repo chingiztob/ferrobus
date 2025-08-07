@@ -55,6 +55,11 @@ jobs:
       - name: Fetch Repository
         uses: actions/checkout@v4
 
+      - name: Setup mold linker
+        uses: rui314/setup-mold@v1
+        with:
+          make-default: true
+
       - name: Install stable Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
