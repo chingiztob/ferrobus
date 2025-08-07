@@ -70,20 +70,20 @@ fn transit_leg_feature(
         let to_name = transit_data.transit_stop_name(*to_stop).unwrap_or_default();
 
         let mut coords: Vec<Coord<f64>> = vec![from_loc.into()];
-        if let Ok(route_stops) = transit_data.get_route_stops(*route_id) {
-            if let (Some(start_idx), Some(end_idx)) = (
+        if let Ok(route_stops) = transit_data.get_route_stops(*route_id)
+            && let (Some(start_idx), Some(end_idx)) = (
                 route_stops.iter().position(|&s| s == *from_stop),
                 route_stops.iter().position(|&s| s == *to_stop),
-            ) {
-                let range: Vec<_> = if start_idx < end_idx {
-                    (start_idx + 1..end_idx).collect()
-                } else {
-                    (end_idx + 1..start_idx).rev().collect()
-                };
-                for idx in range {
-                    let stop_loc = transit_data.transit_stop_location(route_stops[idx]);
-                    coords.push(stop_loc.into());
-                }
+            )
+        {
+            let range: Vec<_> = if start_idx < end_idx {
+                (start_idx + 1..end_idx).collect()
+            } else {
+                (end_idx + 1..start_idx).rev().collect()
+            };
+            for idx in range {
+                let stop_loc = transit_data.transit_stop_location(route_stops[idx]);
+                coords.push(stop_loc.into());
             }
         }
         coords.push(to_loc.into());

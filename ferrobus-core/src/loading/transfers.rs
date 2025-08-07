@@ -67,13 +67,13 @@ pub(crate) fn calculate_transfers(graph: &mut TransitModel) -> Result<(), Error>
                 let target_node = stop_nodes_indices[target_idx];
 
                 // If the target is reachable within our time limit
-                if let Some(&time) = reachable.get(&target_node) {
-                    if time <= max_transfer_time {
-                        local_transfers.push(Transfer {
-                            target_stop: target_idx,
-                            duration: time as Time,
-                        });
-                    }
+                if let Some(&time) = reachable.get(&target_node)
+                    && time <= max_transfer_time
+                {
+                    local_transfers.push(Transfer {
+                        target_stop: target_idx,
+                        duration: time as Time,
+                    });
                 }
             }
 

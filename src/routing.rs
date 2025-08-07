@@ -9,14 +9,14 @@ use ferrobus_core::{prelude::*, routing::itinerary::traced_multimodal_routing};
 /// A geographic location connected to the transit network with pre-calculated access paths
 /// to nearby transit stops and the street network.
 ///
-/// TransitPoint serves as the fundamental origin/destination entity for all routing operations.
+/// `TransitPoint` serves as the fundamental origin/destination entity for all routing operations.
 /// Each point maintains a list of nearby transit stops with walking times, enabling efficient
 /// multimodal journey planning without recomputing access paths for every query.
 ///
 /// Example
 /// -------
 ///
-/// .. code-block:: python
+/// .. `code-block::` python
 ///
 ///     # Create a transit point at specific coordinates
 ///     point = ferrobus.create_transit_point(
@@ -99,11 +99,11 @@ impl PyTransitPoint {
 ///     Latitude coordinate of the point.
 /// lon : float
 ///     Longitude coordinate of the point.
-/// transit_model : TransitModel
+/// `transit_model` : `TransitModel`
 ///     The transit model to which the point should be connected.
-/// max_walking_time : int, default=1200
+/// `max_walking_time` : int, default=1200
 ///     Maximum walking time in seconds this point can connect to the network.
-/// max_nearest_stops : int, default=10
+/// `max_nearest_stops` : int, default=10
 ///     Maximum number of nearby transit stops to consider for connections.
 ///
 /// Returns
@@ -113,12 +113,12 @@ impl PyTransitPoint {
 ///
 /// Raises
 /// ------
-/// ValueError
+/// `ValueError`
 ///     If the coordinates are invalid or unreachable in the transit network.
 ///
 /// See Also
 /// --------
-/// TransitPoint : For more details about transit points.
+/// `TransitPoint` : For more details about transit points.
 #[stubgen]
 #[pyfunction]
 #[pyo3(signature = (lat, lon, transit_model, max_walking_time=1200, max_nearest_stops=10))]
@@ -166,36 +166,36 @@ pub(crate) fn optional_result_to_py(py: Python<'_>, result: Option<&MultiModalRe
 ///
 /// Parameters
 /// ----------
-/// transit_model : TransitModel
+/// `transit_model` : `TransitModel`
 ///     The transit model to use for routing.
-/// start_point : TransitPoint
+/// `start_point` : `TransitPoint`
 ///     Starting location for the route.
-/// end_point : TransitPoint
+/// `end_point` : `TransitPoint`
 ///     Destination location for the route.
-/// departure_time : int
+/// `departure_time` : int
 ///     Time of departure in seconds since midnight.
-/// max_transfers : int, default=3
+/// `max_transfers` : int, default=3
 ///     Maximum number of transfers allowed in route planning.
 ///
 /// Returns
 /// -------
 /// dict or None
 ///     A dictionary containing route details including:
-///     - travel_time_seconds: Total travel time
-///     - walking_time_seconds: Total walking time
-///     - transit_time_seconds: Time spent on transit (if used)
+///     - `travel_time_seconds`: Total travel time
+///     - `walking_time_seconds`: Total walking time
+///     - `transit_time_seconds`: Time spent on transit (if used)
 ///     - transfers: Number of transfers made (if transit used)
-///     - used_transit: Whether transit was used or just walking
+///     - `used_transit`: Whether transit was used or just walking
 ///     Returns None if the destination is unreachable.
 ///
 /// Raises
 /// ------
-/// RuntimeError
+/// `RuntimeError`
 ///     If the route calculation fails.
 ///
 /// Example
 /// -------
-/// .. code-block:: python
+/// .. `code-block::` python
 ///
 ///     result = ferrobus.find_route(model, start_point, end_point, departure_time, max_transfers)
 ///     if result is not None:
@@ -243,27 +243,27 @@ pub fn find_route(
 ///
 /// Parameters
 /// ----------
-/// transit_model : TransitModel
+/// `transit_model` : `TransitModel`
 ///     The transit model to use for routing.
-/// start_point : TransitPoint
+/// `start_point` : `TransitPoint`
 ///     Starting location for all routes.
-/// end_points : list[TransitPoint]
+/// `end_points` : list[TransitPoint]
 ///     List of destination points.
-/// departure_time : int
+/// `departure_time` : int
 ///     Time of departure in seconds since midnight.
-/// max_transfers : int, default=3
+/// `max_transfers` : int, default=3
 ///     Maximum number of transfers allowed in route planning.
 ///
 /// Returns
 /// -------
 /// list[dict or None]
-///     List of routing results in the same order as the input end_points.
+///     List of routing results in the same order as the input `end_points`.
 ///     Each result is either a dictionary with route details or None if
 ///     the destination is unreachable.
 ///
 /// Example
 /// -------
-/// .. code-block:: python
+/// .. `code-block::` python
 ///
 ///     # Create a transit model
 ///     model = ferrobus.create_transit_model(
@@ -320,7 +320,7 @@ pub fn find_route(
 ///
 /// Raises
 /// ------
-/// RuntimeError
+/// `RuntimeError`
 ///     If the batch routing calculation fails.
 ///
 /// Notes
@@ -368,32 +368,32 @@ pub fn find_routes_one_to_many(
 /// Find a detailed journey between two points in a transit network
 ///
 /// Calculates a detailed multimodal route between two points, including walking
-/// and public transit segments. The result is returned as a GeoJSON string
+/// and public transit segments. The result is returned as a `GeoJSON` string
 /// containing the full journey details.
 ///
 /// Parameters
 /// ----------
-/// transit_model : TransitModel
+/// `transit_model` : `TransitModel`
 ///     The transit model to use for routing.
-/// start_point : TransitPoint
+/// `start_point` : `TransitPoint`
 ///     Starting location for the journey.
-/// end_point : TransitPoint
+/// `end_point` : `TransitPoint`
 ///     Destination location for the journey.
-/// departure_time : int
+/// `departure_time` : int
 ///     Time of departure in seconds since midnight.
-/// max_transfers : int, default=3
+/// `max_transfers` : int, default=3
 ///     Maximum number of transfers allowed in route planning.
 ///
 /// Returns
 /// -------
 /// str
-///     A GeoJSON string representing the detailed journey, including all route
+///     A `GeoJSON` string representing the detailed journey, including all route
 ///     segments and properties such as travel time and transfer details. Returns
 ///     "null" if no route is found.
 ///
 /// Raises
 /// ------
-/// RuntimeError
+/// `RuntimeError`
 ///     If the journey calculation fails.
 #[stubgen]
 #[pyfunction]

@@ -168,10 +168,10 @@ pub fn range_multimodal_routing(
     for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
         for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
             // Skip if path is dominated by direct walking
-            if let Some(walking_time) = direct_walking {
-                if access_time + egress_time >= walking_time {
-                    continue;
-                }
+            if let Some(walking_time) = direct_walking
+                && access_time + egress_time >= walking_time
+            {
+                continue;
             }
 
             // Adjust departure range for access time

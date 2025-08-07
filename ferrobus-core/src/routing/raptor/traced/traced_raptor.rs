@@ -127,17 +127,15 @@ pub fn traced_raptor(
                 for (trip_stop_idx, &stop) in stops.iter().enumerate().skip(current_board_pos) {
                     // Check if we can "upgrade" to an earlier trip
                     let prev_board = state.board_times[prev_round][stop];
-                    if prev_board < trip[trip_stop_idx].departure {
-                        if let Some(new_trip_idx) =
+                    if prev_board < trip[trip_stop_idx].departure
+                        && let Some(new_trip_idx) =
                             find_earliest_trip(data, route_id, trip_stop_idx, prev_board)
-                        {
-                            if new_trip_idx != trip_idx {
-                                trip_idx = new_trip_idx;
-                                trip = data.get_trip(route_id, new_trip_idx)?;
-                                boarding_stop = stop;
-                                boarding_time = trip[trip_stop_idx].departure;
-                            }
-                        }
+                        && new_trip_idx != trip_idx
+                    {
+                        trip_idx = new_trip_idx;
+                        trip = data.get_trip(route_id, new_trip_idx)?;
+                        boarding_stop = stop;
+                        boarding_time = trip[trip_stop_idx].departure;
                     }
 
                     let actual_arrival = trip[trip_stop_idx].arrival;

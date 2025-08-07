@@ -72,15 +72,13 @@ pub fn raptor(
                     // This is possible, if one of the stops can be reached earlier
                     // with a different chain of transfers.
                     let prev_board = state.prev_board_times[stop];
-                    if prev_board < trip[trip_stop_idx].departure {
-                        if let Some(new_trip_idx) =
+                    if prev_board < trip[trip_stop_idx].departure
+                        && let Some(new_trip_idx) =
                             find_earliest_trip(data, route_id, trip_stop_idx, prev_board)
-                        {
-                            if new_trip_idx != trip_idx {
-                                trip_idx = new_trip_idx;
-                                trip = data.get_trip(route_id, new_trip_idx)?;
-                            }
-                        }
+                        && new_trip_idx != trip_idx
+                    {
+                        trip_idx = new_trip_idx;
+                        trip = data.get_trip(route_id, new_trip_idx)?;
                     }
                     // Separate the times: the actual arrival (when the bus reaches the stop)
                     // and the boarding time (when the bus departs from the stop).
