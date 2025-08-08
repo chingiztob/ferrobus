@@ -102,31 +102,29 @@ pub fn multimodal_routing(
                 max_transfers,
             ) {
                 match result {
-                    RaptorResult::SingleTarget {
-                        arrival_time: Some(arrival_time),
-                        transfers_used,
-                    } => {
-                        let transit_journey_time = arrival_time - (departure_time + access_time);
-                        let total_time = access_time + transit_journey_time + egress_time;
+                    RaptorResult::SingleTarget(target) => {
+                        if target.is_reachable() {
+                            let transit_time = target.arrival_time - (departure_time + access_time);
+                            let total_time = access_time + transit_time + egress_time;
 
-                        let candidate = CandidateJourney {
-                            total_time,
-                            transit_time: transit_journey_time,
-                            transfers_used,
-                        };
+                            let candidate = CandidateJourney {
+                                total_time,
+                                transit_time,
+                                transfers_used: target.transfers_used,
+                            };
 
-                        // Update if this is better than our current best
-                        if best_candidate
-                            .as_ref()
-                            .is_none_or(|best| candidate.total_time < best.total_time)
-                        {
-                            best_candidate = Some(candidate);
+                            // Update if this is better than our current best
+                            if best_candidate
+                                .as_ref()
+                                .is_none_or(|best| candidate.total_time < best.total_time)
+                            {
+                                best_candidate = Some(candidate);
+                            }
                         }
                     }
-                    RaptorResult::SingleTarget {
-                        arrival_time: None, ..
-                    } => {}
-                    RaptorResult::AllTargets(_) => unreachable!("Unexpected AllTargets result"),
+                    RaptorResult::AllTargets(_) => {
+                        unreachable!("Unexpected AllTargets result");
+                    }
                 }
             }
         }
@@ -195,16 +193,17 @@ pub fn multimodal_routing_one_to_many(
                     continue;
                 }
 
-                let transit_time = transit_times[egress_stop];
+                if transit_times[egress_stop].is_reachable() {
+                    let transit_time = transit_times[egress_stop].arrival_time;
+                    let transfers_used = transit_times[egress_stop].transfers_used;
 
-                if transit_time != Time::MAX {
-                    let transit_journey_time = transit_time - (departure_time + *access_time);
-                    let total_time = *access_time + transit_journey_time + egress_time;
+                    let transit_time = transit_time - (departure_time + *access_time);
+                    let total_time = *access_time + transit_time + egress_time;
 
                     let candidate = CandidateJourney {
                         total_time,
-                        transit_time: transit_journey_time,
-                        transfers_used: max_transfers, // to-do! Calculate real amount of transfers
+                        transit_time,
+                        transfers_used,
                     };
 
                     if best_candidate

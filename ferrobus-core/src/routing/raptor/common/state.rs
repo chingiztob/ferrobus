@@ -81,14 +81,36 @@ pub enum RaptorError {
     InvalidJourney,
 }
 
+/// Per-target result. `arrival_time == Time::MAX` means unreachable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TargetResult {
+    pub arrival_time: Time,
+    pub transfers_used: usize,
+}
+
+impl TargetResult {
+    #[inline]
+    #[allow(unused)]
+    pub fn unreachable() -> Self {
+        Self {
+            arrival_time: Time::MAX,
+            transfers_used: 0,
+        }
+    }
+
+    #[inline]
+    pub fn is_reachable(&self) -> bool {
+        self.arrival_time != Time::MAX
+    }
+}
+
 /// Result of the RAPTOR algorithm.
 #[derive(Debug)]
 pub enum RaptorResult {
-    SingleTarget {
-        arrival_time: Option<Time>,
-        transfers_used: usize,
-    },
-    AllTargets(Vec<Time>),
+    /// Single target result
+    SingleTarget(TargetResult),
+    /// All targets indexed by stop id
+    AllTargets(Vec<TargetResult>),
 }
 
 /// Common validation and setup for RAPTOR algorithms
