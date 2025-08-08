@@ -10,8 +10,8 @@ use super::{
     },
 };
 use crate::{
-    Error,
-    model::{PublicTransitData, RaptorStopId, Route, RouteId, Stop, StopTime},
+    Error, RaptorStopId, RouteId,
+    model::{PublicTransitData, Route, Stop, StopTime},
 };
 use crate::{loading::config::TransitModelConfig, model::FeedMeta};
 

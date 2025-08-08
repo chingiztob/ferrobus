@@ -29,6 +29,7 @@ impl DetailedJourney {
         let walk_leg = WalkingLeg::new(
             start.geometry,
             end.geometry,
+            // Empty strings, because there are no transit stops in a walking-only journey
             String::new(),
             String::new(),
             departure_time,

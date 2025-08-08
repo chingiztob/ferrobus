@@ -4,14 +4,8 @@ use geo::Point;
 
 use crate::loading::FeedInfo;
 
-/// Type for stop indices
-pub type RaptorStopId = usize;
-
-/// Type for route indices
-pub type RouteId = usize;
-
-/// Type for representing time in seconds from the beginning of the day
-pub type Time = u32;
+// Re-export the common types for convenience
+pub use crate::types::{RaptorStopId, RouteId, Time};
 
 /// Arrival/departure time at a stop
 #[derive(Debug, Clone, Copy, PartialEq)]

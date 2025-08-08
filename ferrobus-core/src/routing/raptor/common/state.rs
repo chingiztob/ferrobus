@@ -3,7 +3,8 @@ use std::mem;
 use fixedbitset::FixedBitSet;
 use thiserror::Error;
 
-use crate::{PublicTransitData, Time};
+use crate::PublicTransitData;
+use crate::types::{RaptorStopId, Time};
 
 #[derive(Debug)]
 pub struct RaptorState {
@@ -32,7 +33,7 @@ impl RaptorState {
     pub fn update(
         &mut self,
         round: usize,
-        stop: usize,
+        stop: RaptorStopId,
         arrival: Time,
         board: Time,
     ) -> Result<bool, RaptorError> {

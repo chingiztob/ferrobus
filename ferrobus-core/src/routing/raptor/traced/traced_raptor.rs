@@ -2,18 +2,19 @@ use fixedbitset::FixedBitSet;
 use itertools::Itertools;
 
 use super::state::{Predecessor, TracedRaptorState};
+use crate::PublicTransitData;
 use crate::model::Transfer;
 use crate::routing::raptor::common::create_route_queue;
 use crate::routing::raptor::common::{RaptorError, find_earliest_trip};
-use crate::{PublicTransitData, RaptorStopId, Time};
+use crate::types::{Duration, RaptorStopId, RouteId, Time, TripId};
 
 /// Represents a single leg of an itinerary
 #[derive(Debug, Clone)]
 pub enum JourneyLeg {
     /// A transit trip segment
     Transit {
-        route_id: usize,
-        trip_id: usize,
+        route_id: RouteId,
+        trip_id: TripId,
         from_stop: RaptorStopId,
         departure_time: Time,
         to_stop: RaptorStopId,
@@ -25,7 +26,7 @@ pub enum JourneyLeg {
         departure_time: Time,
         to_stop: RaptorStopId,
         arrival_time: Time,
-        duration: Time,
+        duration: Duration,
     },
     Waiting {
         at_stop: RaptorStopId,

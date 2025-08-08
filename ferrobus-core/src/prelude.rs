@@ -10,7 +10,4 @@ pub use crate::routing::pareto::{
     RangeRoutingResult, pareto_range_multimodal_routing, range_multimodal_routing,
 };
 
-pub use crate::RaptorStopId;
-pub use crate::RouteId;
-pub use crate::StreetNodeId;
 pub use crate::Time;

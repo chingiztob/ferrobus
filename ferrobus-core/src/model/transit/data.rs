@@ -1,6 +1,7 @@
 //! Public transit data structure and methods to work with it
 
-use super::types::{FeedMeta, RaptorStopId, Route, RouteId, Stop, StopTime, Transfer};
+use super::types::{FeedMeta, Route, Stop, StopTime, Transfer};
+use crate::types::{RaptorStopId, RouteId};
 use hashbrown::HashMap;
 use petgraph::graph::NodeIndex;
 

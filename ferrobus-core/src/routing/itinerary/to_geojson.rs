@@ -214,7 +214,6 @@ fn create_direct_line_geometry(
     Geometry::new((&direct_line).into())
 }
 
-/// Converts a waiting leg to a `GeoJSON` Feature.
 fn waiting_leg_feature(transit_data: &PublicTransitData, leg: &JourneyLeg) -> Feature {
     if let JourneyLeg::Waiting { at_stop, duration } = leg {
         let geom = transit_data.transit_stop_location(*at_stop);
