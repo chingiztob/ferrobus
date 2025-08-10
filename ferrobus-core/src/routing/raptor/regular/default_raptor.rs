@@ -83,7 +83,8 @@ pub fn raptor(
                     // Separate the times: the actual arrival (when the bus reaches the stop)
                     // and the boarding time (when the bus departs from the stop).
                     let actual_arrival = trip[trip_stop_idx].arrival;
-                    // For further connections, use the departure time.
+                    // This is currently disabled, because if causes negative travel times in some cases
+
                     let effective_board = if let Some(target_stop) = target {
                         if stop == target_stop {
                             actual_arrival // For target, report arrival.
@@ -93,6 +94,8 @@ pub fn raptor(
                     } else {
                         trip[trip_stop_idx].departure
                     };
+
+                    //let effective_board = trip[trip_stop_idx].departure;
 
                     // Only update if this effective boarding time is an improvement.
                     if state.update(round, stop, actual_arrival, effective_board)? {

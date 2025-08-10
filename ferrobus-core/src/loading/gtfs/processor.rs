@@ -213,10 +213,14 @@ fn process_trip_stop_times<'a>(
 
             for current_trip in group {
                 for stop_time in current_trip {
-                    stop_times_vec.push(StopTime {
-                        arrival: stop_time.arrival_time,
-                        departure: stop_time.departure_time,
-                    });
+                    let mut arrival = stop_time.arrival_time;
+                    let departure = stop_time.departure_time;
+
+                    if stop_time.stop_sequence == 0 {
+                        arrival = departure; // For the first stop, arrival is the same as departure
+                    }
+
+                    stop_times_vec.push(StopTime { arrival, departure });
                 }
             }
 
