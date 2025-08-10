@@ -65,7 +65,7 @@ impl PyTransitPoint {
             ))
         })?;
 
-        Ok(PyTransitPoint {
+        Ok(Self {
             inner: transit_point,
         })
     }

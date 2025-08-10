@@ -12,7 +12,8 @@ pub enum Predecessor {
         route_id: RouteId,
         trip_id: TripId,
         from_stop: RaptorStopId,
-        departure_time: Time,
+        from_idx: usize,
+        to_idx: usize,
     },
     Transfer {
         from_stop: RaptorStopId,
@@ -26,7 +27,7 @@ pub struct TracedRaptorState {
     pub board_times: Vec<Vec<Time>>,
     pub best_arrival: Vec<Time>,
     pub marked_stops: Vec<FixedBitSet>,
-    pub predecessors: Vec<Vec<Predecessor>>, // New field for tracing
+    pub predecessors: Vec<Vec<Predecessor>>,
 }
 
 impl TracedRaptorState {

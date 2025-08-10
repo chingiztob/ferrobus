@@ -109,22 +109,19 @@ pub fn traced_raptor(
         while let Some((route_id, start_pos)) = queue.pop_front() {
             let stops = data.get_route_stops(route_id)?;
 
-            // Use our helper function to find earliest trip
-            if let Some((trip_idx, current_board_pos, boarding_stop, boarding_time)) =
-                find_traced_trip_at_stop(
+            if let Some((trip_idx, current_board_pos)) =
+                crate::routing::raptor::common::find_earliest_trip_at_stop(
                     data,
                     route_id,
                     stops,
                     &state.board_times[prev_round],
                     start_pos,
-                )?
+                )
             {
                 let mut trip_idx = trip_idx;
                 let mut trip = data.get_trip(route_id, trip_idx)?;
-                let mut boarding_stop = boarding_stop;
-                let mut boarding_time = boarding_time;
+                let mut boarding_idx = current_board_pos;
 
-                // Process remaining stops in this route
                 for (trip_stop_idx, &stop) in stops.iter().enumerate().skip(current_board_pos) {
                     // Check if we can "upgrade" to an earlier trip
                     let prev_board = state.board_times[prev_round][stop];
@@ -135,8 +132,8 @@ pub fn traced_raptor(
                     {
                         trip_idx = new_trip_idx;
                         trip = data.get_trip(route_id, new_trip_idx)?;
-                        boarding_stop = stop;
-                        boarding_time = trip[trip_stop_idx].departure;
+                        // Re-board at the current stop on the new trip
+                        boarding_idx = trip_stop_idx;
                     }
 
                     let actual_arrival = trip[trip_stop_idx].arrival;
@@ -150,7 +147,6 @@ pub fn traced_raptor(
                         trip[trip_stop_idx].departure
                     };
 
-                    // Record the trip we took to get here
                     if state.update(
                         round,
                         stop,
@@ -159,8 +155,9 @@ pub fn traced_raptor(
                         Predecessor::Transit {
                             route_id,
                             trip_id: trip_idx,
-                            from_stop: boarding_stop,
-                            departure_time: boarding_time,
+                            from_stop: stops[boarding_idx],
+                            from_idx: boarding_idx,
+                            to_idx: trip_stop_idx,
                         },
                     )? {
                         state.marked_stops[round].set(stop, true);
@@ -202,6 +199,7 @@ pub fn traced_raptor(
         Ok(TracedRaptorResult::SingleTarget(journey))
     } else {
         let mut journeys = vec![None; num_stops];
+
         #[allow(clippy::needless_range_loop)]
         for stop in 0..num_stops {
             if state.best_arrival[stop] != Time::MAX {
@@ -295,27 +293,19 @@ fn reconstruct_journey(
                 route_id,
                 trip_id,
                 from_stop,
-                departure_time,
+                from_idx,
+                to_idx,
             } => {
                 let trip = data.get_trip(*route_id, *trip_id)?;
-                let stops = data.get_route_stops(*route_id)?;
-
-                // Find the indices in the trip
-                let to_idx = stops
-                    .iter()
-                    .position(|&s| s == current_stop)
-                    .ok_or(RaptorError::InvalidJourney)?;
-
                 legs.push(JourneyLeg::Transit {
                     route_id: *route_id,
                     trip_id: *trip_id,
                     from_stop: *from_stop,
-                    departure_time: *departure_time,
+                    departure_time: trip[*from_idx].departure,
                     to_stop: current_stop,
-                    arrival_time: trip[to_idx].arrival,
+                    arrival_time: trip[*to_idx].arrival,
                 });
 
-                // Move to previous stop and round
                 current_stop = *from_stop;
                 current_round -= 1;
             }
@@ -381,33 +371,4 @@ fn reconstruct_journey(
         arrival_time,
         transfers_count,
     })
-}
-
-/// Find the earliest trip at a given stop on a route for traced implementation
-/// Returns (`trip_idx`, `board_pos`, `boarding_stop`, `boarding_time`) if found, None otherwise
-fn find_traced_trip_at_stop(
-    data: &PublicTransitData,
-    route_id: usize,
-    stops: &[usize],
-    board_times: &[Time],
-    start_pos: usize,
-) -> Result<Option<(usize, usize, usize, Time)>, RaptorError> {
-    let mut current_trip_opt = None;
-    let mut current_board_pos = 0;
-
-    // Find the earliest trip on this route that is catchable
-    for (idx, &stop) in stops.iter().enumerate().skip(start_pos) {
-        let earliest_board = board_times[stop];
-        if earliest_board == Time::MAX {
-            continue;
-        }
-        if let Some(trip_idx) = find_earliest_trip(data, route_id, idx, earliest_board) {
-            let trip = data.get_trip(route_id, trip_idx)?;
-            current_trip_opt = Some((trip_idx, idx, stop, trip[idx].departure));
-            current_board_pos = idx;
-            break;
-        }
-    }
-
-    Ok(current_trip_opt.map(|(trip_idx, _, stop, time)| (trip_idx, current_board_pos, stop, time)))
 }

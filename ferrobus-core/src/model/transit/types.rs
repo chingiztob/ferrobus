@@ -8,7 +8,7 @@ use crate::loading::FeedInfo;
 pub use crate::types::{RaptorStopId, RouteId, Time};
 
 /// Arrival/departure time at a stop
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StopTime {
     /// Arrival time in seconds from the beginning of the day
     pub arrival: Time,
