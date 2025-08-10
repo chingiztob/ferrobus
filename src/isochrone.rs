@@ -56,7 +56,7 @@ use crate::routing::PyTransitPoint;
 /// Example
 /// -------
 ///
-/// .. `code-block::` python
+/// .. code-block:: python
 ///
 ///     index = create_isochrone_index(model, area_wkt, 8, 1200);
 ///     isochrone = calculate_isochrone(py, model, point, departure, 3, 1800, index);

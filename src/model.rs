@@ -21,7 +21,7 @@ use pyo3::prelude::*;
 ///
 /// Example:
 ///
-/// .. `code-block::` python
+/// .. code-block:: python
 ///
 ///     model = create_transit_model("path/to/osm.pbf", ["path/to/gtfs"], None, 1800)
 ///     transit_point = create_transit_point(lat, lon, model, 1200, 10)
@@ -59,7 +59,7 @@ impl PyTransitModel {
     ///
     /// Example
     /// -------
-    /// .. `code-block::` python
+    /// .. code-block:: python
     ///
     ///     info = model.feeds_info()
     ///     print(json.loads(info))

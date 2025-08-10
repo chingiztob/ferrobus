@@ -16,7 +16,7 @@ use ferrobus_core::{prelude::*, routing::itinerary::traced_multimodal_routing};
 /// Example
 /// -------
 ///
-/// .. `code-block::` python
+/// .. code-block:: python
 ///
 ///     # Create a transit point at specific coordinates
 ///     point = ferrobus.create_transit_point(
@@ -118,7 +118,7 @@ impl PyTransitPoint {
 ///
 /// See Also
 /// --------
-/// `TransitPoint` : For more details about transit points.
+/// TransitPoint : For more details about transit points.
 #[stubgen]
 #[pyfunction]
 #[pyo3(signature = (lat, lon, transit_model, max_walking_time=1200, max_nearest_stops=10))]
@@ -188,6 +188,14 @@ pub(crate) fn optional_result_to_py(py: Python<'_>, result: Option<&MultiModalRe
 ///     - `used_transit`: Whether transit was used or just walking
 ///     Returns None if the destination is unreachable.
 ///
+/// Notes
+/// -----
+/// This function uses aggressive early pruning, and scans fewer possible egress stops
+/// compared to :py:func:`~ferrobus.find_routes_one_to_many`. As a result, the route found may not always be
+/// the absolute fastest possible, especially in complex transit networks with multiple
+/// transfer options. If you require the most accurate and optimal results, prefer using
+/// :py:func:`~ferrobus.find_routes_one_to_many`, which performs a more exhaustive search for each destination.
+///
 /// Raises
 /// ------
 /// `RuntimeError`
@@ -195,7 +203,7 @@ pub(crate) fn optional_result_to_py(py: Python<'_>, result: Option<&MultiModalRe
 ///
 /// Example
 /// -------
-/// .. `code-block::` python
+/// .. code-block:: python
 ///
 ///     result = ferrobus.find_route(model, start_point, end_point, departure_time, max_transfers)
 ///     if result is not None:
@@ -261,9 +269,15 @@ pub fn find_route(
 ///     Each result is either a dictionary with route details or None if
 ///     the destination is unreachable.
 ///
+/// Notes
+/// -----
+/// The one-to-many nature of this function allows us to scan multiple possible egress
+/// stops for each destination, so the results may be more accurate than individual route
+/// calculations using :py:func:`~ferrobus.find_route`.
+///
 /// Example
 /// -------
-/// .. `code-block::` python
+/// .. code-block:: python
 ///
 ///     # Create a transit model
 ///     model = ferrobus.create_transit_model(
@@ -415,9 +429,7 @@ pub fn detailed_journey(
             max_transfers,
         )
         .map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
-                "Route calculation failed: {e}"
-            ))
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Routing failed: {e}"))
         })?;
 
         if let Some(result) = result {

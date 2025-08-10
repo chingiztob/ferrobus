@@ -40,7 +40,7 @@ pub mod routing;
 /// Example
 /// =======
 ///
-/// .. `code-block::` python
+/// .. code-block:: python
 ///
 ///    # Create a transit model
 ///    model = `ferrobus.create_transit_model("streets.osm.pbf`", ["`gtfs_data`"], None)
