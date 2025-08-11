@@ -21,20 +21,25 @@ where
 
 /// Parse time string in HH:MM:SS format to seconds since midnight
 fn parse_time(time_str: &str) -> u32 {
-    let mut parts = time_str.split(':');
-    let hours = parts
-        .next()
-        .and_then(|p| p.parse::<u32>().ok())
-        .unwrap_or(0);
-    let minutes = parts
-        .next()
-        .and_then(|p| p.parse::<u32>().ok())
-        .unwrap_or(0);
-    let seconds = parts
-        .next()
-        .and_then(|p| p.parse::<u32>().ok())
-        .unwrap_or(0);
+    let bytes = time_str.as_bytes();
 
+    // Fast path for HH:MM:SS format
+    if bytes.len() >= 8 && bytes[2] == b':' && bytes[5] == b':' {
+        let hours = u32::from(bytes[0] - b'0') * 10 + u32::from(bytes[1] - b'0');
+        let minutes = u32::from(bytes[3] - b'0') * 10 + u32::from(bytes[4] - b'0');
+        let seconds = u32::from(bytes[6] - b'0') * 10 + u32::from(bytes[7] - b'0');
+        return hours * 3600 + minutes * 60 + seconds;
+    }
+
+    // Fallback for other formats
+    parse_time_fallback(time_str)
+}
+
+fn parse_time_fallback(time_str: &str) -> u32 {
+    let mut parts = time_str.split(':');
+    let hours = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+    let minutes = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+    let seconds = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
     hours * 3600 + minutes * 60 + seconds
 }
 
