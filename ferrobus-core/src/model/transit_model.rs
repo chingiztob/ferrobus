@@ -24,7 +24,7 @@ pub struct TransitModelMeta {
 }
 
 impl TransitModel {
-    /// Creates a new model from street network and transit data (Unexpected!)
+    /// Creates a new model from street network and transit data
     pub(crate) fn with_transit(
         street_network: StreetGraph,
         transit_data: PublicTransitData,
@@ -107,10 +107,10 @@ impl TransitPoint {
         let mut nearest_stops = Vec::new();
 
         for (&node, &time) in &walking_paths {
-            if time <= max_walking_time - distance {
-                if let Some(&stop_id) = graph.transit_data.node_to_stop.get(&node) {
-                    nearest_stops.push((stop_id, time as Time + distance));
-                }
+            if time <= max_walking_time - distance
+                && let Some(&stop_id) = graph.transit_data.node_to_stop.get(&node)
+            {
+                nearest_stops.push((stop_id, time as Time + distance));
             }
         }
 

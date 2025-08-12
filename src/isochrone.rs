@@ -87,6 +87,7 @@ impl PyIsochroneIndex {
     /// -------
     /// int
     ///     The number of cells in the index.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.inner.len()
     }
@@ -99,6 +100,7 @@ impl PyIsochroneIndex {
     /// -------
     /// bool
     ///     True if the index is empty, False otherwise.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -112,6 +114,7 @@ impl PyIsochroneIndex {
     /// -------
     /// int
     ///     The resolution of the hexagonal grid (0-15).
+    #[must_use]
     pub fn resolution(&self) -> u8 {
         self.inner.resolution()
     }
@@ -121,26 +124,26 @@ impl PyIsochroneIndex {
 ///
 /// Parameters
 /// ----------
-/// transit_data : TransitModel
+/// `transit_data` : `TransitModel`
 ///     The transportation model containing transit network information.
 /// area : str
 ///     Geographic area over which to build the isochrone, as a WKT string.
-/// cell_resolution : int
+/// `cell_resolution` : int
 ///     Resolution of hexagonal grid cells (0-255). Higher values create
 ///     finer-grained but larger indexes.
-/// max_walking_time : int, default=1200
+/// `max_walking_time` : int, default=1200
 ///     Maximum time in seconds for walking connections.
 ///
 /// Returns
 /// -------
-/// IsochroneIndex
+/// `IsochroneIndex`
 ///     Pre-computed spatial index structure for rapid isochrone calculations.
 ///
 /// Raises
 /// ------
-/// ValueError
+/// `ValueError`
 ///     If the area WKT string cannot be parsed.
-/// RuntimeError
+/// `RuntimeError`
 ///     If the isochrone index creation fails for other reasons.
 ///
 /// Notes
@@ -183,17 +186,17 @@ pub fn create_isochrone_index(
 ///
 /// Parameters
 /// ----------
-/// transit_data : TransitModel
+/// `transit_data` : `TransitModel`
 ///     The transit model to use for routing.
-/// start : TransitPoint
+/// start : `TransitPoint`
 ///     Starting location for the isochrone.
-/// departure_time : int
+/// `departure_time` : int
 ///     Time of departure in seconds since midnight.
-/// max_transfers : int
+/// `max_transfers` : int
 ///     Maximum number of transfers allowed in route planning.
 /// cutoff : int
 ///     Maximum travel time in seconds to include in the isochrone.
-/// index : IsochroneIndex
+/// index : `IsochroneIndex`
 ///     Pre-computed isochrone spatial index for the area.
 ///
 /// Returns
@@ -203,7 +206,7 @@ pub fn create_isochrone_index(
 ///
 /// Raises
 /// ------
-/// RuntimeError
+/// `RuntimeError`
 ///     If the isochrone calculation fails.
 #[pyfunction]
 #[stubgen]
@@ -237,23 +240,23 @@ pub fn calculate_isochrone(
 
 /// Calculate isochrones from multiple starting points in batch mode
 ///
-/// This is an optimized bulk version of calculate_isochrone that processes
+/// This is an optimized bulk version of `calculate_isochrone` that processes
 /// multiple starting points in parallel, which is significantly faster than
 /// repeated individual calculations.
 ///
 /// Parameters
 /// ----------
-/// transit_data : TransitModel
+/// `transit_data` : `TransitModel`
 ///     The transit model to use for routing.
-/// starts : list[TransitPoint]
+/// starts : list[`TransitPoint`]
 ///     List of starting locations for isochrone calculations.
-/// departure_time : int
+/// `departure_time` : int
 ///     Time of departure in seconds since midnight.
-/// max_transfers : int
+/// `max_transfers` : int
 ///     Maximum number of transfers allowed in route planning.
 /// cutoff : int
 ///     Maximum travel time in seconds to include in the isochrones.
-/// index : IsochroneIndex
+/// index : `IsochroneIndex`
 ///     Pre-computed isochrone spatial index for the area.
 ///
 /// Returns
@@ -264,7 +267,7 @@ pub fn calculate_isochrone(
 ///
 /// Raises
 /// ------
-/// RuntimeError
+/// `RuntimeError`
 ///     If the batch isochrone calculation fails.
 #[pyfunction]
 #[stubgen]
@@ -307,31 +310,31 @@ pub fn calculate_bulk_isochrones(
 ///
 /// Parameters
 /// ----------
-/// transit_data : TransitModel
+/// `transit_data` : `TransitModel`
 ///     The transit model to use for routing.
-/// start : TransitPoint
+/// start : `TransitPoint`
 ///     Starting location for the isochrone.
-/// departure_range : tuple(int, int)
-///     Range of departure times to sample (start_time, end_time) in seconds.
-/// sample_interval : int
+/// `departure_range` : tuple(int, int)
+///     Range of departure times to sample (`start_time`, `end_time`) in seconds.
+/// `sample_interval` : int
 ///     Time interval between samples in seconds.
-/// max_transfers : int
+/// `max_transfers` : int
 ///     Maximum number of transfers allowed in route planning.
 /// cutoff : int
 ///     Maximum travel time in seconds to include in the isochrone.
-/// index : IsochroneIndex
+/// index : `IsochroneIndex`
 ///     Pre-computed isochrone spatial index for the area.
 ///
 /// Returns
 /// -------
 /// str
-///     GeoJSON FeatureCollection string containing polygons for each grid cell
+///     `GeoJSON` `FeatureCollection` string containing polygons for each grid cell
 ///     with properties indicating the percentage of sampled times the cell
 ///     was accessible.
 ///
 /// Raises
 /// ------
-/// RuntimeError
+/// `RuntimeError`
 ///     If isochrone calculation fails.
 ///
 /// Notes

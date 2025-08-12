@@ -29,15 +29,15 @@ pub fn traced_multimodal_routing(
 
     for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
         for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
-            if let Some(walk_time) = direct_walking {
-                if access_time + egress_time >= walk_time {
-                    continue;
-                }
+            if let Some(walk_time) = direct_walking
+                && access_time + egress_time >= walk_time
+            {
+                continue;
             }
-            if let Some((best, _, _, _)) = best_candidate.as_ref() {
-                if access_time + egress_time >= best.total_time {
-                    continue;
-                }
+            if let Some((best, _, _, _)) = best_candidate.as_ref()
+                && access_time + egress_time >= best.total_time
+            {
+                continue;
             }
             if let Ok(TracedRaptorResult::SingleTarget(Some(journey))) = traced_raptor(
                 transit_data,
@@ -63,15 +63,15 @@ pub fn traced_multimodal_routing(
         }
     }
 
-    if let Some(walk_time) = direct_walking {
-        if best_candidate.is_none() || walk_time <= best_candidate.as_ref().unwrap().0.total_time {
-            return Ok(Some(DetailedJourney::walking_only(
-                start,
-                end,
-                departure_time,
-                walk_time,
-            )));
-        }
+    if let Some(walk_time) = direct_walking
+        && (best_candidate.is_none() || walk_time <= best_candidate.as_ref().unwrap().0.total_time)
+    {
+        return Ok(Some(DetailedJourney::walking_only(
+            start,
+            end,
+            departure_time,
+            walk_time,
+        )));
     }
 
     if let Some((_, journey, access_stop, egress_stop)) = best_candidate {

@@ -1,7 +1,7 @@
 use fixedbitset::FixedBitSet;
 
 use crate::routing::raptor::common::RaptorError;
-use crate::{RaptorStopId, Time};
+use crate::types::{Duration, RaptorStopId, RouteId, Time, TripId};
 
 /// Records how we arrived at a particular stop in a particular round
 #[derive(Debug, Clone)]
@@ -9,15 +9,16 @@ pub enum Predecessor {
     None,
     Source,
     Transit {
-        route_id: usize,
-        trip_id: usize,
+        route_id: RouteId,
+        trip_id: TripId,
         from_stop: RaptorStopId,
-        departure_time: Time,
+        from_idx: usize,
+        to_idx: usize,
     },
     Transfer {
         from_stop: RaptorStopId,
         departure_time: Time,
-        duration: Time,
+        duration: Duration,
     },
 }
 
@@ -26,7 +27,7 @@ pub struct TracedRaptorState {
     pub board_times: Vec<Vec<Time>>,
     pub best_arrival: Vec<Time>,
     pub marked_stops: Vec<FixedBitSet>,
-    pub predecessors: Vec<Vec<Predecessor>>, // New field for tracing
+    pub predecessors: Vec<Vec<Predecessor>>,
 }
 
 impl TracedRaptorState {

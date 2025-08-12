@@ -81,17 +81,17 @@ pub fn multimodal_routing(
     for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
         for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
             // Skip if walking path is faster
-            if let Some(walking_time) = direct_walking {
-                if access_time + egress_time >= walking_time {
-                    continue;
-                }
+            if let Some(walking_time) = direct_walking
+                && access_time + egress_time >= walking_time
+            {
+                continue;
             }
 
             // Skip if we already have a better candidate
-            if let Some(candidate) = &best_candidate {
-                if access_time + egress_time >= candidate.total_time {
-                    continue;
-                }
+            if let Some(candidate) = &best_candidate
+                && access_time + egress_time >= candidate.total_time
+            {
+                continue;
             }
 
             if let Ok(result) = raptor(
@@ -102,41 +102,47 @@ pub fn multimodal_routing(
                 max_transfers,
             ) {
                 match result {
-                    RaptorResult::SingleTarget {
-                        arrival_time: Some(arrival_time),
-                        transfers_used,
-                    } => {
-                        let transit_journey_time = arrival_time - (departure_time + access_time);
-                        let total_time = access_time + transit_journey_time + egress_time;
+                    RaptorResult::SingleTarget(target) => {
+                        if target.is_reachable() {
+                            let transit_time = target.arrival_time - (departure_time + access_time);
+                            let total_time = access_time + transit_time + egress_time;
+                            if target.arrival_time < departure_time + access_time {
+                                return Err(Error::InvalidData(format!(
+                                    "Negative transit time detected: {} - {} = {}",
+                                    target.arrival_time,
+                                    departure_time + access_time,
+                                    transit_time
+                                )));
+                            }
 
-                        let candidate = CandidateJourney {
-                            total_time,
-                            transit_time: transit_journey_time,
-                            transfers_used,
-                        };
+                            let candidate = CandidateJourney {
+                                total_time,
+                                transit_time,
+                                transfers_used: target.transfers_used,
+                            };
 
-                        // Update if this is better than our current best
-                        if best_candidate
-                            .as_ref()
-                            .is_none_or(|best| candidate.total_time < best.total_time)
-                        {
-                            best_candidate = Some(candidate);
+                            // Update if this is better than our current best
+                            if best_candidate
+                                .as_ref()
+                                .is_none_or(|best| candidate.total_time < best.total_time)
+                            {
+                                best_candidate = Some(candidate);
+                            }
                         }
                     }
-                    RaptorResult::SingleTarget {
-                        arrival_time: None, ..
-                    } => {}
-                    RaptorResult::AllTargets(_) => unreachable!("Unexpected AllTargets result"),
+                    RaptorResult::AllTargets(_) => {
+                        unreachable!("Unexpected AllTargets result");
+                    }
                 }
             }
         }
     }
 
     // If some candidate transit route was found, check if it's better than walking
-    if let Some(candidate) = best_candidate {
-        if !is_walking_better(direct_walking, Some(&candidate)) {
-            return Ok(Some(create_transit_result(&candidate)));
-        }
+    if let Some(candidate) = best_candidate
+        && !is_walking_better(direct_walking, Some(&candidate))
+    {
+        return Ok(Some(create_transit_result(&candidate)));
     }
 
     // if not - return walking result
@@ -182,29 +188,30 @@ pub fn multimodal_routing_one_to_many(
         for (_access_stop, (access_time, transit_times)) in &transit_results {
             for &(egress_stop, egress_time) in &end_point.nearest_stops {
                 // Skip if walking path is faster
-                if let Some(walking_time) = direct_walking {
-                    if access_time + egress_time >= walking_time {
-                        continue;
-                    }
+                if let Some(walking_time) = direct_walking
+                    && access_time + egress_time >= walking_time
+                {
+                    continue;
                 }
 
                 // Skip if we already have a better candidate
-                if let Some(candidate) = &best_candidate {
-                    if access_time + egress_time >= candidate.total_time {
-                        continue;
-                    }
+                if let Some(candidate) = &best_candidate
+                    && access_time + egress_time >= candidate.total_time
+                {
+                    continue;
                 }
 
-                let transit_time = transit_times[egress_stop];
+                if transit_times[egress_stop].is_reachable() {
+                    let transit_time = transit_times[egress_stop].arrival_time;
+                    let transfers_used = transit_times[egress_stop].transfers_used;
 
-                if transit_time != Time::MAX {
-                    let transit_journey_time = transit_time - (departure_time + *access_time);
-                    let total_time = *access_time + transit_journey_time + egress_time;
+                    let transit_time = transit_time - (departure_time + *access_time);
+                    let total_time = *access_time + transit_time + egress_time;
 
                     let candidate = CandidateJourney {
                         total_time,
-                        transit_time: transit_journey_time,
-                        transfers_used: max_transfers, // to-do! Calculate real amount of transfers
+                        transit_time,
+                        transfers_used,
                     };
 
                     if best_candidate
@@ -217,11 +224,11 @@ pub fn multimodal_routing_one_to_many(
             }
         }
 
-        if let Some(candidate) = best_candidate {
-            if !is_walking_better(direct_walking, Some(&candidate)) {
-                results[end_idx] = Some(create_transit_result(&candidate));
-                continue;
-            }
+        if let Some(candidate) = best_candidate
+            && !is_walking_better(direct_walking, Some(&candidate))
+        {
+            results[end_idx] = Some(create_transit_result(&candidate));
+            continue;
         }
 
         // Either walking is better or no transit option exists

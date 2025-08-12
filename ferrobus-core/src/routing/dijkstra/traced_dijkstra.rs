@@ -27,22 +27,22 @@ pub(crate) fn dijkstra_paths(
     distances.insert(start, 0);
 
     while let Some(State { cost, node }) = heap.pop() {
-        if let Some(target_node) = target {
-            if node == target_node {
-                break;
-            }
+        if let Some(target_node) = target
+            && node == target_node
+        {
+            break;
         }
 
-        if let Some(&best) = distances.get(&node) {
-            if cost > best {
-                continue;
-            }
+        if let Some(&best) = distances.get(&node)
+            && cost > best
+        {
+            continue;
         }
 
-        if let Some(max) = max_cost {
-            if f64::from(cost) > max {
-                break;
-            }
+        if let Some(max) = max_cost
+            && f64::from(cost) > max
+        {
+            break;
         }
 
         for edge in graph.edges(node) {

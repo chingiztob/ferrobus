@@ -14,14 +14,17 @@ pub struct PyRangeRoutingResult {
 #[stubgen]
 #[pymethods]
 impl PyRangeRoutingResult {
+    #[must_use]
     pub fn median_travel_time(&self) -> Time {
         self.inner.median_travel_time()
     }
 
+    #[must_use]
     pub fn travel_times(&self) -> Vec<Time> {
         self.inner.travel_times()
     }
 
+    #[must_use]
     pub fn departure_times(&self) -> Vec<Time> {
         self.inner.departure_times()
     }

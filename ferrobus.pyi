@@ -93,7 +93,7 @@ class RangeRoutingResult:
 
 class TransitModel:
     r"""
-    TransitModel
+    `TransitModel`
 
     A unified transit model that integrates both the street network (OSM) and
     public transit schedules (GTFS) for multimodal routing.
@@ -163,7 +163,7 @@ class TransitPoint:
     A geographic location connected to the transit network with pre-calculated access paths
     to nearby transit stops and the street network.
 
-    TransitPoint serves as the fundamental origin/destination entity for all routing operations.
+    `TransitPoint` serves as the fundamental origin/destination entity for all routing operations.
     Each point maintains a list of nearby transit stops with walking times, enabling efficient
     multimodal journey planning without recomputing access paths for every query.
 
@@ -199,23 +199,23 @@ def calculate_bulk_isochrones(transit_data:TransitModel, starts:typing.Sequence[
     r"""
     Calculate isochrones from multiple starting points in batch mode
 
-    This is an optimized bulk version of calculate_isochrone that processes
+    This is an optimized bulk version of `calculate_isochrone` that processes
     multiple starting points in parallel, which is significantly faster than
     repeated individual calculations.
 
     Parameters
     ----------
-    transit_data : TransitModel
+    `transit_data` : `TransitModel`
         The transit model to use for routing.
-    starts : list[TransitPoint]
+    starts : list[`TransitPoint`]
         List of starting locations for isochrone calculations.
-    departure_time : int
+    `departure_time` : int
         Time of departure in seconds since midnight.
-    max_transfers : int
+    `max_transfers` : int
         Maximum number of transfers allowed in route planning.
     cutoff : int
         Maximum travel time in seconds to include in the isochrones.
-    index : IsochroneIndex
+    index : `IsochroneIndex`
         Pre-computed isochrone spatial index for the area.
 
     Returns
@@ -226,7 +226,7 @@ def calculate_bulk_isochrones(transit_data:TransitModel, starts:typing.Sequence[
 
     Raises
     ------
-    RuntimeError
+    `RuntimeError`
         If the batch isochrone calculation fails.
     """
 
@@ -239,17 +239,17 @@ def calculate_isochrone(transit_data:TransitModel, start:TransitPoint, departure
 
     Parameters
     ----------
-    transit_data : TransitModel
+    `transit_data` : `TransitModel`
         The transit model to use for routing.
-    start : TransitPoint
+    start : `TransitPoint`
         Starting location for the isochrone.
-    departure_time : int
+    `departure_time` : int
         Time of departure in seconds since midnight.
-    max_transfers : int
+    `max_transfers` : int
         Maximum number of transfers allowed in route planning.
     cutoff : int
         Maximum travel time in seconds to include in the isochrone.
-    index : IsochroneIndex
+    index : `IsochroneIndex`
         Pre-computed isochrone spatial index for the area.
 
     Returns
@@ -259,7 +259,7 @@ def calculate_isochrone(transit_data:TransitModel, start:TransitPoint, departure
 
     Raises
     ------
-    RuntimeError
+    `RuntimeError`
         If the isochrone calculation fails.
     """
 
@@ -272,31 +272,31 @@ def calculate_percent_access_isochrone(transit_data:TransitModel, start:TransitP
 
     Parameters
     ----------
-    transit_data : TransitModel
+    `transit_data` : `TransitModel`
         The transit model to use for routing.
-    start : TransitPoint
+    start : `TransitPoint`
         Starting location for the isochrone.
-    departure_range : tuple(int, int)
-        Range of departure times to sample (start_time, end_time) in seconds.
-    sample_interval : int
+    `departure_range` : tuple(int, int)
+        Range of departure times to sample (`start_time`, `end_time`) in seconds.
+    `sample_interval` : int
         Time interval between samples in seconds.
-    max_transfers : int
+    `max_transfers` : int
         Maximum number of transfers allowed in route planning.
     cutoff : int
         Maximum travel time in seconds to include in the isochrone.
-    index : IsochroneIndex
+    index : `IsochroneIndex`
         Pre-computed isochrone spatial index for the area.
 
     Returns
     -------
     str
-        GeoJSON FeatureCollection string containing polygons for each grid cell
+        `GeoJSON` `FeatureCollection` string containing polygons for each grid cell
         with properties indicating the percentage of sampled times the cell
         was accessible.
 
     Raises
     ------
-    RuntimeError
+    `RuntimeError`
         If isochrone calculation fails.
 
     Notes
@@ -311,26 +311,26 @@ def create_isochrone_index(transit_data:TransitModel, area:builtins.str, cell_re
 
     Parameters
     ----------
-    transit_data : TransitModel
+    `transit_data` : `TransitModel`
         The transportation model containing transit network information.
     area : str
         Geographic area over which to build the isochrone, as a WKT string.
-    cell_resolution : int
+    `cell_resolution` : int
         Resolution of hexagonal grid cells (0-255). Higher values create
         finer-grained but larger indexes.
-    max_walking_time : int, default=1200
+    `max_walking_time` : int, default=1200
         Maximum time in seconds for walking connections.
 
     Returns
     -------
-    IsochroneIndex
+    `IsochroneIndex`
         Pre-computed spatial index structure for rapid isochrone calculations.
 
     Raises
     ------
-    ValueError
+    `ValueError`
         If the area WKT string cannot be parsed.
-    RuntimeError
+    `RuntimeError`
         If the isochrone index creation fails for other reasons.
 
     Notes
@@ -356,24 +356,24 @@ def create_transit_model(osm_path:builtins.str, gtfs_dirs:typing.Sequence[builti
 
     Parameters
     ----------
-    osm_path : str
+    `osm_path` : str
         Path to OpenStreetMap PBF file containing street network data
-    gtfs_dirs : list[str]
+    `gtfs_dirs` : list[str]
         List of paths to directories containing GTFS data
     date : datetime.date, optional
         Filter transit schedules to services running on this date.
         If None, includes all services.
-    max_transfer_time : int, default=1800
+    `max_transfer_time` : int, default=1800
         Maximum walking time in seconds allowed for transfers between stops
 
     Returns
     -------
-    TransitModel
+    `TransitModel`
         An integrated model for multimodal routing operations
 
     Raises
     ------
-    RuntimeError
+    `RuntimeError`
         If the model creation fails due to data errors
 
     Notes
@@ -394,11 +394,11 @@ def create_transit_point(lat:builtins.float, lon:builtins.float, transit_model:T
         Latitude coordinate of the point.
     lon : float
         Longitude coordinate of the point.
-    transit_model : TransitModel
+    `transit_model` : `TransitModel`
         The transit model to which the point should be connected.
-    max_walking_time : int, default=1200
+    `max_walking_time` : int, default=1200
         Maximum walking time in seconds this point can connect to the network.
-    max_nearest_stops : int, default=10
+    `max_nearest_stops` : int, default=10
         Maximum number of nearby transit stops to consider for connections.
 
     Returns
@@ -408,7 +408,7 @@ def create_transit_point(lat:builtins.float, lon:builtins.float, transit_model:T
 
     Raises
     ------
-    ValueError
+    `ValueError`
         If the coordinates are invalid or unreachable in the transit network.
 
     See Also
@@ -421,32 +421,32 @@ def detailed_journey(transit_model:TransitModel, start_point:TransitPoint, end_p
     Find a detailed journey between two points in a transit network
 
     Calculates a detailed multimodal route between two points, including walking
-    and public transit segments. The result is returned as a GeoJSON string
+    and public transit segments. The result is returned as a `GeoJSON` string
     containing the full journey details.
 
     Parameters
     ----------
-    transit_model : TransitModel
+    `transit_model` : `TransitModel`
         The transit model to use for routing.
-    start_point : TransitPoint
+    `start_point` : `TransitPoint`
         Starting location for the journey.
-    end_point : TransitPoint
+    `end_point` : `TransitPoint`
         Destination location for the journey.
-    departure_time : int
+    `departure_time` : int
         Time of departure in seconds since midnight.
-    max_transfers : int, default=3
+    `max_transfers` : int, default=3
         Maximum number of transfers allowed in route planning.
 
     Returns
     -------
     str
-        A GeoJSON string representing the detailed journey, including all route
+        A `GeoJSON` string representing the detailed journey, including all route
         segments and properties such as travel time and transfer details. Returns
         "null" if no route is found.
 
     Raises
     ------
-    RuntimeError
+    `RuntimeError`
         If the journey calculation fails.
     """
 
@@ -460,31 +460,39 @@ def find_route(transit_model:TransitModel, start_point:TransitPoint, end_point:T
 
     Parameters
     ----------
-    transit_model : TransitModel
+    `transit_model` : `TransitModel`
         The transit model to use for routing.
-    start_point : TransitPoint
+    `start_point` : `TransitPoint`
         Starting location for the route.
-    end_point : TransitPoint
+    `end_point` : `TransitPoint`
         Destination location for the route.
-    departure_time : int
+    `departure_time` : int
         Time of departure in seconds since midnight.
-    max_transfers : int, default=3
+    `max_transfers` : int, default=3
         Maximum number of transfers allowed in route planning.
 
     Returns
     -------
     dict or None
         A dictionary containing route details including:
-        - travel_time_seconds: Total travel time
-        - walking_time_seconds: Total walking time
-        - transit_time_seconds: Time spent on transit (if used)
+        - `travel_time_seconds`: Total travel time
+        - `walking_time_seconds`: Total walking time
+        - `transit_time_seconds`: Time spent on transit (if used)
         - transfers: Number of transfers made (if transit used)
-        - used_transit: Whether transit was used or just walking
+        - `used_transit`: Whether transit was used or just walking
         Returns None if the destination is unreachable.
+
+    Notes
+    -----
+    This function uses aggressive early pruning, and scans fewer possible egress stops
+    compared to :py:func:`~ferrobus.find_routes_one_to_many`. As a result, the route found may not always be
+    the absolute fastest possible, especially in complex transit networks with multiple
+    transfer options. If you require the most accurate and optimal results, prefer using
+    :py:func:`~ferrobus.find_routes_one_to_many`, which performs a more exhaustive search for each destination.
 
     Raises
     ------
-    RuntimeError
+    `RuntimeError`
         If the route calculation fails.
 
     Example
@@ -516,23 +524,29 @@ def find_routes_one_to_many(transit_model:TransitModel, start_point:TransitPoint
 
     Parameters
     ----------
-    transit_model : TransitModel
+    `transit_model` : `TransitModel`
         The transit model to use for routing.
-    start_point : TransitPoint
+    `start_point` : `TransitPoint`
         Starting location for all routes.
-    end_points : list[TransitPoint]
+    `end_points` : list[TransitPoint]
         List of destination points.
-    departure_time : int
+    `departure_time` : int
         Time of departure in seconds since midnight.
-    max_transfers : int, default=3
+    `max_transfers` : int, default=3
         Maximum number of transfers allowed in route planning.
 
     Returns
     -------
     list[dict or None]
-        List of routing results in the same order as the input end_points.
+        List of routing results in the same order as the input `end_points`.
         Each result is either a dictionary with route details or None if
         the destination is unreachable.
+
+    Notes
+    -----
+    The one-to-many nature of this function allows us to scan multiple possible egress
+    stops for each destination, so the results may be more accurate than individual route
+    calculations using :py:func:`~ferrobus.find_route`.
 
     Example
     -------
@@ -593,7 +607,7 @@ def find_routes_one_to_many(transit_model:TransitModel, start_point:TransitPoint
 
     Raises
     ------
-    RuntimeError
+    `RuntimeError`
         If the batch routing calculation fails.
 
     Notes
@@ -612,13 +626,13 @@ def travel_time_matrix(transit_model:TransitModel, points:typing.Sequence[Transi
 
     Parameters
     ----------
-    transit_model : TransitModel
+    `transit_model` : `TransitModel`
         The transit model to use for routing.
-    points : list[TransitPoint]
+    points : list[`TransitPoint`]
         List of points between which to calculate travel times.
-    departure_time : int
+    `departure_time` : int
         Time of departure in seconds since midnight.
-    max_transfers : int
+    `max_transfers` : int
         Maximum number of transfers allowed in route planning.
 
     Returns

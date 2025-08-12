@@ -3,7 +3,7 @@ use ferrobus_core::prelude::*;
 use ferrobus_macros::stubgen;
 use pyo3::prelude::*;
 
-/// TransitModel
+/// `TransitModel`
 ///
 /// A unified transit model that integrates both the street network (OSM) and
 /// public transit schedules (GTFS) for multimodal routing.
@@ -35,11 +35,13 @@ pub struct PyTransitModel {
 #[pymethods]
 impl PyTransitModel {
     /// Get total stop count of all feeds in the model
+    #[must_use]
     pub fn stop_count(&self) -> usize {
         self.model.stop_count()
     }
 
     /// Get total route count of all feeds in the model
+    #[must_use]
     pub fn route_count(&self) -> usize {
         self.model.route_count()
     }
@@ -72,6 +74,7 @@ impl PyTransitModel {
     ///     #         "feed_version": "2025.04"
     ///     #     }
     ///     # ]
+    #[must_use]
     pub fn feeds_info(&self) -> String {
         self.model.feeds_info()
     }
@@ -104,24 +107,24 @@ impl PyTransitModel {
 ///
 /// Parameters
 /// ----------
-/// osm_path : str
+/// `osm_path` : str
 ///     Path to OpenStreetMap PBF file containing street network data
-/// gtfs_dirs : list[str]
+/// `gtfs_dirs` : list[str]
 ///     List of paths to directories containing GTFS data
 /// date : datetime.date, optional
 ///     Filter transit schedules to services running on this date.
 ///     If None, includes all services.
-/// max_transfer_time : int, default=1800
+/// `max_transfer_time` : int, default=1800
 ///     Maximum walking time in seconds allowed for transfers between stops
 ///
 /// Returns
 /// -------
-/// TransitModel
+/// `TransitModel`
 ///     An integrated model for multimodal routing operations
 ///
 /// Raises
 /// ------
-/// RuntimeError
+/// `RuntimeError`
 ///     If the model creation fails due to data errors
 ///
 /// Notes

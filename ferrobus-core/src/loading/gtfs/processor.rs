@@ -1,17 +1,14 @@
 use chrono::{Datelike, Weekday};
 use geo::Point;
 use hashbrown::{HashMap, HashSet};
-use log::warn;
 
 use super::{
     de::deserialize_gtfs_file,
-    raw_types::{
-        FeedCalendarDates, FeedInfo, FeedRoute, FeedService, FeedStop, FeedStopTime, FeedTrip,
-    },
+    raw_types::{FeedCalendarDates, FeedInfo, FeedService, FeedStop, FeedStopTime, FeedTrip},
 };
 use crate::{
-    Error,
-    model::{PublicTransitData, RaptorStopId, Route, RouteId, Stop, StopTime},
+    Error, RaptorStopId, RouteId,
+    model::{PublicTransitData, Route, Stop, StopTime},
 };
 use crate::{loading::config::TransitModelConfig, model::FeedMeta};
 
@@ -37,18 +34,6 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
         &calendar_dates,
     );
 
-    // Create maps for fast lookup during conversion
-    let stop_id_map: HashMap<&str, RaptorStopId> = stops
-        .iter()
-        .enumerate()
-        .map(|(idx, stop)| (stop.stop_id.as_str(), idx))
-        .collect();
-
-    let trip_id_map: HashMap<&str, &str> = trips
-        .iter()
-        .map(|trip| (trip.trip_id.as_str(), trip.route_id.as_str()))
-        .collect();
-
     // Map from trip_id to vec of stop times
     let mut trip_stop_times: HashMap<String, Vec<FeedStopTime>> = HashMap::new();
     for stop_time in stop_times {
@@ -58,17 +43,17 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
             .push(stop_time);
     }
 
-    for stop_list in trip_stop_times.values_mut() {
-        stop_list.sort_by_key(|s| s.stop_sequence);
-    }
+    trip_stop_times
+        .values_mut()
+        .for_each(|v| v.sort_by_key(|s| s.stop_sequence));
+
     // Process trips
     let (stop_times, route_stops, routes_vec) =
-        process_trip_stop_times(&stop_id_map, &trip_id_map, &trip_stop_times);
+        process_trip_stop_times(&stops, &trips, &trip_stop_times);
     drop(trip_stop_times);
 
     // Key raptor transit data model vectors
     let mut stop_routes: Vec<RouteId> = Vec::new();
-    drop(stop_id_map);
     let mut stops_vec = create_stops_vector(stops);
 
     // Index of routes for each stop
@@ -112,71 +97,70 @@ fn filter_trips_by_service_day(
     // Create set of service_id for the selected day of the week
     // if date is not provided, return without filtering trips
     let Some(date) = config.date else { return };
-    let day_of_week = date.weekday();
 
     // process regular services
     let mut active_services: HashSet<&str> = services
         .iter()
-        .filter_map(|service| {
-            let is_active = match day_of_week {
-                Weekday::Mon => service.monday == "1",
-                Weekday::Tue => service.tuesday == "1",
-                Weekday::Wed => service.wednesday == "1",
-                Weekday::Thu => service.thursday == "1",
-                Weekday::Fri => service.friday == "1",
-                Weekday::Sat => service.saturday == "1",
-                Weekday::Sun => service.sunday == "1",
-            };
-            if is_active {
-                Some(service.service_id.as_str())
-            } else {
-                None
-            }
+        .filter(|service| match date.weekday() {
+            Weekday::Mon => service.monday == "1",
+            Weekday::Tue => service.tuesday == "1",
+            Weekday::Wed => service.wednesday == "1",
+            Weekday::Thu => service.thursday == "1",
+            Weekday::Fri => service.friday == "1",
+            Weekday::Sat => service.saturday == "1",
+            Weekday::Sun => service.sunday == "1",
         })
+        .map(|s| s.service_id.as_str())
         .collect();
 
     // Filter calendar_dates exceptions
-    for calendar_date in calendar_dates {
-        if calendar_date.date == Some(date) {
-            if calendar_date.exception_type == 1 {
-                // Add service if exception type is 1 (service added)
-                active_services.insert(calendar_date.service_id.as_str());
-            } else if calendar_date.exception_type == 2 {
-                // Remove service if exception type is 2 (service removed)
-                active_services.remove(calendar_date.service_id.as_str());
+    for cd in calendar_dates.iter().filter(|cd| cd.date == Some(date)) {
+        match cd.exception_type {
+            1 => {
+                active_services.insert(cd.service_id.as_str());
             }
+            2 => {
+                active_services.remove(cd.service_id.as_str());
+            }
+            _ => {}
         }
     }
 
     // Filter trips and respective stop_times by day of the week
     trips.retain(|trip| active_services.contains(trip.service_id.as_str()));
-    let active_trips = trips
-        .iter()
-        .map(|trip| trip.trip_id.as_str())
-        .collect::<HashSet<&str>>();
-    stop_times.retain(|stop_time| active_trips.contains(stop_time.trip_id.as_str()));
+    let active_trips: HashSet<&str> = trips.iter().map(|trip| trip.trip_id.as_str()).collect();
+    stop_times.retain(|st| active_trips.contains(st.trip_id.as_str()));
 }
 
 fn process_trip_stop_times<'a>(
-    stop_id_map: &HashMap<&str, usize>,
-    trip_id_map: &HashMap<&str, &str>,
-    trip_stop_times: &'a HashMap<String, Vec<FeedStopTime>>,
+    stops: &[FeedStop],
+    trips: &[FeedTrip],
+    trip_stop_times: &'a HashMap<String, Vec<FeedStopTime>>, // trip id to stop times
 ) -> (Vec<StopTime>, Vec<usize>, Vec<Route>) {
-    // Group trips by route id
-    let mut routes_map: HashMap<String, Vec<&'a [FeedStopTime]>> = HashMap::new();
-    for (trip_id, feed_stop_times) in trip_stop_times {
-        if let Some(&route_id) = trip_id_map.get(trip_id.as_str()) {
-            routes_map
-                .entry(route_id.to_owned())
-                .or_default()
-                .push(feed_stop_times.as_slice());
-        } else {
-            warn!("Trip {trip_id} not found in trip_id_map, skipping");
-        }
-    }
+    let stop_id_map: HashMap<&str, usize> = stops
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.stop_id.as_str(), i))
+        .collect();
+    let trip_id_map: HashMap<&str, &str> = trips
+        .iter()
+        .map(|t| (t.trip_id.as_str(), t.route_id.as_str()))
+        .collect();
 
-    let mut stop_times_vec = Vec::new();
+    // Group trips by route id
+    let mut routes_map: HashMap<&str, Vec<&'a [FeedStopTime]>> = HashMap::new();
+    trip_stop_times.iter().for_each(|(trip_id, sts)| {
+        if let Some(&route_id) = trip_id_map.get(trip_id.as_str()) {
+            routes_map.entry(route_id).or_default().push(sts.as_slice());
+        }
+    });
+
+    // flattened array with all arrivals/departures for every trip
+    let total_stop_times: usize = trip_stop_times.values().map(std::vec::Vec::len).sum();
+    let mut stop_times_vec = Vec::with_capacity(total_stop_times);
+    // stop indices per route pattern
     let mut route_stops = Vec::new();
+    // metadata (route_id, number of trips, number of stops, and offsets into the other two vectors)
     let mut routes_vec = Vec::new();
 
     // Process each route group.
@@ -196,36 +180,33 @@ fn process_trip_stop_times<'a>(
             let representative = group[0];
             let stops_start = route_stops.len();
             // Build the route's stop sequence.
-            for stop_time in representative {
-                if let Some(&stop_idx) = stop_id_map.get(stop_time.stop_id.as_str()) {
-                    route_stops.push(stop_idx);
-                } else {
-                    warn!(
-                        "Stop ID {} not found in stop_id_map, skipping",
-                        stop_time.stop_id
-                    );
+            for st in representative {
+                if let Some(&idx) = stop_id_map.get(st.stop_id.as_str()) {
+                    route_stops.push(idx);
                 }
             }
 
             // Record the starting index for this subgroup's trips.
             let trips_start = stop_times_vec.len();
-            let valid_trip_count = group.len();
 
-            for current_trip in group {
-                for stop_time in current_trip {
-                    stop_times_vec.push(StopTime {
-                        arrival: stop_time.arrival_time,
-                        departure: stop_time.departure_time,
-                    });
-                }
-            }
+            group.iter().flat_map(|trip| trip.iter()).for_each(|st| {
+                let arrival = if st.stop_sequence == 0 {
+                    st.departure_time
+                } else {
+                    st.arrival_time
+                };
+                stop_times_vec.push(StopTime {
+                    arrival,
+                    departure: st.departure_time,
+                });
+            });
 
             routes_vec.push(Route {
-                num_trips: valid_trip_count,
+                num_trips: group.len(),
                 num_stops,
                 stops_start,
                 trips_start,
-                route_id: route_id.clone(),
+                route_id: route_id.to_string(),
             });
         }
     }
@@ -233,22 +214,17 @@ fn process_trip_stop_times<'a>(
 }
 
 fn create_stops_vector(stops: Vec<FeedStop>) -> Vec<Stop> {
-    let stops_vec: Vec<Stop> = stops
+    stops
         .into_iter()
-        .map(|feed_stop| {
-            let geometry = Point::new(feed_stop.stop_lon, feed_stop.stop_lat);
-
-            Stop {
-                stop_id: feed_stop.stop_id,
-                geometry,
-                routes_start: 0,
-                routes_len: 0,
-                transfers_start: 0,
-                transfers_len: 0,
-            }
+        .map(|s| Stop {
+            stop_id: s.stop_id,
+            geometry: Point::new(s.stop_lon, s.stop_lat),
+            routes_start: 0,
+            routes_len: 0,
+            transfers_start: 0,
+            transfers_len: 0,
         })
-        .collect();
-    stops_vec
+        .collect()
 }
 
 type RawGTFSmodel = (
@@ -262,7 +238,6 @@ type RawGTFSmodel = (
 
 fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSmodel, Error> {
     let mut stops: Vec<FeedStop> = Vec::new();
-    let mut routes: Vec<FeedRoute> = Vec::new();
     let mut trips: Vec<FeedTrip> = Vec::new();
     let mut stop_times: Vec<FeedStopTime> = Vec::new();
     let mut services: Vec<FeedService> = Vec::new();
@@ -270,7 +245,6 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSmodel, Error> {
     let mut calendar_dates: Vec<FeedCalendarDates> = Vec::new();
     for dir in &config.gtfs_dirs {
         stops.extend(deserialize_gtfs_file(&dir.join("stops.txt"))?);
-        routes.extend(deserialize_gtfs_file(&dir.join("routes.txt"))?);
         trips.extend(deserialize_gtfs_file(&dir.join("trips.txt"))?);
         stop_times.extend(deserialize_gtfs_file(&dir.join("stop_times.txt"))?);
         services.extend(deserialize_gtfs_file(&dir.join("calendar.txt"))?);
@@ -281,7 +255,6 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSmodel, Error> {
             .extend(deserialize_gtfs_file(&dir.join("calendar_dates.txt")).unwrap_or_default());
     }
     stops.shrink_to_fit();
-    routes.shrink_to_fit();
     trips.shrink_to_fit();
     stop_times.shrink_to_fit();
     services.shrink_to_fit();

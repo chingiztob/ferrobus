@@ -1,6 +1,6 @@
 use crate::model::Transfer;
 use crate::routing::raptor::common::{
-    RaptorError, RaptorResult, RaptorState, create_route_queue, find_earliest_trip,
+    RaptorError, RaptorResult, RaptorState, TargetResult, create_route_queue, find_earliest_trip,
     find_earliest_trip_at_stop, get_target_bound, process_foot_paths, validate_raptor_inputs,
 };
 use crate::{PublicTransitData, RaptorStopId, Time};
@@ -72,20 +72,18 @@ pub fn raptor(
                     // This is possible, if one of the stops can be reached earlier
                     // with a different chain of transfers.
                     let prev_board = state.prev_board_times[stop];
-                    if prev_board < trip[trip_stop_idx].departure {
-                        if let Some(new_trip_idx) =
+                    if prev_board < trip[trip_stop_idx].departure
+                        && let Some(new_trip_idx) =
                             find_earliest_trip(data, route_id, trip_stop_idx, prev_board)
-                        {
-                            if new_trip_idx != trip_idx {
-                                trip_idx = new_trip_idx;
-                                trip = data.get_trip(route_id, new_trip_idx)?;
-                            }
-                        }
+                        && new_trip_idx != trip_idx
+                    {
+                        trip_idx = new_trip_idx;
+                        trip = data.get_trip(route_id, new_trip_idx)?;
                     }
                     // Separate the times: the actual arrival (when the bus reaches the stop)
                     // and the boarding time (when the bus departs from the stop).
                     let actual_arrival = trip[trip_stop_idx].arrival;
-                    // For further connections, use the departure time.
+
                     let effective_board = if let Some(target_stop) = target {
                         if stop == target_stop {
                             actual_arrival // For target, report arrival.
@@ -95,6 +93,8 @@ pub fn raptor(
                     } else {
                         trip[trip_stop_idx].departure
                     };
+
+                    //let effective_board = trip[trip_stop_idx].departure;
 
                     // Only update if this effective boarding time is an improvement.
                     if state.update(round, stop, actual_arrival, effective_board)? {
@@ -119,10 +119,11 @@ pub fn raptor(
             // If the arrival time in this round is worse than our best known time,
             // there's no point continuing
             if arrival_time != Time::MAX && arrival_time > target_bound {
-                return Ok(RaptorResult::SingleTarget {
-                    arrival_time: Some(target_bound),
+                let target_result = TargetResult {
+                    arrival_time,
                     transfers_used: prev_round,
-                });
+                };
+                return Ok(RaptorResult::SingleTarget(target_result));
             }
         }
 
@@ -134,14 +135,24 @@ pub fn raptor(
 
     // Report final result.
     if let Some(target_stop) = target {
-        let best_time = Some(state.best_arrival[target_stop]).filter(|&t| t != Time::MAX);
+        let arrival_time = state.best_arrival[target_stop];
         let transfers_used = state.best_transfer_count[target_stop];
 
-        Ok(RaptorResult::SingleTarget {
-            arrival_time: best_time,
+        Ok(RaptorResult::SingleTarget(TargetResult {
+            arrival_time,
             transfers_used,
-        })
+        }))
     } else {
-        Ok(RaptorResult::AllTargets(state.best_arrival))
+        Ok(RaptorResult::AllTargets(
+            state
+                .best_arrival
+                .iter()
+                .zip(state.best_transfer_count.iter())
+                .map(|(&arrival, &transfers)| TargetResult {
+                    arrival_time: arrival,
+                    transfers_used: transfers,
+                })
+                .collect(),
+        ))
     }
 }

@@ -10,7 +10,7 @@ use crate::{
     model::{IndexedPoint, StreetEdge, StreetGraph, StreetNode},
 };
 
-/// Crate the street network graph based on an OSM .pbf file
+/// Create the street network graph based on an OSM .pbf file
 pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGraph, Error> {
     info!("Reading OSM data from: {}", filename.as_ref().display());
 

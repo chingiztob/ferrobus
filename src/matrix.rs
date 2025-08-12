@@ -11,13 +11,13 @@ use crate::routing::PyTransitPoint;
 ///
 /// Parameters
 /// ----------
-/// transit_model : TransitModel
+/// `transit_model` : `TransitModel`
 ///     The transit model to use for routing.
-/// points : list[TransitPoint]
+/// points : list[`TransitPoint`]
 ///     List of points between which to calculate travel times.
-/// departure_time : int
+/// `departure_time` : int
 ///     Time of departure in seconds since midnight.
-/// max_transfers : int
+/// `max_transfers` : int
 ///     Maximum number of transfers allowed in route planning.
 ///
 /// Returns
