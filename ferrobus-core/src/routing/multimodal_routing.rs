@@ -106,7 +106,7 @@ pub fn multimodal_routing(
                         if target.is_reachable() {
                             let transit_time = target.arrival_time - (departure_time + access_time);
                             let total_time = access_time + transit_time + egress_time;
-                            if target.arrival_time < departure_time {
+                            if target.arrival_time < departure_time + access_time {
                                 return Err(Error::InvalidData(format!(
                                     "Negative transit time detected: {} - {} = {}",
                                     target.arrival_time,
