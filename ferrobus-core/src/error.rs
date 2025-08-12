@@ -16,4 +16,6 @@ pub enum Error {
     H3Error(#[from] h3o::error::InvalidGeometry),
     #[error("Unknown error: {0}")]
     UnrecoverableError(&'static str),
+    #[error("Invalid time format: {0}")]
+    InvalidTimeFormat(String),
 }
