@@ -26,7 +26,7 @@ pub mod routing;
 ///
 /// Ferrobus is fully implemented in Rust, which makes it extremely fast.
 /// This also allows for zero-dependency installation, as it does not require any external
-/// libraries or packages. Unlike R5 or `OpenTripPlanner`, Ferrobus does not require Java.
+/// libraries or packages. Unlike R5 or OpenTripPlanner, Ferrobus does not require Java.
 ///
 /// Functionality
 /// =============
@@ -43,24 +43,24 @@ pub mod routing;
 /// .. code-block:: python
 ///
 ///    # Create a transit model
-///    model = `ferrobus.create_transit_model("streets.osm.pbf`", ["`gtfs_data`"], None)
+///    model = ferrobus.create_transit_model("streets.osm.pbf", ["gtfs_data"], None)
 ///
 ///    # Create transit points
-///    origin = `ferrobus.create_transit_point(52.52`, 13.40, model)
-///    destination = `ferrobus.create_transit_point(52.53`, 13.42, model)
+///    origin = ferrobus.create_transit_point(52.52, 13.40, model)
+///    destination = ferrobus.create_transit_point(52.53, 13.42, model)
 ///
 ///    # Find route
-///    `departure_time` = 8 * 3600  # 8:00 AM in seconds since midnight
-///    route = `ferrobus.find_route(model`, origin, destination, `departure_time`)
+///    departure_time = 8 * 3600  # 8:00 AM in seconds since midnight
+///    route = ferrobus.find_route(model, origin, destination, departure_time)
 ///
 ///    # Generate an isochrone
-///    index = `ferrobus.create_isochrone_index(model`, `area_wkt`, 8)
-///    isochrone = `ferrobus.calculate_isochrone(model`, origin, `departure_time`,
+///    index = ferrobus.create_isochrone_index(model, area_wkt, 8)
+///    isochrone = ferrobus.calculate_isochrone(model, origin, departure_time,
 ///                                             2, 1800, index)
 ///
 ///    # Calculate a travel time matrix
 ///    points = [origin, destination, point3, point4]
-///    matrix = `ferrobus.travel_time_matrix(model`, points, `departure_time`, 3)
+///    matrix = ferrobus.travel_time_matrix(model, points, departure_time, 3)
 ///
 /// Implementation details
 /// =======================
