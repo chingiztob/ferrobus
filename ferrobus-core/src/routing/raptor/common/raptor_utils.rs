@@ -67,12 +67,7 @@ pub(crate) fn process_foot_paths(
     state: &mut RaptorState,
     round: usize,
 ) -> Result<FixedBitSet, RaptorError> {
-    // 1) reserve up front
-    let mut current_marks = Vec::with_capacity(state.marked_stops.count_ones(..));
-    for stop in state.marked_stops.ones() {
-        current_marks.push(stop);
-    }
-
+    let current_marks: Vec<usize> = state.marked_stops.ones().collect();
     let mut new_marks = FixedBitSet::with_capacity(num_stops);
 
     let target_bound = if let Some(ts) = target {

@@ -76,7 +76,7 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
     #[cfg(all(target_os = "linux", target_env = "gnu"))]
     unsafe {
         if libc::malloc_trim(0) == 0 {
-            dbg!("Memory trimming failed");
+            log::error!("Memory trimming failed");
         }
     };
     Ok(graph)

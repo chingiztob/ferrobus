@@ -24,7 +24,7 @@ pub struct TransitModelMeta {
 }
 
 impl TransitModel {
-    /// Creates a new model from street network and transit data (Unexpected!)
+    /// Creates a new model from street network and transit data
     pub(crate) fn with_transit(
         street_network: StreetGraph,
         transit_data: PublicTransitData,
