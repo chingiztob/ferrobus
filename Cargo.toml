@@ -36,7 +36,7 @@ wkt = "0.14.0"
 [workspace.dependencies]
 geo = "0.30.0"
 geojson = "0.24.0"
-rayon = "1.10"
+rayon = "1.11.0"
 chrono = { version = "0.4", default-features = false, features = [
     "std",
     "serde",
