@@ -214,6 +214,7 @@ mod tests {
             transfers: vec![],
             node_to_stop: HashMap::new(),
             feeds_meta: vec![],
+            trips: vec![],
         };
 
         // Map nodes to stops

@@ -6,7 +6,7 @@ use crate::PublicTransitData;
 use crate::model::Transfer;
 use crate::routing::raptor::common::create_route_queue;
 use crate::routing::raptor::common::{RaptorError, find_earliest_trip};
-use crate::types::{Duration, RaptorStopId, RouteId, Time, TripId};
+use crate::types::{Duration, RaptorStopId, RouteId, Time};
 
 /// Represents a single leg of an itinerary
 #[derive(Debug, Clone)]
@@ -14,7 +14,7 @@ pub enum JourneyLeg {
     /// A transit trip segment
     Transit {
         route_id: RouteId,
-        trip_id: TripId,
+        trip_id: String,
         from_stop: RaptorStopId,
         departure_time: Time,
         to_stop: RaptorStopId,
@@ -297,9 +297,10 @@ fn reconstruct_journey(
                 to_idx,
             } => {
                 let trip = data.get_trip(*route_id, *trip_id)?;
+                let trip_id_string = data.get_trip_id(*route_id, *trip_id).to_string();
                 legs.push(JourneyLeg::Transit {
                     route_id: *route_id,
-                    trip_id: *trip_id,
+                    trip_id: trip_id_string,
                     from_stop: *from_stop,
                     departure_time: trip[*from_idx].departure,
                     to_stop: current_stop,

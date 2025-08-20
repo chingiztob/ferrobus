@@ -1,7 +1,10 @@
 //! Public transit data structure and methods to work with it
 
 use super::types::{FeedMeta, Route, Stop, StopTime, Transfer};
-use crate::types::{RaptorStopId, RouteId};
+use crate::{
+    model::transit::types::Trip,
+    types::{RaptorStopId, RouteId},
+};
 use hashbrown::HashMap;
 use petgraph::graph::NodeIndex;
 
@@ -25,6 +28,8 @@ pub struct PublicTransitData {
     pub node_to_stop: HashMap<NodeIndex, RaptorStopId>,
     /// Metadata for feeds
     pub feeds_meta: Vec<FeedMeta>,
+    /// Trip IDs for each trip (indexed by route, then trip index)
+    pub trips: Vec<Vec<Trip>>,
 }
 
 impl PublicTransitData {
@@ -54,5 +59,14 @@ impl PublicTransitData {
         } else {
             None
         }
+    }
+
+    /// Get the real trip ID from route and trip index
+    pub(crate) fn get_trip_id(&self, route_id: RouteId, trip_idx: usize) -> &str {
+        self.trips
+            .get(route_id)
+            .and_then(|trips| trips.get(trip_idx))
+            .map(|trip| trip.trip_id.as_str())
+            .unwrap()
     }
 }

@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     Error, RaptorStopId, RouteId,
-    model::{PublicTransitData, Route, Stop, StopTime},
+    model::{PublicTransitData, Route, Stop, StopTime, Trip},
 };
 use crate::{loading::config::TransitModelConfig, model::FeedMeta};
 
@@ -48,7 +48,7 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
         .for_each(|v| v.sort_by_key(|s| s.stop_sequence));
 
     // Process trips
-    let (stop_times, route_stops, routes_vec) =
+    let (stop_times, route_stops, routes_vec, trips_vec) =
         process_trip_stop_times(&stops, &trips, &trip_stop_times);
     drop(trip_stop_times);
 
@@ -84,6 +84,7 @@ pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTran
         transfers: vec![],            // Will be filled in `calculate_transfers`
         node_to_stop: HashMap::new(), // Empty node to stop mapping initially
         feeds_meta,
+        trips: trips_vec,
     })
 }
 
@@ -136,7 +137,7 @@ fn process_trip_stop_times<'a>(
     stops: &[FeedStop],
     trips: &[FeedTrip],
     trip_stop_times: &'a HashMap<String, Vec<FeedStopTime>>, // trip id to stop times
-) -> (Vec<StopTime>, Vec<usize>, Vec<Route>) {
+) -> (Vec<StopTime>, Vec<usize>, Vec<Route>, Vec<Vec<Trip>>) {
     let stop_id_map: HashMap<&str, usize> = stops
         .iter()
         .enumerate()
@@ -146,6 +147,10 @@ fn process_trip_stop_times<'a>(
         .iter()
         .map(|t| (t.trip_id.as_str(), t.route_id.as_str()))
         .collect();
+
+    // Create a map from trip_id to FeedTrip for accessing trip metadata
+    let trip_data_map: HashMap<&str, &FeedTrip> =
+        trips.iter().map(|t| (t.trip_id.as_str(), t)).collect();
 
     // Group trips by route id
     let mut routes_map: HashMap<&str, Vec<&'a [FeedStopTime]>> = HashMap::new();
@@ -162,13 +167,15 @@ fn process_trip_stop_times<'a>(
     let mut route_stops = Vec::new();
     // metadata (route_id, number of trips, number of stops, and offsets into the other two vectors)
     let mut routes_vec = Vec::new();
+    // trips organized by route
+    let mut trips_vec = Vec::new();
 
     // Process each route group.
-    for (route_id, trips) in routes_map {
+    for (route_id, trips_data) in routes_map {
         // Not all trips have the same number of stops, but Raptor requires a fixed number of stops per route.
         // So route will be added in few variations, each with a different number of stops.
         let mut groups_by_length: HashMap<usize, Vec<&'a [FeedStopTime]>> = HashMap::new();
-        for ts in trips {
+        for ts in trips_data {
             groups_by_length.entry(ts.len()).or_default().push(ts);
         }
 
@@ -189,6 +196,18 @@ fn process_trip_stop_times<'a>(
             // Record the starting index for this subgroup's trips.
             let trips_start = stop_times_vec.len();
 
+            // Collect trip IDs for this route variant
+            let mut route_trips = Vec::new();
+            for trip_stop_times in &group {
+                let trip_id = &trip_stop_times[0].trip_id;
+
+                if let Some(trip_data) = trip_data_map.get(trip_id.as_str()) {
+                    route_trips.push(Trip {
+                        trip_id: trip_data.trip_id.clone(),
+                    });
+                }
+            }
+
             group.iter().flat_map(|trip| trip.iter()).for_each(|st| {
                 let arrival = if st.stop_sequence == 0 {
                     st.departure_time
@@ -208,9 +227,11 @@ fn process_trip_stop_times<'a>(
                 trips_start,
                 route_id: route_id.to_string(),
             });
+
+            trips_vec.push(route_trips);
         }
     }
-    (stop_times_vec, route_stops, routes_vec)
+    (stop_times_vec, route_stops, routes_vec, trips_vec)
 }
 
 fn create_stops_vector(stops: Vec<FeedStop>) -> Vec<Stop> {
