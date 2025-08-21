@@ -20,9 +20,9 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86_64
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: aarch64
     steps:
       - uses: actions/checkout@v4
@@ -47,9 +47,9 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: x86_64
-          - runner: ubuntu-22.04
+          - runner: ubuntu-24.04
             target: aarch64
     steps:
       - uses: actions/checkout@v4
