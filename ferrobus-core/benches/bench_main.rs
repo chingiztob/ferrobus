@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use divan::{Bencher, bench};
+use criterion::{Criterion, criterion_group, criterion_main};
 use ferrobus_core::{TransitModel, model::TransitPoint, multimodal_routing};
 
 static TRANSIT_DATA: std::sync::LazyLock<(TransitModel, TransitPoint, TransitPoint, u32, usize)> =
@@ -46,22 +46,22 @@ static TRANSIT_DATA: std::sync::LazyLock<(TransitModel, TransitPoint, TransitPoi
         )
     });
 
-#[bench(sample_count = 1000)]
-fn raptor_routing(bencher: Bencher) {
+fn raptor_routing(c: &mut Criterion) {
     let (transit_graph, start_point, end_point, departure_time, max_transfers) = &*TRANSIT_DATA;
 
-    bencher.bench(|| {
-        let _ = multimodal_routing(
-            transit_graph,
-            start_point,
-            end_point,
-            *departure_time,
-            *max_transfers,
-        )
-        .unwrap();
+    c.bench_function("raptor_routing", |b| {
+        b.iter(|| {
+            let _ = multimodal_routing(
+                transit_graph,
+                start_point,
+                end_point,
+                *departure_time,
+                *max_transfers,
+            )
+            .unwrap();
+        });
     });
 }
 
-fn main() {
-    divan::main();
-}
+criterion_group!(benches, raptor_routing);
+criterion_main!(benches);
