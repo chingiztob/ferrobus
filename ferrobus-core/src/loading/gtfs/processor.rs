@@ -321,14 +321,17 @@ fn process_route_variants<'a>(
     trip_data_map: &HashMap<&str, &FeedTrip>,
     builder: &mut RouteBuilder,
 ) {
+    // Group all trips on route by the number of stops each trip has
     let mut groups_by_length: HashMap<usize, Vec<&'a [FeedStopTime]>> = HashMap::new();
     for ts in trips_data {
         groups_by_length.entry(ts.len()).or_default().push(ts);
     }
 
+    // Group trips by their stop sequences
     for (num_stops, mut group) in groups_by_length {
         group.sort_by_key(|ts| &ts[0].departure_time);
 
+        // Use the first trip as a representative (which defines exact stops pattern)
         let representative = group[0];
         let stops_start = build_route_stops(representative, stop_id_map, builder.route_stops);
         let trips_start = builder.stop_times_vec.len();
