@@ -62,11 +62,10 @@ impl PublicTransitData {
     }
 
     /// Get the real trip ID from route and trip index
-    pub(crate) fn get_trip_id(&self, route_id: RouteId, trip_idx: usize) -> &str {
+    pub(crate) fn get_trip_id(&self, route_id: RouteId, trip_idx: usize) -> Option<&str> {
         self.trips
             .get(route_id)
             .and_then(|trips| trips.get(trip_idx))
             .map(|trip| trip.trip_id.as_str())
-            .unwrap()
     }
 }

@@ -129,14 +129,3 @@ pub struct FeedInfo {
     pub feed_end_date: Option<chrono::NaiveDate>,
     pub feed_version: String,
 }
-
-#[derive(Debug, Deserialize, Default, Clone)]
-#[serde(default)]
-#[allow(clippy::struct_field_names)]
-pub struct FeedShape {
-    pub shape_id: String,
-    pub shape_pt_lat: f64,
-    pub shape_pt_lon: f64,
-    pub shape_pt_sequence: u32,
-    pub shape_dist_traveled: f64,
-}

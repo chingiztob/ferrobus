@@ -297,7 +297,10 @@ fn reconstruct_journey(
                 to_idx,
             } => {
                 let trip = data.get_trip(*route_id, *trip_id)?;
-                let trip_id_string = data.get_trip_id(*route_id, *trip_id).to_string();
+                let trip_id_string = data
+                    .get_trip_id(*route_id, *trip_id)
+                    .unwrap_or("unknown")
+                    .to_string();
                 legs.push(JourneyLeg::Transit {
                     route_id: *route_id,
                     trip_id: trip_id_string,
