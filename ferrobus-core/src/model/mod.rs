@@ -15,4 +15,6 @@ pub use transit_model::{TransitModel, TransitModelMeta, TransitPoint};
 // Re-export of basic types for convenience
 pub use streets::StreetGraph;
 pub use transit::data::PublicTransitData;
-pub use transit::types::{FeedMeta, RaptorStopId, Route, RouteId, Stop, StopTime, Time, Transfer};
+pub use transit::types::{
+    FeedMeta, RaptorStopId, Route, RouteId, Stop, StopTime, Time, Transfer, Trip,
+};

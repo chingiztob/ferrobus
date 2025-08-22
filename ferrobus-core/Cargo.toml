@@ -14,11 +14,11 @@ csv = "1"
 itertools = "0.14"
 chrono.workspace = true
 rstar = "0.12"
-rustworkx-core = "0.16"
-petgraph = "0.7"
+rustworkx-core = "0.17"
+petgraph = "0.8"
 hashbrown = "0.15"
 fixedbitset = "0.5"
-h3o = { version = "0.8", features = ["geo"] }
+h3o = { version = "0.9.0", features = ["geo"] }
 #osm4routing = { git = "https://github.com/rust-transit/osm4routing2.git" }
 osm4routing = { git = "https://github.com/chingiztob/osm4routing2.git", branch = "switch_to_osmpbf" }
 geo.workspace = true
@@ -29,7 +29,7 @@ rayon.workspace = true
 libc = "0.2"
 
 [dev-dependencies]
-divan = "0.1.21"
+criterion = "0.7"
 
 [[bench]]
 name = "bench_main"

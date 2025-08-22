@@ -58,3 +58,8 @@ pub struct Transfer {
     pub target_stop: RaptorStopId,
     pub duration: Time,
 }
+
+#[derive(Debug, Clone)]
+pub struct Trip {
+    pub trip_id: String,
+}

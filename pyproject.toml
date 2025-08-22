@@ -25,6 +25,10 @@ dynamic = ["version"]
 license = { text = "MIT OR Apache-2.0" }
 readme = "README.md"
 
+[project.urls]
+Homepage = "https://github.com/chingiztob/ferrobus"
+Documentation = "https://ferrobus.readthedocs.io/"
+
 [project.optional-dependencies]
 docs = ["myst_nb", "sphinx-book-theme"]
 
