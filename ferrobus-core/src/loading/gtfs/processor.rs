@@ -12,6 +12,14 @@ use crate::{
 };
 use crate::{loading::config::TransitModelConfig, model::FeedMeta};
 
+/// Create public transit data model from GTFS files
+pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTransitData, Error> {
+    let raw_data = load_raw_feed(config)?;
+    let filtered_data = filter_data_by_date(config, raw_data);
+    let processed_data = process_transit_data(filtered_data);
+    Ok(build_public_transit_data(processed_data))
+}
+
 struct RawGTFSData {
     stops: Vec<FeedStop>,
     trips: Vec<FeedTrip>,
@@ -19,6 +27,78 @@ struct RawGTFSData {
     services: Vec<FeedService>,
     feed_info: Vec<FeedInfo>,
     calendar_dates: Vec<FeedCalendarDates>,
+}
+
+fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
+    let mut stops = Vec::new();
+    let mut trips = Vec::new();
+    let mut stop_times = Vec::new();
+    let mut services = Vec::new();
+    let mut feed_info = Vec::new();
+    let mut calendar_dates = Vec::new();
+
+    for dir in &config.gtfs_dirs {
+        stops.extend(deserialize_gtfs_file(&dir.join("stops.txt"))?);
+        trips.extend(deserialize_gtfs_file(&dir.join("trips.txt"))?);
+        stop_times.extend(deserialize_gtfs_file(&dir.join("stop_times.txt"))?);
+        services.extend(deserialize_gtfs_file(&dir.join("calendar.txt"))?);
+        feed_info.extend(deserialize_gtfs_file(&dir.join("feed_info.txt")).unwrap_or_default());
+        calendar_dates
+            .extend(deserialize_gtfs_file(&dir.join("calendar_dates.txt")).unwrap_or_default());
+    }
+
+    stops.shrink_to_fit();
+    trips.shrink_to_fit();
+    stop_times.shrink_to_fit();
+    services.shrink_to_fit();
+
+    Ok(RawGTFSData {
+        stops,
+        trips,
+        stop_times,
+        services,
+        feed_info,
+        calendar_dates,
+    })
+}
+
+struct FilteredGTFSData {
+    stops: Vec<FeedStop>,
+    trips: Vec<FeedTrip>,
+    stop_times: Vec<FeedStopTime>,
+    feeds_meta: Vec<FeedMeta>,
+}
+
+fn filter_data_by_date(config: &TransitModelConfig, mut raw_data: RawGTFSData) -> FilteredGTFSData {
+    let feeds_meta = raw_data
+        .feed_info
+        .into_iter()
+        .map(|info| FeedMeta { feed_info: info })
+        .collect();
+
+    if let Some(date) = config.date {
+        let service_filter = ServiceFilter::new(date, &raw_data.services, &raw_data.calendar_dates);
+        let active_services = service_filter.get_active_services();
+
+        raw_data
+            .trips
+            .retain(|trip| active_services.contains(trip.service_id.as_str()));
+        let active_trips: HashSet<&str> = raw_data
+            .trips
+            .iter()
+            .map(|trip| trip.trip_id.as_str())
+            .collect();
+        raw_data
+            .stop_times
+            .retain(|st| active_trips.contains(st.trip_id.as_str()));
+    }
+
+    FilteredGTFSData {
+        stops: raw_data.stops,
+        trips: raw_data.trips,
+        stop_times: raw_data.stop_times,
+        feeds_meta,
+    }
 }
 
 struct ServiceFilter<'a> {
@@ -83,86 +163,6 @@ impl<'a> ServiceFilter<'a> {
             }
         }
     }
-}
-
-/// Create public transit data model from GTFS files
-pub fn transit_model_from_gtfs(config: &TransitModelConfig) -> Result<PublicTransitData, Error> {
-    let raw_data = load_raw_feed(config)?;
-    let filtered_data = filter_data_by_date(config, raw_data);
-    let processed_data = process_transit_data(filtered_data);
-    Ok(build_public_transit_data(processed_data))
-}
-
-fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
-    let mut stops = Vec::new();
-    let mut trips = Vec::new();
-    let mut stop_times = Vec::new();
-    let mut services = Vec::new();
-    let mut feed_info = Vec::new();
-    let mut calendar_dates = Vec::new();
-
-    for dir in &config.gtfs_dirs {
-        stops.extend(deserialize_gtfs_file(&dir.join("stops.txt"))?);
-        trips.extend(deserialize_gtfs_file(&dir.join("trips.txt"))?);
-        stop_times.extend(deserialize_gtfs_file(&dir.join("stop_times.txt"))?);
-        services.extend(deserialize_gtfs_file(&dir.join("calendar.txt"))?);
-        feed_info.extend(deserialize_gtfs_file(&dir.join("feed_info.txt")).unwrap_or_default());
-        calendar_dates
-            .extend(deserialize_gtfs_file(&dir.join("calendar_dates.txt")).unwrap_or_default());
-    }
-
-    stops.shrink_to_fit();
-    trips.shrink_to_fit();
-    stop_times.shrink_to_fit();
-    services.shrink_to_fit();
-
-    Ok(RawGTFSData {
-        stops,
-        trips,
-        stop_times,
-        services,
-        feed_info,
-        calendar_dates,
-    })
-}
-
-fn filter_data_by_date(config: &TransitModelConfig, mut raw_data: RawGTFSData) -> FilteredGTFSData {
-    let feeds_meta = raw_data
-        .feed_info
-        .into_iter()
-        .map(|info| FeedMeta { feed_info: info })
-        .collect();
-
-    if let Some(date) = config.date {
-        let service_filter = ServiceFilter::new(date, &raw_data.services, &raw_data.calendar_dates);
-        let active_services = service_filter.get_active_services();
-
-        raw_data
-            .trips
-            .retain(|trip| active_services.contains(trip.service_id.as_str()));
-        let active_trips: HashSet<&str> = raw_data
-            .trips
-            .iter()
-            .map(|trip| trip.trip_id.as_str())
-            .collect();
-        raw_data
-            .stop_times
-            .retain(|st| active_trips.contains(st.trip_id.as_str()));
-    }
-
-    FilteredGTFSData {
-        stops: raw_data.stops,
-        trips: raw_data.trips,
-        stop_times: raw_data.stop_times,
-        feeds_meta,
-    }
-}
-
-struct FilteredGTFSData {
-    stops: Vec<FeedStop>,
-    trips: Vec<FeedTrip>,
-    stop_times: Vec<FeedStopTime>,
-    feeds_meta: Vec<FeedMeta>,
 }
 
 fn process_transit_data(filtered_data: FilteredGTFSData) -> ProcessedTransitData {

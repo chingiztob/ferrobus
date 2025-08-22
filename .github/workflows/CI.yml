@@ -157,10 +157,9 @@ jobs:
 
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: PyO3/maturin-action@v1
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          command: upload
-          args: --non-interactive --skip-existing wheels-*/*
+          packages-dir: wheels-*/
 
       # Upload wheels to GitHub Release page
       - name: Upload wheels to GitHub Release
