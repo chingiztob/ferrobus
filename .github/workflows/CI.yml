@@ -150,20 +150,26 @@ jobs:
         with:
           path: ./wheels
 
+      - name: Flatten wheels directory
+        run: |
+          mkdir -p ./dist
+          find ./wheels -type f -name "*.whl" -exec cp {} ./dist/ \;
+          find ./wheels -type f -name "*.tar.gz" -exec cp {} ./dist/ \;
+
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: 'wheels/**/*'
+          subject-path: 'dist/*'
 
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: wheels
+          packages-dir: dist
           skip-existing: true
 
       - name: Upload wheels to GitHub Release
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@v2
         with:
-          files: wheels/**/*
+          files: dist/*
