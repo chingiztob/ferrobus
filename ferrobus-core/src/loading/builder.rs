@@ -1,11 +1,11 @@
+use geo::{ConvexHull, Intersects, MultiPoint};
 use log::info;
-use std::sync::mpsc::{self, RecvError};
 
 use super::config::TransitModelConfig;
 use super::gtfs::transit_model_from_gtfs;
 use super::osm::create_street_graph;
 use super::transfers::calculate_transfers;
-use crate::{Error, TransitModel};
+use crate::{Error, PublicTransitData, TransitModel, model::StreetGraph};
 
 /// Creates a transit model based on the provided configuration
 ///
@@ -24,30 +24,18 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
         ));
     }
 
-    let (street_sender, street_receiver) = mpsc::channel();
-
     // Start OSM data processing in a separate thread
     let osm_path = config.osm_path.clone();
-    let graph_handle = std::thread::spawn(move || {
-        let result = create_street_graph(osm_path);
-        let _ = street_sender.send(result);
-    });
+    let graph_handle = std::thread::spawn(move || create_street_graph(osm_path));
 
     info!("Processing public transit data (GTFS)");
     let transit_data = transit_model_from_gtfs(config)?;
 
-    let street_graph = match street_receiver.recv() {
-        Ok(Ok(graph)) => graph,
-        Ok(Err(error)) => return Err(error),
-        Err(RecvError) => {
-            return Err(Error::UnrecoverableError(
-                "Unrecoverable error while processing OSM data",
-            ));
-        }
-    };
+    let street_graph = graph_handle
+        .join()
+        .map_err(|_| Error::UnrecoverableError("OSM processing thread panicked"))??;
 
-    // Wait for the thread to finish
-    let _ = graph_handle.join();
+    validate_graph_transit_overlap(&street_graph, &transit_data);
 
     let mut graph = TransitModel::with_transit(
         street_graph,
@@ -80,4 +68,26 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
         }
     };
     Ok(graph)
+}
+
+fn validate_graph_transit_overlap(streets: &StreetGraph, transit: &PublicTransitData) {
+    let graph_nodes: MultiPoint = streets
+        .graph
+        .node_weights()
+        .map(|node| node.geometry)
+        .collect();
+    let graph_hull = graph_nodes.convex_hull();
+
+    let stops_outside_hull = transit
+        .stops
+        .iter()
+        .filter(|stop| !stop.geometry.intersects(&graph_hull))
+        .count();
+
+    if stops_outside_hull > 0 {
+        log::warn!(
+            "{stops_outside_hull} transit stops are outside the street network coverage area. \
+            Consider using a larger OSM dataset that covers all transit stops."
+        );
+    }
 }
