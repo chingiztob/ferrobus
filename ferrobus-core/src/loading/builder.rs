@@ -45,7 +45,7 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
         },
     );
 
-    calculate_transfers(&mut graph)?;
+    calculate_transfers(&mut graph);
     info!(
         "Calculated {} transfers between stops",
         &graph.transit_data.transfers.len()
