@@ -36,7 +36,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v3
+        uses: CodSpeedHQ/action@v4
         with:
           run: uv run pytest --codspeed
           token: ${{ secrets.CODSPEED_TOKEN }}
