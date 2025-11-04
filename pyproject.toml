@@ -36,7 +36,7 @@ docs = ["myst_nb", "sphinx-book-theme"]
 features = ["pyo3/extension-module"]
 
 [tool.uv]
-dev-dependencies = ["maturin", "pytest-codspeed>=2.2.1", "pytest>=8.0.1"]
+dev-dependencies = ["maturin", "pytest-codspeed>=4.2.0", "pytest>=8.4.0"]
 
 [tool.ruff]
 lint.select = [
