@@ -22,7 +22,7 @@ crate-type = ["cdylib", "rlib"]
 doctest = false
 
 [dependencies]
-pyo3 = { version = "0.25.1", features = ["chrono"] }
+pyo3 = { version = "0.25", features = ["chrono"] }
 pyo3-log = "0.12.4"
 ferrobus_core = { path = "ferrobus-core" }
 ferrobus_macros = { path = "ferrobus-macros" }
@@ -34,7 +34,7 @@ serde_json.workspace = true
 wkt = "0.14.0"
 
 [workspace.dependencies]
-geo = "0.30.0"
+geo = "0.31.0"
 geojson = "0.24.0"
 rayon = "1.11.0"
 chrono = { version = "0.4", default-features = false, features = [
@@ -44,7 +44,7 @@ chrono = { version = "0.4", default-features = false, features = [
 serde_json = "1"
 
 [dependencies.pyo3-stub-gen]
-version = "0.12"
+version = "0.13"
 optional = true
 
 [features]

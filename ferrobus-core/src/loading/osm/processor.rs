@@ -63,9 +63,10 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
 
     // Keep only the largest connected component to avoid isolated parts of the graph
     // affecting routing
+    #[allow(clippy::redundant_closure_for_method_calls)]
     let largest_component = connected_components(&graph)
         .into_iter()
-        .max_by_key(hashbrown::HashSet::len)
+        .max_by_key(|c| c.len())
         .ok_or(Error::InvalidData(
             "No connected components found".to_string(),
         ))?;
