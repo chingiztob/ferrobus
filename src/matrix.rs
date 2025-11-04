@@ -36,7 +36,7 @@ pub fn travel_time_matrix(
 ) -> PyResult<Vec<Vec<Option<u32>>>> {
     // Perform the routing
     let points: Vec<_> = points.into_iter().map(|p| p.inner).collect();
-    let full_vec = py.allow_threads(|| {
+    let full_vec = py.detach(|| {
         points
             .par_iter()
             .map(|start_point| {

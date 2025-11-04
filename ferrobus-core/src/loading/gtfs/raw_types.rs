@@ -4,6 +4,7 @@ use super::de::{deserialize_gtfs_date, deserialize_gtfs_time};
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
+#[allow(dead_code)]
 pub struct FeedCalendar {
     pub service_id: String,
     pub monday: String,
@@ -33,6 +34,7 @@ pub struct FeedTrip {
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
+#[allow(dead_code)]
 pub struct FeedRoute {
     pub route_id: String,
     pub agency_id: String,
@@ -80,6 +82,7 @@ pub struct FeedStop {
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
+#[allow(dead_code)]
 pub struct FeedTripEntity {
     pub route_id: String,
     pub service_id: String,

@@ -219,7 +219,7 @@ pub fn calculate_isochrone(
     cutoff: Time,
     index: &PyIsochroneIndex,
 ) -> PyResult<String> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let isochrone = ferrobus_core::algo::calculate_isochrone(
             &transit_data.model,
             &start.inner,
@@ -281,7 +281,7 @@ pub fn calculate_bulk_isochrones(
     cutoff: Time,
     index: &PyIsochroneIndex,
 ) -> PyResult<Vec<String>> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let inners = starts.iter().map(|p| &p.inner).collect::<Vec<_>>();
         let isochrones = ferrobus_core::algo::bulk_isochrones(
             &transit_data.model,
@@ -354,7 +354,7 @@ pub fn calculate_percent_access_isochrone(
     cutoff: Time,
     index: &PyIsochroneIndex,
 ) -> PyResult<String> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let percent_access = ferrobus_core::algo::calculate_percent_access_isochrone(
             &transit_data.model,
             &start.inner,

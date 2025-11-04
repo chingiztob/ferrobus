@@ -133,7 +133,10 @@ pub fn create_transit_point(
 }
 
 /// Convert an Option<MultiModalResult> to a Python dictionary or None
-pub(crate) fn optional_result_to_py(py: Python<'_>, result: Option<&MultiModalResult>) -> PyObject {
+pub(crate) fn optional_result_to_py(
+    py: Python<'_>,
+    result: Option<&MultiModalResult>,
+) -> Py<PyAny> {
     match result {
         Some(result) => {
             let dict = PyDict::new(py);
@@ -228,7 +231,7 @@ pub fn find_route(
     end_point: &PyTransitPoint,
     departure_time: Time,
     max_transfers: usize,
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     let result = multimodal_routing(
         &transit_model.model,
         &start_point.inner,
@@ -350,12 +353,12 @@ pub fn find_routes_one_to_many(
     end_points: Vec<PyTransitPoint>,
     departure_time: Time,
     max_transfers: usize,
-) -> PyResult<Vec<PyObject>> {
+) -> PyResult<Vec<Py<PyAny>>> {
     let end_points = end_points.into_iter().map(|p| p.inner).collect::<Vec<_>>();
 
     // Perform the routing
     let results = py
-        .allow_threads(|| {
+        .detach(|| {
             multimodal_routing_one_to_many(
                 &transit_model.model,
                 &start_point.inner,
@@ -420,7 +423,7 @@ pub fn detailed_journey(
     departure_time: Time,
     max_transfers: usize,
 ) -> PyResult<Option<String>> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let result = traced_multimodal_routing(
             &transit_model.model,
             &start_point.inner,

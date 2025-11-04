@@ -141,7 +141,7 @@ pub fn py_create_transit_model(
     max_transfer_time: u32,
 ) -> PyResult<PyTransitModel> {
     // Allow Python threads during all blocking operations
-    py.allow_threads(|| {
+    py.detach(|| {
         let osm_pathbuf = std::path::PathBuf::from(osm_path);
         let gtfs_pathbufs = gtfs_dirs
             .into_iter()
