@@ -35,7 +35,7 @@ Pre-built wheels are available for the following platforms:
 - **macOS**: x86_64 and arm64
 - **Linux**: x86_64 and arm64 (including musl-based systems like Alpine Linux and manylinux2014-compliant systems)
 
-Supported Python versions are **CPython 3.8 and later**, including **PyPy >3.8**.
+Supported Python versions are **CPython 3.9 and later**, including **PyPy >3.11**.
 If a pre-built binary is not available, the package will be built from source, requiring Rust to be installed. You can install Rust using [rustup](https://rustup.rs/):
 
 ```bash
