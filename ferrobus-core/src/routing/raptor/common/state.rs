@@ -38,7 +38,7 @@ impl RaptorState {
         board: Time,
     ) -> Result<bool, RaptorError> {
         if stop >= self.curr_arrival_times.len() {
-            return Err(RaptorError::MaxTransfersExceeded);
+            return Err(RaptorError::InvalidStop);
         }
 
         // Only update if the new arrival time is better than what we've seen in this round
@@ -67,6 +67,7 @@ impl RaptorState {
 }
 
 #[derive(Error, Debug, PartialEq)]
+#[allow(clippy::enum_variant_names)]
 pub enum RaptorError {
     #[error("Invalid stop ID")]
     InvalidStop,
@@ -76,8 +77,6 @@ pub enum RaptorError {
     InvalidTrip,
     #[error("Invalid time value")]
     InvalidTime,
-    #[error("Maximum transfers exceeded")]
-    MaxTransfersExceeded,
     #[error("Invalid jorney")]
     InvalidJourney,
 }
@@ -121,11 +120,15 @@ pub fn validate_raptor_inputs(
     target: Option<usize>,
     departure_time: Time,
 ) -> Result<(), RaptorError> {
+    // Maximum time is 48 hours (2 days) - allows for overnight services
+    const MAX_TIME_SECONDS: Time = 86400 * 2;
+
     data.validate_stop(source)?;
     if let Some(target_stop) = target {
         data.validate_stop(target_stop)?;
     }
-    if departure_time > 86400 * 2 {
+
+    if departure_time > MAX_TIME_SECONDS {
         return Err(RaptorError::InvalidTime);
     }
 

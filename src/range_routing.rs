@@ -65,7 +65,7 @@ pub fn py_range_multimodal_routing(
     )
     .map_err(|e| {
         PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
-            "Range multomodal routing failed: {e}"
+            "Range multimodal routing failed: {e}"
         ))
     })?;
 

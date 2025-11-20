@@ -13,16 +13,12 @@ use crate::{Error, PublicTransitData, TransitModel, model::StreetGraph};
 ///
 /// Returns an error if there are problems reading or processing data
 pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel, Error> {
+    validate_config(config)?;
+
     info!(
         "Processing street data (OSM): {}",
         config.osm_path.display()
     );
-
-    if config.gtfs_dirs.is_empty() {
-        return Err(Error::InvalidData(
-            "No GTFS directories provided in the configuration".to_string(),
-        ));
-    }
 
     // Start OSM data processing in a separate thread
     let osm_path = config.osm_path.clone();
@@ -64,12 +60,41 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
     #[cfg(all(target_os = "linux", target_env = "gnu"))]
     unsafe {
         if libc::malloc_trim(0) == 0 {
-            log::error!("Memory trimming failed");
+            log::warn!("Memory trimming failed - continuing anyway");
+        } else {
+            log::debug!("Successfully trimmed unused heap memory");
         }
-    };
+    }
     Ok(graph)
 }
 
+fn validate_config(config: &TransitModelConfig) -> Result<(), Error> {
+    if !config.osm_path.exists() {
+        return Err(Error::InvalidData(format!(
+            "OSM file not found: {}",
+            config.osm_path.display()
+        )));
+    }
+
+    if config.gtfs_dirs.is_empty() {
+        return Err(Error::InvalidData(
+            "No GTFS directories provided in the configuration".to_string(),
+        ));
+    }
+
+    for dir in &config.gtfs_dirs {
+        if !dir.exists() {
+            return Err(Error::IoError(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("GTFS directory not found: {}", dir.display()),
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+#[allow(clippy::cast_precision_loss)]
 fn validate_graph_transit_overlap(streets: &StreetGraph, transit: &PublicTransitData) {
     let graph_nodes: MultiPoint = streets
         .graph
@@ -84,10 +109,14 @@ fn validate_graph_transit_overlap(streets: &StreetGraph, transit: &PublicTransit
         .filter(|stop| !stop.geometry.intersects(&graph_hull))
         .count();
 
+    let total_stops = transit.stops.len();
+
+    let percentage = (stops_outside_hull as f64 / total_stops as f64) * 100.0;
     if stops_outside_hull > 0 {
         log::warn!(
-            "{stops_outside_hull} transit stops are outside the street network coverage area. \
-            Consider using a larger OSM dataset that covers all transit stops."
+            "{stops_outside_hull} of {total_stops} transit stops ({percentage:.1}%) are outside \
+        the street network coverage area. These stops may be unreachable for routing. \
+        Consider using a larger OSM dataset that covers all transit stops."
         );
     }
 }

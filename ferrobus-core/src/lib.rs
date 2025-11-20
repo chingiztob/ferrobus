@@ -21,6 +21,9 @@ pub use model::{PublicTransitData, Route, Stop, TransitModel, TransitPoint};
 pub use routing::multimodal_routing::{
     MultiModalResult, multimodal_routing, multimodal_routing_one_to_many,
 };
+pub use routing::pareto::{
+    RangeRoutingResult, pareto_range_multimodal_routing, range_multimodal_routing,
+};
 
 // Re-export core types for external use
 pub use types::{
