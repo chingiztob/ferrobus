@@ -1,5 +1,6 @@
-import ferrobus
 import pytest
+
+import ferrobus
 
 
 def test_create_transit_point(model):

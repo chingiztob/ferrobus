@@ -29,14 +29,12 @@ readme = "README.md"
 Homepage = "https://github.com/chingiztob/ferrobus"
 Documentation = "https://ferrobus.readthedocs.io/"
 
-[project.optional-dependencies]
+[dependency-groups]
+dev = ["maturin", "pytest-codspeed>=4.2.0", "pytest>=8.4.0"]
 docs = ["myst_nb", "sphinx-book-theme"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
-
-[tool.uv]
-dev-dependencies = ["maturin", "pytest-codspeed>=4.2.0", "pytest>=8.4.0"]
 
 [tool.ruff]
 lint.select = [

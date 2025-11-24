@@ -1,7 +1,8 @@
 import os
 
-import ferrobus
 import pytest
+
+import ferrobus
 
 
 @pytest.fixture(scope="session")
