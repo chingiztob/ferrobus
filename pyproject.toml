@@ -24,20 +24,21 @@ classifiers = [
 dynamic = ["version"]
 license = { text = "MIT OR Apache-2.0" }
 readme = "README.md"
+keywords = ["routing", "gtfs", "transit", "public transit", "pyo3", "gis"]
 
 [project.urls]
 Homepage = "https://github.com/chingiztob/ferrobus"
 Documentation = "https://ferrobus.readthedocs.io/"
 
 [dependency-groups]
-dev = ["maturin", "pytest-codspeed>=4.2.0", "pytest>=8.4.0"]
+dev = ["maturin>=1.9", "pytest-codspeed>=4.2.0", "pytest>=8.4.0"]
 docs = ["myst_nb", "sphinx-book-theme"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
 
-[tool.ruff]
-lint.select = [
+[tool.ruff.lint]
+select = [
     "E", # pycodestyle errors
     "W", # pycodestyle warnings
     "F", # pyflakes
@@ -46,7 +47,7 @@ lint.select = [
     "B", # flake8-bugbear
     "Q", # flake8-quotes
 ]
-lint.ignore = ["W293"] # Ignore blank line contains whitespace
+ignore = ["W293"] # Ignore blank line contains whitespace
 exclude = ["venv"]
 
 [tool.pytest.ini_options]
