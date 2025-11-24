@@ -1,11 +1,11 @@
 [build-system]
-requires = ["maturin>=1.8,<2.0"]
+requires = ["maturin>=1.9,<2.0"]
 build-backend = "maturin"
 
 [project]
 name = "ferrobus"
 description = "High-performance multimodal public transit routing library "
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -24,10 +24,15 @@ classifiers = [
 dynamic = ["version"]
 license = { text = "MIT OR Apache-2.0" }
 readme = "README.md"
+keywords = ["routing", "gtfs", "transit", "public transit", "pyo3", "gis"]
 
 [project.urls]
 Homepage = "https://github.com/chingiztob/ferrobus"
 Documentation = "https://ferrobus.readthedocs.io/"
+
+[dependency-groups]
+dev = ["maturin>=1.9", "pytest-codspeed>=4.2.0", "pytest>=8.4.0"]
+docs = ["myst_nb", "sphinx-book-theme"]
 
 [project.optional-dependencies]
 docs = ["myst_nb", "sphinx-book-theme"]
@@ -35,11 +40,8 @@ docs = ["myst_nb", "sphinx-book-theme"]
 [tool.maturin]
 features = ["pyo3/extension-module"]
 
-[tool.uv]
-dev-dependencies = ["maturin", "pytest-codspeed>=2.2.1", "pytest>=8.0.1"]
-
-[tool.ruff]
-lint.select = [
+[tool.ruff.lint]
+select = [
     "E", # pycodestyle errors
     "W", # pycodestyle warnings
     "F", # pyflakes
@@ -48,7 +50,7 @@ lint.select = [
     "B", # flake8-bugbear
     "Q", # flake8-quotes
 ]
-lint.ignore = ["W293"] # Ignore blank line contains whitespace
+ignore = ["W293"] # Ignore blank line contains whitespace
 exclude = ["venv"]
 
 [tool.pytest.ini_options]

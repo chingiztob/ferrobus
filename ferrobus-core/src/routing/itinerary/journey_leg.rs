@@ -2,7 +2,7 @@ use geo::{Point, line_string};
 use geojson::{Feature, Geometry};
 use serde_json::json;
 
-use crate::Time;
+use crate::{Error, Time};
 
 /// Represents a walking leg outside the transit network.
 #[derive(Debug, Clone)]
@@ -38,10 +38,7 @@ impl WalkingLeg {
     }
 
     /// Convert the walking leg to a `GeoJSON` Feature using the `json!` macro.
-    ///
-    /// # Panics
-    /// This function will panic if `Feature::from_json_value` fails to parse the JSON value.
-    pub fn to_feature(&self, leg_type: &str) -> Feature {
+    pub fn to_feature(&self, leg_type: &str) -> Result<Feature, Error> {
         let coordinates = line_string![
             (x: self.from_location.x(), y: self.from_location.y()),
             (x: self.to_location.x(), y: self.to_location.y()),
@@ -58,6 +55,6 @@ impl WalkingLeg {
                 "duration": self.duration,
             }
         });
-        Feature::from_json_value(value).unwrap()
+        Feature::from_json_value(value).map_err(|e| Error::GeoJsonError(e.to_string()))
     }
 }

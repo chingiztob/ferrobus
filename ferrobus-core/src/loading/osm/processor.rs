@@ -1,7 +1,8 @@
 use hashbrown::HashMap;
 use log::info;
 use osm4routing::FootAccessibility;
-use petgraph::graph::UnGraph;
+use petgraph::graph::{NodeIndex, UnGraph};
+use rstar::RTree;
 use rustworkx_core::connectivity::connected_components;
 use std::path::Path;
 
@@ -62,9 +63,10 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
 
     // Keep only the largest connected component to avoid isolated parts of the graph
     // affecting routing
+    #[allow(clippy::redundant_closure_for_method_calls)]
     let largest_component = connected_components(&graph)
         .into_iter()
-        .max_by_key(hashbrown::HashSet::len)
+        .max_by_key(|c| c.len())
         .ok_or(Error::InvalidData(
             "No connected components found".to_string(),
         ))?;
@@ -105,11 +107,11 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
 }
 
 /// R*-tree spatial index for quick nearest neighbor queries
-pub(crate) fn build_rtree(graph: &UnGraph<StreetNode, StreetEdge>) -> rstar::RTree<IndexedPoint> {
+pub(crate) fn build_rtree(graph: &UnGraph<StreetNode, StreetEdge>) -> RTree<IndexedPoint> {
     let mut points = Vec::with_capacity(graph.node_count());
     for (idx, node) in graph.node_weights().enumerate() {
-        let idx = petgraph::graph::NodeIndex::new(idx);
+        let idx = NodeIndex::new(idx);
         points.push(IndexedPoint::new(node.geometry, idx));
     }
-    rstar::RTree::bulk_load(points)
+    RTree::bulk_load(points)
 }

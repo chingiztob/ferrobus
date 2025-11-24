@@ -16,7 +16,7 @@ chrono.workspace = true
 rstar = "0.12"
 rustworkx-core = "0.17"
 petgraph = "0.8"
-hashbrown = "0.15"
+hashbrown = "0.16.0"
 fixedbitset = "0.5"
 h3o = { version = "0.9.0", features = ["geo"] }
 #osm4routing = { git = "https://github.com/rust-transit/osm4routing2.git" }

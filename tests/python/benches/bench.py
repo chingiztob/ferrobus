@@ -1,7 +1,8 @@
 import datetime
 
-import ferrobus
 import pytest
+
+import ferrobus
 
 
 @pytest.mark.benchmark

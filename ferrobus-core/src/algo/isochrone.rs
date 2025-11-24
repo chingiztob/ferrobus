@@ -233,7 +233,7 @@ fn compute_reachable_cells(
         .filter_map(|(index, result)| {
             result
                 .as_ref()
-                .filter(|r| r.travel_time < cutoff)
+                .filter(|r| r.travel_time <= cutoff)
                 .map(|_| grid[index])
         })
         .collect();

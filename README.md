@@ -31,11 +31,11 @@ pip install ferrobus
 
 Pre-built wheels are available for the following platforms:
 
-- **Windows**: x86 and x86_64
-- **macOS**: x86_64 and arm64
+- **Windows**: x86_64
+- **macOS**: Apple Silicon (arm64)
 - **Linux**: x86_64 and arm64 (including musl-based systems like Alpine Linux and manylinux2014-compliant systems)
 
-Supported Python versions are **CPython 3.8 and later**, including **PyPy >3.8**.
+Supported Python versions are **CPython 3.9 and later**, including **PyPy >3.11**.
 If a pre-built binary is not available, the package will be built from source, requiring Rust to be installed. You can install Rust using [rustup](https://rustup.rs/):
 
 ```bash
@@ -134,10 +134,6 @@ For more detailed information, see the [full rendered documentation](https://fer
 ## Benchmarks
 
 Ferrobus is designed for high performance and low memory footprint. Benchmarks are continuously run using [CodSpeed](https://codspeed.io/chingiztob/ferrobus) to avoid regressions. Typical routing queries (including multimodal and batch operations) complete in milliseconds on modern hardware.
-
-### Comparative Benchmarks
-
-*to be added ...*
 
 ## License
 

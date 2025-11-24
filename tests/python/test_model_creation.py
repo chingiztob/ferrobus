@@ -2,8 +2,9 @@
 
 import datetime
 
-import ferrobus
 import pytest
+
+import ferrobus
 
 
 def test_model_creation_valid(osm_path, gtfs_dirs):

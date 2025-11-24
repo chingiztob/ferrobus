@@ -3,10 +3,10 @@ Getting Started
 
 Ferrobus is easily installable from PyPI and supports Windows, Linux, and macOS.
 
-Pre-built binaries are available for **Windows (x86_64, x86), macOS (x86_64 and arm64), and Linux (x86_64, arm64)**.
+Pre-built binaries are available for **Windows (x86_64), macOS (Apple Silicon), and Linux (x86_64, arm64)**.
 Wheels for Linux are available for musl-based systems (e.g., Alpine Linux) and manylinux2014-compliant systems.
 
-Supported Python versions are **CPython 3.8 and later, including free-threaded 3.13t and PyPy >3.8**
+Supported Python versions are **CPython 3.9 and later, including free-threaded 3.13t and PyPy >3.11**
 
 Installation
 ------------
