@@ -77,7 +77,7 @@ pub enum RaptorError {
     InvalidTrip,
     #[error("Invalid time value")]
     InvalidTime,
-    #[error("Invalid jorney")]
+    #[error("Invalid journey")]
     InvalidJourney,
 }
 
