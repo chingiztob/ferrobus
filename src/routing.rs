@@ -436,7 +436,14 @@ pub fn detailed_journey(
         })?;
 
         if let Some(result) = result {
-            return Ok(Some(result.to_geojson_string(&transit_model.model)));
+            let geojson = result
+                .to_geojson_string(&transit_model.model)
+                .map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                        "GeoJSON conversion failed: {e}"
+                    ))
+                })?;
+            return Ok(Some(geojson));
         }
         Ok(None)
     })

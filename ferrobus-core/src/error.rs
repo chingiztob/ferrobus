@@ -18,4 +18,6 @@ pub enum Error {
     UnrecoverableError(&'static str),
     #[error("Invalid time format: {0}")]
     InvalidTimeFormat(String),
+    #[error("GeoJSON conversion error: {0}")]
+    GeoJsonError(String),
 }
