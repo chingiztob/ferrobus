@@ -286,7 +286,6 @@ fn reconstruct_journey(
                 return Err(RaptorError::InvalidJourney);
             }
             Predecessor::Source => {
-                // We've reached the source
                 break;
             }
             Predecessor::Transit {
