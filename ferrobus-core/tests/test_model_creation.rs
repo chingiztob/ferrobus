@@ -66,7 +66,7 @@ fn test_model_creation_invalid_osm() {
 
     let model_result = try_create_model(&config);
     assert!(model_result.is_err());
-    assert!(matches!(model_result, Err(Error::InvalidData(_))));
+    assert!(matches!(model_result, Err(Error::IoError(_))));
 }
 
 #[test]
