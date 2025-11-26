@@ -70,9 +70,9 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
 
 fn validate_config(config: &TransitModelConfig) -> Result<(), Error> {
     if !config.osm_path.exists() {
-        return Err(Error::InvalidData(format!(
-            "OSM file not found: {}",
-            config.osm_path.display()
+        return Err(Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("OSM file not found: {}", config.osm_path.display()),
         )));
     }
 

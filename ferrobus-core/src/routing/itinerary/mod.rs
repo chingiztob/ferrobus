@@ -64,7 +64,9 @@ pub fn traced_multimodal_routing(
     }
 
     if let Some(walk_time) = direct_walking
-        && (best_candidate.is_none() || walk_time <= best_candidate.as_ref().unwrap().0.total_time)
+        && best_candidate
+            .as_ref()
+            .is_none_or(|c| walk_time <= c.0.total_time)
     {
         return Ok(Some(DetailedJourney::walking_only(
             start,

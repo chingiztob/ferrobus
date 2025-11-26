@@ -334,12 +334,10 @@ fn reconstruct_journey(
     // Legs are in reverse order (target to source), so reverse them
     legs.reverse();
 
-    // Add "waiting" points to result
-    let mut walking_legs = Vec::new();
-
-    // Iterate over journeys with window, if next departure is `transit` , then calculate delay
-    // between this departure and out arrival on that stop
-    for (idx, (prev_leg, next_leg)) in legs.iter().tuple_windows().enumerate() {
+    // Add "waiting" legs between arrivals and next transit departures
+    let mut result = Vec::with_capacity(legs.len() * 2);
+    for (prev_leg, next_leg) in legs.iter().tuple_windows() {
+        result.push(prev_leg.clone());
         if let (
             JourneyLeg::Transit { arrival_time, .. } | JourneyLeg::Transfer { arrival_time, .. },
             JourneyLeg::Transit {
@@ -348,28 +346,26 @@ fn reconstruct_journey(
                 ..
             },
         ) = (prev_leg, next_leg)
+            && *departure_time > *arrival_time
         {
-            walking_legs.push((
-                idx,
-                JourneyLeg::Waiting {
-                    at_stop: *from_stop,
-                    duration: (*departure_time - *arrival_time),
-                },
-            ));
+            result.push(JourneyLeg::Waiting {
+                at_stop: *from_stop,
+                duration: *departure_time - *arrival_time,
+            });
         }
     }
-    // Shift accounts for elements shifting on each insert, +1 alligns waits to correct position (cringe)
-    for (shift, (idx, leg)) in walking_legs.into_iter().enumerate() {
-        legs.insert(idx + shift + 1, leg);
+
+    if let Some(last) = legs.last() {
+        result.push(last.clone());
     }
 
-    let transfers_count = legs
+    let transfers_count = result
         .iter()
         .filter(|leg| matches!(leg, JourneyLeg::Transfer { .. }))
         .count();
 
     Ok(Journey {
-        legs,
+        legs: result,
         departure_time: state.board_times[0][source],
         arrival_time,
         transfers_count,
