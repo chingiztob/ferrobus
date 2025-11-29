@@ -8,6 +8,7 @@ use super::{
 };
 use crate::{
     Error, RaptorStopId, RouteId,
+    loading::gtfs::raw_types::FeedTransfer,
     model::{PublicTransitData, Route, Stop, StopTime, Trip},
 };
 use crate::{loading::config::TransitModelConfig, model::FeedMeta};
@@ -27,6 +28,7 @@ struct RawGTFSData {
     services: Vec<FeedService>,
     feed_info: Vec<FeedInfo>,
     calendar_dates: Vec<FeedCalendarDates>,
+    transfers: Vec<FeedTransfer>,
 }
 
 fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
@@ -36,6 +38,7 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
     let mut services = Vec::new();
     let mut feed_info = Vec::new();
     let mut calendar_dates = Vec::new();
+    let mut transfers = Vec::new();
 
     for dir in &config.gtfs_dirs {
         stops.extend(deserialize_gtfs_file(&dir.join("stops.txt"))?);
@@ -45,12 +48,14 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
         feed_info.extend(deserialize_gtfs_file(&dir.join("feed_info.txt")).unwrap_or_default());
         calendar_dates
             .extend(deserialize_gtfs_file(&dir.join("calendar_dates.txt")).unwrap_or_default());
+        transfers.extend(deserialize_gtfs_file(&dir.join("transfers.txt")).unwrap_or_default());
     }
 
     stops.shrink_to_fit();
     trips.shrink_to_fit();
     stop_times.shrink_to_fit();
     services.shrink_to_fit();
+    transfers.shrink_to_fit();
 
     Ok(RawGTFSData {
         stops,
@@ -59,6 +64,7 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
         services,
         feed_info,
         calendar_dates,
+        transfers,
     })
 }
 
@@ -67,6 +73,7 @@ struct FilteredGTFSData {
     trips: Vec<FeedTrip>,
     stop_times: Vec<FeedStopTime>,
     feeds_meta: Vec<FeedMeta>,
+    gtfs_transfers: Vec<FeedTransfer>,
 }
 
 fn filter_data_by_date(config: &TransitModelConfig, mut raw_data: RawGTFSData) -> FilteredGTFSData {
@@ -98,6 +105,7 @@ fn filter_data_by_date(config: &TransitModelConfig, mut raw_data: RawGTFSData) -
         trips: raw_data.trips,
         stop_times: raw_data.stop_times,
         feeds_meta,
+        gtfs_transfers: raw_data.transfers,
     }
 }
 
@@ -178,6 +186,7 @@ fn process_transit_data(filtered_data: FilteredGTFSData) -> ProcessedTransitData
         trips,
         stops,
         feeds_meta: filtered_data.feeds_meta,
+        gtfs_transfers: filtered_data.gtfs_transfers,
     }
 }
 
@@ -188,6 +197,7 @@ struct ProcessedTransitData {
     trips: Vec<Vec<Trip>>,
     stops: Vec<Stop>,
     feeds_meta: Vec<FeedMeta>,
+    gtfs_transfers: Vec<FeedTransfer>,
 }
 
 fn group_stop_times_by_trip(stop_times: Vec<FeedStopTime>) -> HashMap<String, Vec<FeedStopTime>> {
@@ -241,6 +251,7 @@ fn build_public_transit_data(processed_data: ProcessedTransitData) -> PublicTran
         node_to_stop: HashMap::new(),
         feeds_meta: processed_data.feeds_meta,
         trips: processed_data.trips,
+        gtfs_transfers: processed_data.gtfs_transfers,
     }
 }
 

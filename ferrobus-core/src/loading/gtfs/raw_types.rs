@@ -132,3 +132,12 @@ pub struct FeedInfo {
     pub feed_end_date: Option<chrono::NaiveDate>,
     pub feed_version: String,
 }
+
+#[derive(Debug, Deserialize, Default, Clone)]
+#[serde(default)]
+pub struct FeedTransfer {
+    pub from_stop_id: String,
+    pub to_stop_id: String,
+    pub transfer_type: u8,
+    pub min_transfer_time: Option<u32>,
+}

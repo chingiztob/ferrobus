@@ -1,11 +1,12 @@
 use hashbrown::HashMap;
-use log::info;
+use log::{info, warn};
 use petgraph::graph::NodeIndex;
 use rayon::prelude::*;
 
 use crate::{RaptorStopId, Time, TransitModel, model::Transfer, routing::dijkstra};
 
 /// Calculate transfers between stops using the street network
+/// Merges with GTFS-defined transfers (GTFS takes priority)
 pub(crate) fn calculate_transfers(graph: &mut TransitModel) {
     let max_transfer_time = graph.meta.max_transfer_time;
     let stop_count = graph.transit_data.stops.len();
@@ -15,9 +16,118 @@ pub(crate) fn calculate_transfers(graph: &mut TransitModel) {
     // Snap all transit stops to street network nodes (Some = snapped, None = too far)
     let stop_nodes = snap_stops_to_network(graph);
     // Calculate transfers for all stops that could be snapped
-    let stop_transfers = calculate_stop_transfers(graph, &stop_nodes, max_transfer_time);
+    let computed_transfers = calculate_stop_transfers(graph, &stop_nodes, max_transfer_time);
 
-    update_transit_model_with_transfers(graph, stop_transfers, &stop_nodes);
+    let gtfs_transfers_raw = std::mem::take(&mut graph.transit_data.gtfs_transfers);
+
+    let stop_id_map: HashMap<String, RaptorStopId> = graph
+        .transit_data
+        .stops
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.stop_id.clone(), i))
+        .collect();
+
+    // Convert GTFS transfers to internal format
+    let gtfs_transfers =
+        convert_gtfs_transfers_to_internal(&gtfs_transfers_raw, &stop_id_map, max_transfer_time);
+
+    if !gtfs_transfers.is_empty() {
+        let gtfs_count: usize = gtfs_transfers.iter().map(|(_, t)| t.len()).sum();
+        info!("Loaded {gtfs_count} GTFS-defined transfers");
+    }
+
+    // GTFS overrides computed
+    let merged_transfers = merge_transfers(computed_transfers, gtfs_transfers);
+
+    update_transit_model_with_transfers(graph, merged_transfers, &stop_nodes);
+}
+
+fn convert_gtfs_transfers_to_internal(
+    gtfs_transfers: &[crate::loading::FeedTransfer],
+    stop_id_map: &HashMap<String, RaptorStopId>,
+    max_transfer_time: Time,
+) -> Vec<(RaptorStopId, Vec<Transfer>)> {
+    let mut transfers_by_stop: HashMap<RaptorStopId, Vec<Transfer>> = HashMap::new();
+
+    for transfer in gtfs_transfers {
+        // "Transfers are not possible between routes at the location" link
+        // https://gtfs.org/documentation/schedule/reference/#transferstxt
+        if transfer.transfer_type == 3 {
+            continue;
+        }
+
+        let Some(duration) = transfer.min_transfer_time else {
+            continue;
+        };
+
+        if duration > max_transfer_time {
+            continue;
+        }
+
+        // GTFS Stop IDs to internal indices of raptor flat model
+        let Some(&from_idx) = stop_id_map.get(&transfer.from_stop_id) else {
+            warn!(
+                "GTFS transfer: unknown from_stop_id '{}', skipping",
+                transfer.from_stop_id
+            );
+            continue;
+        };
+
+        let Some(&to_idx) = stop_id_map.get(&transfer.to_stop_id) else {
+            warn!(
+                "GTFS transfer: unknown to_stop_id '{}', skipping",
+                transfer.to_stop_id
+            );
+            continue;
+        };
+
+        if from_idx == to_idx {
+            continue;
+        }
+
+        transfers_by_stop
+            .entry(from_idx)
+            .or_default()
+            .push(Transfer {
+                target_stop: to_idx,
+                duration,
+            });
+    }
+
+    transfers_by_stop.into_iter().collect()
+}
+
+fn merge_transfers(
+    computed: Vec<(RaptorStopId, Vec<Transfer>)>,
+    gtfs: Vec<(RaptorStopId, Vec<Transfer>)>,
+) -> Vec<(RaptorStopId, Vec<Transfer>)> {
+    // from_stop, to_stop
+    let mut merged: HashMap<RaptorStopId, HashMap<RaptorStopId, Transfer>> = HashMap::new();
+
+    for (from_stop, transfers) in computed {
+        let entry = merged.entry(from_stop).or_default();
+        for transfer in transfers {
+            entry.insert(transfer.target_stop, transfer);
+        }
+    }
+
+    // Override with GTFS transfers
+    for (from_stop, transfers) in gtfs {
+        let entry = merged.entry(from_stop).or_default();
+        for transfer in transfers {
+            entry.insert(transfer.target_stop, transfer);
+        }
+    }
+
+    merged
+        .into_iter()
+        .map(|(from_stop, transfers_map)| {
+            let transfers: Vec<Transfer> = transfers_map.into_values().collect();
+            (from_stop, transfers)
+        })
+        .filter(|(_, transfers)| !transfers.is_empty())
+        .collect()
 }
 
 /// Snap transit stops to their nearest street network nodes

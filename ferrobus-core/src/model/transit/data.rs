@@ -2,6 +2,7 @@
 
 use super::types::{FeedMeta, Route, Stop, StopTime, Transfer};
 use crate::{
+    loading::FeedTransfer,
     model::transit::types::Trip,
     types::{RaptorStopId, RouteId},
 };
@@ -30,6 +31,8 @@ pub struct PublicTransitData {
     pub feeds_meta: Vec<FeedMeta>,
     /// Trip IDs for each trip (indexed by route, then trip index)
     pub trips: Vec<Vec<Trip>>,
+    /// GTFS-defined transfers (to be merged with computed transfers)
+    pub gtfs_transfers: Vec<FeedTransfer>,
 }
 
 impl PublicTransitData {
