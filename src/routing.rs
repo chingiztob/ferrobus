@@ -33,7 +33,7 @@ use ferrobus_core::{prelude::*, routing::itinerary::traced_multimodal_routing};
 /// The ``max_walking_time`` parameter controls how far the point can connect to the transit
 /// network, while ``max_nearest_stops`` limits the number of stops considered during routing.
 #[stubgen]
-#[pyclass(name = "TransitPoint")]
+#[pyclass(from_py_object, name = "TransitPoint")]
 #[derive(Clone, Debug)]
 pub struct PyTransitPoint {
     pub inner: TransitPoint,
