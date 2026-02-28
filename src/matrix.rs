@@ -65,3 +65,110 @@ pub fn travel_time_matrix(
 
     Ok(full_vec)
 }
+
+/// Computes travel time statistics from each point to all targets in parallel.
+///
+/// For each origin point, returns the travel time statistic to reachable targets
+/// only if at least the specified percentage of all targets are reachable;
+/// otherwise returns None.
+///
+/// Parameters
+/// ----------
+/// `transit_model` : `TransitModel`
+///     The transit model to use for routing.
+/// points : list[`TransitPoint`]
+///     List of points used as both origins and targets.
+/// `departure_time` : int
+///     Time of departure in seconds since midnight.
+/// `max_transfers` : int
+///     Maximum number of transfers allowed in route planning.
+/// `threshold` : float, default = 0.75
+///     Percentage of target points which must be reached to allow statistics.
+/// `stat` : str, default = "mean"
+///     Statistic computed from reachable travel times:
+///
+///     • `"mean"`   — arithmetic mean travel time
+///     • `"median"` — median travel time
+///
+/// Returns
+/// -------
+/// list[Optional[float]]
+///     A list where each element corresponds to an origin point and contains
+///     the computed travel time statistic in seconds, or None if fewer than the
+///     specified percentage of targets are reachable from that origin.
+#[stubgen]
+#[pyfunction]
+#[pyo3(signature = (transit_model, points, departure_time, max_transfers, threshold=0.75, stat="mean"))]
+pub fn travel_time_statistics(
+    py: Python<'_>,
+    transit_model: &PyTransitModel,
+    points: Vec<PyTransitPoint>,
+    departure_time: Time,
+    max_transfers: usize,
+    threshold: f64,
+    stat: &str, // "mean" or "median"
+) -> PyResult<Vec<Option<f64>>> {
+    if stat != "mean" && stat != "median" {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            r#"stat must be "mean" or "median""#,
+        ));
+    }
+
+    let points: Vec<_> = points.into_iter().map(|p| p.inner).collect();
+    let target_count = points.len();
+
+    if target_count == 0 {
+        return Ok(vec![]);
+    }
+
+    let results = py.detach(|| {
+        points
+            .par_iter()
+            .map(|start_point| {
+                let routing_result = match multimodal_routing_one_to_many(
+                    &transit_model.model,
+                    start_point,
+                    &points,
+                    departure_time,
+                    max_transfers,
+                ) {
+                    Ok(result) => result,
+                    Err(e) => {
+                        println!("Routing failed for point {start_point:?}, error: {e}");
+                        return None;
+                    }
+                };
+
+                let mut reached_times: Vec<u64> = Vec::new();
+                for destination in routing_result.into_iter().flatten() {
+                    reached_times.push(u64::from(destination.travel_time));
+                }
+
+                let reached_count = reached_times.len();
+                if reached_count == 0 || (reached_count as f64 / target_count as f64) < threshold {
+                    return None;
+                }
+
+                if stat == "mean" {
+                    let sum: u64 = reached_times.iter().sum();
+                    Some(sum as f64 / reached_count as f64)
+                } else {
+                    let mid = reached_count / 2;
+
+                    if reached_count % 2 == 1 {
+                        let (_, m, _) = reached_times.select_nth_unstable(mid);
+                        Some(*m as f64)
+                    } else {
+                        let (_, hi, _) = reached_times.select_nth_unstable(mid);
+                        let hi = *hi;
+                        let (_, lo, _) = reached_times.select_nth_unstable(mid - 1);
+                        let lo = *lo;
+                        Some(f64::midpoint(lo as f64, hi as f64))
+                    }
+                }
+            })
+            .collect::<Vec<_>>()
+    });
+
+    Ok(results)
+}

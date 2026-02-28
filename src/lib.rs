@@ -4,7 +4,7 @@ use isochrone::{
     PyIsochroneIndex, calculate_bulk_isochrones, calculate_isochrone,
     calculate_percent_access_isochrone, create_isochrone_index,
 };
-use matrix::travel_time_matrix;
+use matrix::{travel_time_matrix, travel_time_statistics};
 use model::{PyTransitModel, py_create_transit_model};
 use range_routing::{
     PyRangeRoutingResult, py_pareto_range_multimodal_routing, py_range_multimodal_routing,
@@ -85,6 +85,7 @@ fn ferrobus(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(detailed_journey, m)?)?;
 
     m.add_function(wrap_pyfunction!(travel_time_matrix, m)?)?;
+    m.add_function(wrap_pyfunction!(travel_time_statistics, m)?)?;
 
     m.add_class::<PyIsochroneIndex>()?;
     m.add_function(wrap_pyfunction!(create_isochrone_index, m)?)?;

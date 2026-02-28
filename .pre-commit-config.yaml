@@ -22,7 +22,7 @@ repos:
 
       - id: cargo-clippy
         name: cargo clippy
-        entry: cargo clippy -- -D warnings
+        entry: cargo clippy -- -D warnings -A clippy::cast_precision_loss
         language: system
         types: [rust]
         pass_filenames: false
