@@ -96,9 +96,10 @@ pub fn travel_time_matrix(
 ///     A list where each element corresponds to an origin point and contains
 ///     the computed travel time statistic in seconds, or None if fewer than the
 ///     specified percentage of targets are reachable from that origin.
+#[allow(clippy::too_many_arguments)]
 #[stubgen]
 #[pyfunction]
-#[pyo3(signature = (transit_model, points, departure_time, max_transfers, threshold=0.75, stat="mean"))]
+#[pyo3(signature = (transit_model, points, departure_time, max_transfers, threshold=0.75, stat="mean", filter_cutoff=None))]
 pub fn travel_time_statistics(
     py: Python<'_>,
     transit_model: &PyTransitModel,
@@ -107,6 +108,7 @@ pub fn travel_time_statistics(
     max_transfers: usize,
     threshold: f64,
     stat: &str, // "mean" or "median"
+    filter_cutoff: Option<u64>,
 ) -> PyResult<Vec<Option<f64>>> {
     if stat != "mean" && stat != "median" {
         return Err(pyo3::exceptions::PyValueError::new_err(
@@ -141,6 +143,11 @@ pub fn travel_time_statistics(
 
                 let mut reached_times: Vec<u64> = Vec::new();
                 for destination in routing_result.into_iter().flatten() {
+                    if let Some(cutoff) = filter_cutoff
+                        && u64::from(destination.travel_time) > cutoff
+                    {
+                        continue;
+                    }
                     reached_times.push(u64::from(destination.travel_time));
                 }
 
