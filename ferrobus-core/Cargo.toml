@@ -29,7 +29,7 @@ rayon.workspace = true
 libc = "0.2"
 
 [dev-dependencies]
-criterion = "0.7"
+criterion = "0.8"
 
 [[bench]]
 name = "bench_main"
