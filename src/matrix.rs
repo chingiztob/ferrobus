@@ -89,6 +89,9 @@ pub fn travel_time_matrix(
 ///
 ///     • `"mean"`   — arithmetic mean travel time
 ///     • `"median"` — median travel time
+/// `filter_cutoff` : Optional[int], default = None
+///     If provided, excludes destinations with travel time strictly greater than
+///     this cutoff (in seconds) from the statistic computation.
 ///
 /// Returns
 /// -------
@@ -110,6 +113,12 @@ pub fn travel_time_statistics(
     stat: &str, // "mean" or "median"
     filter_cutoff: Option<u64>,
 ) -> PyResult<Vec<Option<f64>>> {
+    if !threshold.is_finite() || !(0.0..=1.0).contains(&threshold) {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "threshold must be a finite number in [0.0, 1.0]",
+        ));
+    }
+
     if stat != "mean" && stat != "median" {
         return Err(pyo3::exceptions::PyValueError::new_err(
             r#"stat must be "mean" or "median""#,
@@ -127,21 +136,16 @@ pub fn travel_time_statistics(
         points
             .par_iter()
             .map(|start_point| {
-                let routing_result = match multimodal_routing_one_to_many(
+                let routing_result = multimodal_routing_one_to_many(
                     &transit_model.model,
                     start_point,
                     &points,
                     departure_time,
                     max_transfers,
-                ) {
-                    Ok(result) => result,
-                    Err(e) => {
-                        println!("Routing failed for point {start_point:?}, error: {e}");
-                        return None;
-                    }
-                };
+                )
+                .map_err(|e| format!("Routing failed for point {start_point:?}, error: {e}"))?;
 
-                let mut reached_times: Vec<u64> = Vec::new();
+                let mut reached_times: Vec<u64> = Vec::with_capacity(routing_result.len());
                 for destination in routing_result.into_iter().flatten() {
                     if let Some(cutoff) = filter_cutoff
                         && u64::from(destination.travel_time) > cutoff
@@ -153,29 +157,30 @@ pub fn travel_time_statistics(
 
                 let reached_count = reached_times.len();
                 if reached_count == 0 || (reached_count as f64 / target_count as f64) < threshold {
-                    return None;
+                    return Ok(None);
                 }
 
                 if stat == "mean" {
                     let sum: u64 = reached_times.iter().sum();
-                    Some(sum as f64 / reached_count as f64)
+                    Ok(Some(sum as f64 / reached_count as f64))
                 } else {
                     let mid = reached_count / 2;
+                    let (lower, hi, _) = reached_times.select_nth_unstable(mid);
 
                     if reached_count % 2 == 1 {
-                        let (_, m, _) = reached_times.select_nth_unstable(mid);
-                        Some(*m as f64)
+                        Ok(Some(*hi as f64))
                     } else {
-                        let (_, hi, _) = reached_times.select_nth_unstable(mid);
-                        let hi = *hi;
-                        let (_, lo, _) = reached_times.select_nth_unstable(mid - 1);
-                        let lo = *lo;
-                        Some(f64::midpoint(lo as f64, hi as f64))
+                        let Some(lo) = lower.iter().max().copied() else {
+                            return Err(format!(
+                                "Median computation failed for point {start_point:?}: empty lower partition"
+                            ));
+                        };
+                        Ok(Some(f64::midpoint(lo as f64, *hi as f64)))
                     }
                 }
             })
-            .collect::<Vec<_>>()
+            .collect::<Result<Vec<_>, String>>()
     });
 
-    Ok(results)
+    results.map_err(pyo3::exceptions::PyRuntimeError::new_err)
 }

@@ -665,7 +665,7 @@ def travel_time_matrix(transit_model: TransitModel, points: typing.Sequence[Tran
         from point i to point j, or None if the point is unreachable.
     """
 
-def travel_time_statistics(transit_model: TransitModel, points: typing.Sequence[TransitPoint], departure_time: builtins.int, max_transfers: builtins.int, threshold: builtins.float = 0.75, stat: builtins.str = 'mean') -> builtins.list[typing.Optional[builtins.float]]:
+def travel_time_statistics(transit_model: TransitModel, points: typing.Sequence[TransitPoint], departure_time: builtins.int, max_transfers: builtins.int, threshold: builtins.float = 0.75, stat: builtins.str = 'mean', filter_cutoff: typing.Optional[builtins.int] = None) -> builtins.list[typing.Optional[builtins.float]]:
     r"""
     Computes travel time statistics from each point to all targets in parallel.
 
@@ -690,6 +690,9 @@ def travel_time_statistics(transit_model: TransitModel, points: typing.Sequence[
 
         • `"mean"`   — arithmetic mean travel time
         • `"median"` — median travel time
+    `filter_cutoff` : Optional[int], default = None
+        If provided, excludes destinations with travel time strictly greater than
+        this cutoff (in seconds) from the statistic computation.
 
     Returns
     -------
