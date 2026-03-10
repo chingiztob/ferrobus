@@ -8,6 +8,7 @@ use super::{
 };
 use crate::{
     Error, RaptorStopId, RouteId,
+    loading::gtfs::raw_types::FeedTransfer,
     model::{PublicTransitData, Route, Stop, StopTime, Trip},
 };
 use crate::{loading::config::TransitModelConfig, model::FeedMeta};
@@ -27,6 +28,7 @@ struct RawGTFSData {
     services: Vec<FeedService>,
     feed_info: Vec<FeedInfo>,
     calendar_dates: Vec<FeedCalendarDates>,
+    transfers: Vec<FeedTransfer>,
 }
 
 fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
@@ -36,6 +38,7 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
     let mut services = Vec::new();
     let mut feed_info = Vec::new();
     let mut calendar_dates = Vec::new();
+    let mut transfers = Vec::new();
 
     for dir in &config.gtfs_dirs {
         stops.extend(deserialize_gtfs_file(&dir.join("stops.txt"))?);
@@ -45,12 +48,14 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
         feed_info.extend(deserialize_gtfs_file(&dir.join("feed_info.txt")).unwrap_or_default());
         calendar_dates
             .extend(deserialize_gtfs_file(&dir.join("calendar_dates.txt")).unwrap_or_default());
+        transfers.extend(deserialize_gtfs_file(&dir.join("transfers.txt")).unwrap_or_default());
     }
 
     stops.shrink_to_fit();
     trips.shrink_to_fit();
     stop_times.shrink_to_fit();
     services.shrink_to_fit();
+    transfers.shrink_to_fit();
 
     Ok(RawGTFSData {
         stops,
@@ -59,6 +64,7 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
         services,
         feed_info,
         calendar_dates,
+        transfers,
     })
 }
 
@@ -67,6 +73,7 @@ struct FilteredGTFSData {
     trips: Vec<FeedTrip>,
     stop_times: Vec<FeedStopTime>,
     feeds_meta: Vec<FeedMeta>,
+    gtfs_transfers: Vec<FeedTransfer>,
 }
 
 fn filter_data_by_date(config: &TransitModelConfig, mut raw_data: RawGTFSData) -> FilteredGTFSData {
@@ -98,6 +105,7 @@ fn filter_data_by_date(config: &TransitModelConfig, mut raw_data: RawGTFSData) -
         trips: raw_data.trips,
         stop_times: raw_data.stop_times,
         feeds_meta,
+        gtfs_transfers: raw_data.transfers,
     }
 }
 
@@ -178,6 +186,7 @@ fn process_transit_data(filtered_data: FilteredGTFSData) -> ProcessedTransitData
         trips,
         stops,
         feeds_meta: filtered_data.feeds_meta,
+        gtfs_transfers: filtered_data.gtfs_transfers,
     }
 }
 
@@ -188,6 +197,7 @@ struct ProcessedTransitData {
     trips: Vec<Vec<Trip>>,
     stops: Vec<Stop>,
     feeds_meta: Vec<FeedMeta>,
+    gtfs_transfers: Vec<FeedTransfer>,
 }
 
 fn group_stop_times_by_trip(stop_times: Vec<FeedStopTime>) -> HashMap<String, Vec<FeedStopTime>> {
@@ -241,21 +251,8 @@ fn build_public_transit_data(processed_data: ProcessedTransitData) -> PublicTran
         node_to_stop: HashMap::new(),
         feeds_meta: processed_data.feeds_meta,
         trips: processed_data.trips,
+        gtfs_transfers: processed_data.gtfs_transfers,
     }
-}
-
-fn build_route_stops(
-    representative: &[FeedStopTime],
-    stop_id_map: &HashMap<&str, usize>,
-    route_stops: &mut Vec<usize>,
-) -> usize {
-    let stops_start = route_stops.len();
-    for st in representative {
-        if let Some(&idx) = stop_id_map.get(st.stop_id.as_str()) {
-            route_stops.push(idx);
-        }
-    }
-    stops_start
 }
 
 fn build_route_trips(
@@ -321,23 +318,38 @@ fn process_route_variants<'a>(
     trip_data_map: &HashMap<&str, &FeedTrip>,
     builder: &mut RouteBuilder,
 ) {
-    // Group all trips on route by the number of stops each trip has
-    let mut groups_by_length: HashMap<usize, Vec<&'a [FeedStopTime]>> = HashMap::new();
+    // Group trips by full mapped stop sequence pattern.
+    // Using only stop count can incorrectly mix variants with different stop IDs.
+    let mut groups_by_pattern: HashMap<Vec<usize>, Vec<&'a [FeedStopTime]>> = HashMap::new();
     for ts in trips_data {
-        groups_by_length.entry(ts.len()).or_default().push(ts);
+        let mut pattern = Vec::with_capacity(ts.len());
+        let mut valid_pattern = true;
+
+        for st in ts {
+            if let Some(&idx) = stop_id_map.get(st.stop_id.as_str()) {
+                pattern.push(idx);
+            } else {
+                valid_pattern = false;
+                break;
+            }
+        }
+
+        if valid_pattern {
+            groups_by_pattern.entry(pattern).or_default().push(ts);
+        }
     }
 
-    // Group trips by their stop sequences
-    for (num_stops, mut group) in groups_by_length {
+    for (pattern, mut group) in groups_by_pattern {
         group.sort_by_key(|ts| &ts[0].departure_time);
 
-        // Use the first trip as a representative (which defines exact stops pattern)
-        let representative = group[0];
-        let stops_start = build_route_stops(representative, stop_id_map, builder.route_stops);
+        let stops_start = builder.route_stops.len();
+        builder.route_stops.extend(pattern.iter().copied());
         let trips_start = builder.stop_times_vec.len();
 
         let route_trips = build_route_trips(&group, trip_data_map);
         build_stop_times(&group, builder.stop_times_vec);
+
+        let num_stops = pattern.len();
 
         builder.routes_vec.push(Route {
             num_trips: group.len(),
@@ -405,4 +417,76 @@ fn create_stops_vector(stops: Vec<FeedStop>) -> Vec<Stop> {
             transfers_len: 0,
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::process_trip_stop_times;
+    use crate::loading::gtfs::raw_types::{FeedStop, FeedStopTime, FeedTrip};
+
+    fn mk_stop(id: &str) -> FeedStop {
+        FeedStop {
+            stop_id: id.to_string(),
+            ..FeedStop::default()
+        }
+    }
+
+    fn mk_trip(route_id: &str, trip_id: &str) -> FeedTrip {
+        FeedTrip {
+            route_id: route_id.to_string(),
+            trip_id: trip_id.to_string(),
+            ..FeedTrip::default()
+        }
+    }
+
+    fn mk_st(trip_id: &str, stop_id: &str, seq: u32, t: u32) -> FeedStopTime {
+        FeedStopTime {
+            trip_id: trip_id.to_string(),
+            stop_id: stop_id.to_string(),
+            stop_sequence: seq,
+            arrival_time: t,
+            departure_time: t,
+        }
+    }
+
+    #[test]
+    fn splits_route_variants_by_full_stop_pattern() {
+        // Same GTFS route and same stop count, but different middle stop.
+        // Must become separate internal variants, otherwise stop IDs mismatch trip times.
+        let stops = vec![mk_stop("A"), mk_stop("B"), mk_stop("C"), mk_stop("D")];
+        let trips = vec![mk_trip("R1", "T1"), mk_trip("R1", "T2")];
+
+        let mut trip_stop_times = hashbrown::HashMap::new();
+        trip_stop_times.insert(
+            "T1".to_string(),
+            vec![
+                mk_st("T1", "A", 0, 100),
+                mk_st("T1", "B", 1, 200),
+                mk_st("T1", "D", 2, 300),
+            ],
+        );
+        trip_stop_times.insert(
+            "T2".to_string(),
+            vec![
+                mk_st("T2", "A", 0, 110),
+                mk_st("T2", "C", 1, 210),
+                mk_st("T2", "D", 2, 310),
+            ],
+        );
+
+        let (_stop_times, route_stops, routes, _trips) =
+            process_trip_stop_times(&stops, &trips, &trip_stop_times);
+
+        assert_eq!(routes.len(), 2);
+        assert!(routes.iter().all(|r| r.num_stops == 3));
+        assert!(routes.iter().all(|r| r.num_trips == 1));
+
+        let mut patterns: Vec<Vec<usize>> = routes
+            .iter()
+            .map(|r| route_stops[r.stops_start..r.stops_start + r.num_stops].to_vec())
+            .collect();
+        patterns.sort_unstable();
+
+        assert_eq!(patterns, vec![vec![0, 1, 3], vec![0, 2, 3]]);
+    }
 }

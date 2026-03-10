@@ -1,5 +1,4 @@
 use fixedbitset::FixedBitSet;
-use itertools::Itertools;
 
 use super::state::{Predecessor, TracedRaptorState};
 use crate::PublicTransitData;
@@ -259,6 +258,7 @@ fn process_detailed_foot_paths(
     Ok(new_marks)
 }
 
+#[allow(clippy::too_many_lines)]
 fn reconstruct_journey(
     data: &PublicTransitData,
     state: &TracedRaptorState,
@@ -295,10 +295,23 @@ fn reconstruct_journey(
                 from_idx,
                 to_idx,
             } => {
+                let route_stops = data.get_route_stops(*route_id)?;
+                let Some(&route_from_stop) = route_stops.get(*from_idx) else {
+                    return Err(RaptorError::InvalidJourney);
+                };
+                let Some(&route_to_stop) = route_stops.get(*to_idx) else {
+                    return Err(RaptorError::InvalidJourney);
+                };
+
+                // Ensure predecessor indices and stop IDs are internally consistent.
+                if route_from_stop != *from_stop || route_to_stop != current_stop {
+                    return Err(RaptorError::InvalidJourney);
+                }
+
                 let trip = data.get_trip(*route_id, *trip_id)?;
                 let trip_id_string = data
                     .get_trip_id(*route_id, *trip_id)
-                    .unwrap_or("unknown")
+                    .ok_or(RaptorError::InvalidJourney)?
                     .to_string();
                 legs.push(JourneyLeg::Transit {
                     route_id: *route_id,
@@ -310,6 +323,9 @@ fn reconstruct_journey(
                 });
 
                 current_stop = *from_stop;
+                if current_round == 0 {
+                    return Err(RaptorError::InvalidJourney);
+                }
                 current_round -= 1;
             }
             Predecessor::Transfer {
@@ -334,42 +350,84 @@ fn reconstruct_journey(
     // Legs are in reverse order (target to source), so reverse them
     legs.reverse();
 
-    // Add "waiting" points to result
-    let mut walking_legs = Vec::new();
+    // Add "waiting" legs between arrivals and next transit departures
+    let mut result = Vec::with_capacity(legs.len() * 2);
+    for [prev_leg, next_leg] in legs.array_windows() {
+        let (prev_to, prev_arrival) = match prev_leg {
+            JourneyLeg::Transit {
+                to_stop,
+                arrival_time,
+                ..
+            }
+            | JourneyLeg::Transfer {
+                to_stop,
+                arrival_time,
+                ..
+            } => (*to_stop, *arrival_time),
+            JourneyLeg::Waiting { .. } => return Err(RaptorError::InvalidJourney),
+        };
 
-    // Iterate over journeys with window, if next departure is `transit` , then calculate delay
-    // between this departure and out arrival on that stop
-    for (idx, (prev_leg, next_leg)) in legs.iter().tuple_windows().enumerate() {
+        let (next_from, next_departure) = match next_leg {
+            JourneyLeg::Transit {
+                from_stop,
+                departure_time,
+                ..
+            }
+            | JourneyLeg::Transfer {
+                from_stop,
+                departure_time,
+                ..
+            } => (*from_stop, *departure_time),
+            JourneyLeg::Waiting { .. } => return Err(RaptorError::InvalidJourney),
+        };
+
+        if prev_to != next_from {
+            return Err(RaptorError::InvalidJourney);
+        }
+
+        if next_departure < prev_arrival {
+            return Err(RaptorError::InvalidJourney);
+        }
+
+        result.push(prev_leg.clone());
         if let (
-            JourneyLeg::Transit { arrival_time, .. } | JourneyLeg::Transfer { arrival_time, .. },
+            JourneyLeg::Transit {
+                to_stop,
+                arrival_time,
+                ..
+            }
+            | JourneyLeg::Transfer {
+                to_stop,
+                arrival_time,
+                ..
+            },
             JourneyLeg::Transit {
                 from_stop,
                 departure_time,
                 ..
             },
         ) = (prev_leg, next_leg)
+            && *to_stop == *from_stop
+            && *departure_time > *arrival_time
         {
-            walking_legs.push((
-                idx,
-                JourneyLeg::Waiting {
-                    at_stop: *from_stop,
-                    duration: (*departure_time - *arrival_time),
-                },
-            ));
+            result.push(JourneyLeg::Waiting {
+                at_stop: *to_stop,
+                duration: *departure_time - *arrival_time,
+            });
         }
     }
-    // Shift accounts for elements shifting on each insert, +1 alligns waits to correct position (cringe)
-    for (shift, (idx, leg)) in walking_legs.into_iter().enumerate() {
-        legs.insert(idx + shift + 1, leg);
+
+    if let Some(last) = legs.last() {
+        result.push(last.clone());
     }
 
-    let transfers_count = legs
+    let transfers_count = result
         .iter()
         .filter(|leg| matches!(leg, JourneyLeg::Transfer { .. }))
         .count();
 
     Ok(Journey {
-        legs,
+        legs: result,
         departure_time: state.board_times[0][source],
         arrival_time,
         transfers_count,

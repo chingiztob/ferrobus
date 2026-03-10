@@ -48,18 +48,18 @@ impl PyRangeRoutingResult {
 
 #[stubgen]
 #[pyfunction(name = "range_multimodal_routing")]
-#[pyo3(signature = (transit_model, start, end, departure_range, max_transfers=3))]
+#[pyo3(signature = (transit_model, start_point, end_point, departure_range, max_transfers=3))]
 pub fn py_range_multimodal_routing(
     transit_model: &PyTransitModel,
-    start: &PyTransitPoint,
-    end: &PyTransitPoint,
+    start_point: &PyTransitPoint,
+    end_point: &PyTransitPoint,
     departure_range: (Time, Time),
     max_transfers: usize,
 ) -> PyResult<PyRangeRoutingResult> {
     let result = ferrobus_core::prelude::range_multimodal_routing(
         &transit_model.model,
-        &start.inner,
-        &end.inner,
+        &start_point.inner,
+        &end_point.inner,
         departure_range,
         max_transfers,
     )
@@ -74,18 +74,18 @@ pub fn py_range_multimodal_routing(
 
 #[stubgen]
 #[pyfunction(name = "pareto_range_multimodal_routing")]
-#[pyo3(signature = (transit_model, start, end, departure_range, max_transfers=3))]
+#[pyo3(signature = (transit_model, start_point, end_point, departure_range, max_transfers=3))]
 pub fn py_pareto_range_multimodal_routing(
     transit_model: &PyTransitModel,
-    start: &PyTransitPoint,
-    end: &PyTransitPoint,
+    start_point: &PyTransitPoint,
+    end_point: &PyTransitPoint,
     departure_range: (Time, Time),
     max_transfers: usize,
 ) -> PyResult<PyRangeRoutingResult> {
     let result = ferrobus_core::prelude::pareto_range_multimodal_routing(
         &transit_model.model,
-        &start.inner,
-        &end.inner,
+        &start_point.inner,
+        &end_point.inner,
         departure_range,
         max_transfers,
     )

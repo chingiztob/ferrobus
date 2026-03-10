@@ -2,6 +2,7 @@ use ferrobus_macros::stubgen;
 use geo::Point;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use rayon::prelude::*;
 
 use crate::model::PyTransitModel;
 use ferrobus_core::{prelude::*, routing::itinerary::traced_multimodal_routing};
@@ -33,7 +34,7 @@ use ferrobus_core::{prelude::*, routing::itinerary::traced_multimodal_routing};
 /// The ``max_walking_time`` parameter controls how far the point can connect to the transit
 /// network, while ``max_nearest_stops`` limits the number of stops considered during routing.
 #[stubgen]
-#[pyclass(name = "TransitPoint")]
+#[pyclass(from_py_object, name = "TransitPoint")]
 #[derive(Clone, Debug)]
 pub struct PyTransitPoint {
     pub inner: TransitPoint,
@@ -446,5 +447,87 @@ pub fn detailed_journey(
             return Ok(Some(geojson));
         }
         Ok(None)
+    })
+}
+
+/// Find detailed journeys from one point to multiple destinations in parallel
+///
+/// Calculates detailed multimodal routes from a single origin to many destinations,
+/// returning each successful journey as a `GeoJSON` string. Computation is parallelized
+/// across destinations while preserving the input order in the returned list.
+///
+/// Parameters
+/// ----------
+/// `transit_model` : `TransitModel`
+///     The transit model to use for routing.
+/// `start_point` : `TransitPoint`
+///     Starting location for all journeys.
+/// `end_points` : list[`TransitPoint`]
+///     Destination locations for which detailed journeys should be computed.
+/// `departure_time` : int
+///     Time of departure in seconds since midnight.
+/// `max_transfers` : int, default=3
+///     Maximum number of transfers allowed in route planning.
+///
+/// Returns
+/// -------
+/// list[str or None]
+///     A list with the same length and order as `end_points`. Each element is either:
+///     - a `GeoJSON` string for a reachable destination, or
+///     - `None` if no route is found.
+///
+/// Raises
+/// ------
+/// `RuntimeError`
+///     If routing or GeoJSON conversion fails.
+///
+/// Notes
+/// -----
+/// This function releases the Python GIL during computation
+#[stubgen]
+#[pyfunction]
+#[pyo3(signature = (transit_model, start_point, end_points, departure_time, max_transfers=3))]
+pub fn parallel_detailed_journeys(
+    py: Python<'_>,
+    transit_model: &PyTransitModel,
+    start_point: &PyTransitPoint,
+    end_points: Vec<PyTransitPoint>,
+    departure_time: Time,
+    max_transfers: usize,
+) -> PyResult<Vec<Option<String>>> {
+    py.detach(|| {
+        let end_points: Vec<_> = end_points.into_iter().map(|p| p.inner).collect();
+
+        let results = end_points
+            .par_iter()
+            .map(|end_point| {
+                traced_multimodal_routing(
+                    &transit_model.model,
+                    &start_point.inner,
+                    end_point,
+                    departure_time,
+                    max_transfers,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Routing failed: {e}"))
+            })?;
+
+        let geojson_results = results
+            .into_iter()
+            .map(|result| {
+                result
+                    .map(|r| r.to_geojson_string(&transit_model.model))
+                    .transpose()
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                    "GeoJSON conversion failed: {e}"
+                ))
+            })?;
+
+        Ok(geojson_results)
     })
 }

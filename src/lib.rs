@@ -4,13 +4,14 @@ use isochrone::{
     PyIsochroneIndex, calculate_bulk_isochrones, calculate_isochrone,
     calculate_percent_access_isochrone, create_isochrone_index,
 };
-use matrix::travel_time_matrix;
+use matrix::{travel_time_matrix, travel_time_statistics};
 use model::{PyTransitModel, py_create_transit_model};
 use range_routing::{
     PyRangeRoutingResult, py_pareto_range_multimodal_routing, py_range_multimodal_routing,
 };
 use routing::{
     PyTransitPoint, create_transit_point, detailed_journey, find_route, find_routes_one_to_many,
+    parallel_detailed_journeys,
 };
 
 pub mod isochrone;
@@ -51,12 +52,27 @@ pub mod routing;
 ///
 ///    # Find route
 ///    departure_time = 8 * 3600  # 8:00 AM in seconds since midnight
-///    route = ferrobus.find_route(model, origin, destination, departure_time)
+///    route = ferrobus.find_route(
+///        transit_model=model,
+///        start_point=origin,
+///        end_point=destination,
+///        departure_time=departure_time,
+///    )
 ///
 ///    # Generate an isochrone
-///    index = ferrobus.create_isochrone_index(model, area_wkt, 8)
-///    isochrone = ferrobus.calculate_isochrone(model, origin, departure_time,
-///                                             2, 1800, index)
+///    index = ferrobus.create_isochrone_index(
+///        transit_model=model,
+///        area=area_wkt,
+///        cell_resolution=8,
+///    )
+///    isochrone = ferrobus.calculate_isochrone(
+///        transit_model=model,
+///        start_point=origin,
+///        departure_time=departure_time,
+///        max_transfers=2,
+///        cutoff=1800,
+///        index=index,
+///    )
 ///
 ///    # Calculate a travel time matrix
 ///    points = [origin, destination, point3, point4]
@@ -83,8 +99,10 @@ fn ferrobus(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_routes_one_to_many, m)?)?;
     m.add_function(wrap_pyfunction!(create_transit_point, m)?)?;
     m.add_function(wrap_pyfunction!(detailed_journey, m)?)?;
+    m.add_function(wrap_pyfunction!(parallel_detailed_journeys, m)?)?;
 
     m.add_function(wrap_pyfunction!(travel_time_matrix, m)?)?;
+    m.add_function(wrap_pyfunction!(travel_time_statistics, m)?)?;
 
     m.add_class::<PyIsochroneIndex>()?;
     m.add_function(wrap_pyfunction!(create_isochrone_index, m)?)?;

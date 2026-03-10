@@ -11,7 +11,6 @@ log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json.workspace = true
 csv = "1"
-itertools = "0.14"
 chrono.workspace = true
 rstar = "0.12"
 rustworkx-core = "0.17"
@@ -29,7 +28,7 @@ rayon.workspace = true
 libc = "0.2"
 
 [dev-dependencies]
-criterion = "0.7"
+criterion = "0.8.1"
 
 [[bench]]
 name = "bench_main"

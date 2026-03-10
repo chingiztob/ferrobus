@@ -20,8 +20,8 @@ def test_model_creation_performance(osm_path, gtfs_dirs):
 
 
 def test_find_routes_one_to_many(model, benchmark):
-    start = ferrobus.create_transit_point(56.256657, 93.533561, model)
-    ends = [
+    start_point = ferrobus.create_transit_point(56.256657, 93.533561, model)
+    end_points = [
         ferrobus.create_transit_point(56.242574, 93.499159, model),
         ferrobus.create_transit_point(56.231878, 93.552460, model),
     ]
@@ -29,10 +29,14 @@ def test_find_routes_one_to_many(model, benchmark):
     @benchmark
     def bench():
         results = ferrobus.find_routes_one_to_many(
-            model, start, ends, departure_time=43200, max_transfers=2
+            transit_model=model,
+            start_point=start_point,
+            end_points=end_points,
+            departure_time=43200,
+            max_transfers=2,
         )
         assert isinstance(results, list)
-        assert len(results) == len(ends)
+        assert len(results) == len(end_points)
         for res in results:
             assert res is None or isinstance(res, dict)
 
@@ -47,8 +51,8 @@ def test_calculate_isochrone_performance(model, isochrone_index, benchmark):
     @benchmark
     def bench():
         isochrone = ferrobus.calculate_isochrone(
-            model,
-            point,
+            transit_model=model,
+            start_point=point,
             departure_time=43200,
             max_transfers=3,
             cutoff=1200,

@@ -83,7 +83,9 @@ pub(crate) fn create_street_graph(filename: impl AsRef<Path>) -> Result<StreetGr
 
     for node_index in &largest_component {
         for neighbor in graph.neighbors(*node_index) {
-            let edge = graph.find_edge(*node_index, neighbor).unwrap();
+            let edge = graph
+                .find_edge(*node_index, neighbor)
+                .expect("edge must exist for neighbor");
             let edge_type = graph[edge].clone();
 
             new_graph.add_edge(

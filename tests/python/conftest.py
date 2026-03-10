@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import pytest
@@ -27,7 +28,7 @@ def model(osm_path, gtfs_dirs):
     return ferrobus.create_transit_model(
         osm_path=osm_path,
         gtfs_dirs=gtfs_dirs,
-        date=None,
+        date=datetime.date(2024, 1, 11),
         max_transfer_time=600,
     )
 

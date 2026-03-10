@@ -71,7 +71,7 @@ jobs:
       - name: Run cargo nextest in ferrobus-core
         run: |
           cd ferrobus-core
-          cargo nextest run
+          cargo nextest run --no-fail-fast
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7

@@ -12,4 +12,4 @@ pub(crate) use osm::build_rtree;
 
 pub use builder::create_transit_model;
 pub use config::TransitModelConfig;
-pub use gtfs::FeedInfo;
+pub use gtfs::{FeedInfo, FeedTransfer};
