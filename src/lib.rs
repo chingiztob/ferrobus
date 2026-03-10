@@ -52,12 +52,27 @@ pub mod routing;
 ///
 ///    # Find route
 ///    departure_time = 8 * 3600  # 8:00 AM in seconds since midnight
-///    route = ferrobus.find_route(model, origin, destination, departure_time)
+///    route = ferrobus.find_route(
+///        transit_model=model,
+///        start_point=origin,
+///        end_point=destination,
+///        departure_time=departure_time,
+///    )
 ///
 ///    # Generate an isochrone
-///    index = ferrobus.create_isochrone_index(model, area_wkt, 8)
-///    isochrone = ferrobus.calculate_isochrone(model, origin, departure_time,
-///                                             2, 1800, index)
+///    index = ferrobus.create_isochrone_index(
+///        transit_model=model,
+///        area=area_wkt,
+///        cell_resolution=8,
+///    )
+///    isochrone = ferrobus.calculate_isochrone(
+///        transit_model=model,
+///        start_point=origin,
+///        departure_time=departure_time,
+///        max_transfers=2,
+///        cutoff=1800,
+///        index=index,
+///    )
 ///
 ///    # Calculate a travel time matrix
 ///    points = [origin, destination, point3, point4]

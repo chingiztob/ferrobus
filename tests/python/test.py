@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 import ferrobus
@@ -156,4 +158,59 @@ def test_pareto_range_multimodal_routing(model):
                 "arrival_time": 44766,
             }
         ]
+    }
+
+
+def test_detailed_journey(model):
+    start_point = ferrobus.create_transit_point(
+        56.256657,
+        93.533561,
+        transit_model=model,
+    )
+    end_point = ferrobus.create_transit_point(56.231878, 93.552460, transit_model=model)
+
+    result = ferrobus.detailed_journey(
+        transit_model=model,
+        start_point=start_point,
+        end_point=end_point,
+        departure_time=43200,  # Время отправления (12:00)
+        max_transfers=3,
+    )
+
+    assert isinstance(result, str)
+
+    geojson = json.loads(result)
+    assert geojson["type"] == "FeatureCollection"
+    assert len(geojson["features"]) == 3
+
+    access_leg, transit_leg, egress_leg = geojson["features"]
+
+    assert access_leg["properties"] == {
+        "arrival_time": 43223,
+        "departure_time": 43200,
+        "duration": 23,
+        "from_name": "",
+        "leg_type": "access_walk",
+        "to_name": "21",
+    }
+
+    assert transit_leg["properties"] == {
+        "arrival_time": 43920,
+        "departure_time": 43320,
+        "duration": 600,
+        "from_name": "21",
+        "leg_index": 0,
+        "leg_type": "transit",
+        "route_id": "bus_9",
+        "to_name": "74",
+        "trip_id": "bus_9_dir0_11_53_winter_weekday",
+    }
+
+    assert egress_leg["properties"] == {
+        "arrival_time": 43935,
+        "departure_time": 43920,
+        "duration": 15,
+        "from_name": "74",
+        "leg_type": "egress_walk",
+        "to_name": "",
     }

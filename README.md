@@ -46,6 +46,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ```python
 import ferrobus
+import datetime
 import time
 
 # Create a transit model from OpenStreetMap and GTFS data
@@ -61,12 +62,13 @@ model = ferrobus.create_transit_model(
 # operations. By creating and reusing these pre-initialized points, the system avoids redundant computations of geographic
 # positions, resulting in significantly improved performance for routing and spatial queries.
 origin = ferrobus.create_transit_point(52.52, 13.40, model)
-destination = ferrobus.create_transit_point(52.53, 13.42, model)_
+destination = ferrobus.create_transit_point(52.53, 13.42, model)
 
 # Find route (departure at noon)
 departure_time = 12 * 3600  # 12:00 noon in seconds since midnight
 start_time = time.perf_counter()
 route = ferrobus.find_route(
+    transit_model=model,
     start_point=origin,
     end_point=destination,
     departure_time=departure_time,
@@ -114,7 +116,11 @@ matrix = ferrobus.travel_time_matrix(
 
 ```python
 # Create an isochrone index for a specific area
-index = ferrobus.create_isochrone_index(model, area_wkt, 8)
+index = ferrobus.create_isochrone_index(
+    transit_model=model,
+    area=area_wkt,
+    cell_resolution=8,
+)
 
 # Calculate isochrone (areas reachable within 30 minutes)
 isochrone = ferrobus.calculate_isochrone(

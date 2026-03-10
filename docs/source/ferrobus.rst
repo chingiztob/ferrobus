@@ -7,7 +7,7 @@ This module provides algorithms for multimodal transit routing, isochrone genera
 - **Compute routes from a single origin to multiple destinations** (:func:`find_routes_one_to_many`).
 - **Generate isochrones** to visualize travel-time polygons (:func:`calculate_isochrone`).
 - **Calculate travel-time matrices** for multiple points (:func:`travel_time_matrix`).
-- **Perform time-range routing** to find journeys across a range of departure times (:func:`py_range_multimodal_routing`).
+- **Perform time-range routing** to find journeys across a range of departure times (:func:`range_multimodal_routing`).
 
 The module also defines several classes, including:
 
@@ -44,7 +44,7 @@ Examples
    )
 
    print(f"Travel time: {route['travel_time_seconds'] / 60:.1f} minutes")
-   print(f"Number of transfers: {route['num_transfers']}")
+   print(f"Number of transfers: {route['transfers']}")
 
 API Reference
 -------------
@@ -61,6 +61,7 @@ Routing Functions
     ferrobus.pareto_range_multimodal_routing
     ferrobus.range_multimodal_routing
     ferrobus.detailed_journey
+    ferrobus.parallel_detailed_journeys
 
 Isochrone and Matrix Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -73,6 +74,7 @@ Isochrone and Matrix Functions
     ferrobus.calculate_bulk_isochrones
     ferrobus.calculate_percent_access_isochrone
     ferrobus.travel_time_matrix
+    ferrobus.travel_time_statistics
 
 Utility Functions
 ^^^^^^^^^^^^^^^^^

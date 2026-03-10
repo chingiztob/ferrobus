@@ -38,14 +38,14 @@ Here's a simple example to get you started:
 
    # Create origin and destination points
    origin = ferrobus.create_transit_point(
-       latitude=59.85,
-       longitude=30.22,
+       lat=59.85,
+       lon=30.22,
        transit_model=model
    )
 
    destination = ferrobus.create_transit_point(
-       latitude=59.97,
-       longitude=30.50,
+       lat=59.97,
+       lon=30.50,
        transit_model=model
    )
 
@@ -60,6 +60,6 @@ Here's a simple example to get you started:
 
    # Print the results
    print(f"Travel time: {route['travel_time_seconds'] / 60:.1f} minutes")
-   print(f"Number of transfers: {route['num_transfers']}")
+    print(f"Number of transfers: {route['transfers']}")
 
 For detailed examples, see the :doc:`demo` notebook and the :doc:`ferrobus` API documentation.
