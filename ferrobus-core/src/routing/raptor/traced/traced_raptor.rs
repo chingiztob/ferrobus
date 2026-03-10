@@ -1,5 +1,4 @@
 use fixedbitset::FixedBitSet;
-use itertools::Itertools;
 
 use super::state::{Predecessor, TracedRaptorState};
 use crate::PublicTransitData;
@@ -353,7 +352,7 @@ fn reconstruct_journey(
 
     // Add "waiting" legs between arrivals and next transit departures
     let mut result = Vec::with_capacity(legs.len() * 2);
-    for (prev_leg, next_leg) in legs.iter().tuple_windows() {
+    for [prev_leg, next_leg] in legs.array_windows() {
         let (prev_to, prev_arrival) = match prev_leg {
             JourneyLeg::Transit {
                 to_stop,
