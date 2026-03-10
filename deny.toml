@@ -16,3 +16,6 @@ allow = [
 
 [sources]
 allow-git = ["https://github.com/chingiztob/osm4routing2.git"]
+
+[advisories]
+unmaintained = "workspace"
