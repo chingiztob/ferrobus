@@ -63,9 +63,9 @@ pub(crate) fn create_transit_result(candidate: &CandidateJourney) -> MultiModalR
 
 ///Combined multimodal routing function
 pub fn multimodal_routing(
-    transit_data: &TransitModel,
-    start: &TransitPoint,
-    end: &TransitPoint,
+    transit_model: &TransitModel,
+    start_point: &TransitPoint,
+    end_point: &TransitPoint,
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<Option<MultiModalResult>, Error> {
@@ -73,13 +73,14 @@ pub fn multimodal_routing(
         return Err(Error::InvalidData("Invalid departure time".to_string()));
     }
 
-    let transit_data = &transit_data.transit_data;
-    let direct_walking = start.walking_time_to(end);
+    let transit_data = &transit_model.transit_data;
+    let direct_walking = start_point.walking_time_to(end_point);
 
     let mut best_candidate: Option<CandidateJourney> = None;
 
-    for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
-        for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
+    for &(access_stop, access_time) in start_point.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
+        for &(egress_stop, egress_time) in end_point.nearest_stops.iter().take(MAX_CANDIDATE_STOPS)
+        {
             // Skip if walking path is faster
             if let Some(walking_time) = direct_walking
                 && access_time + egress_time >= walking_time
@@ -157,19 +158,19 @@ pub fn multimodal_routing(
 /// calculate transit routes to all stops from the access point, so whole calculation
 /// can be done in one raptor run.
 pub fn multimodal_routing_one_to_many(
-    transit_data: &TransitModel,
-    start: &TransitPoint,
-    targets: &[TransitPoint],
+    transit_model: &TransitModel,
+    start_point: &TransitPoint,
+    end_points: &[TransitPoint],
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<Vec<Option<MultiModalResult>>, Error> {
-    let transit_data = &transit_data.transit_data;
-    let mut results = vec![None; targets.len()];
+    let transit_data = &transit_model.transit_data;
+    let mut results = vec![None; end_points.len()];
 
     // Run RAPTOR to all stops for each initial access point
     let mut transit_results = HashMap::new();
 
-    for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
+    for &(access_stop, access_time) in start_point.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
         if let Ok(RaptorResult::AllTargets(times)) = raptor(
             transit_data,
             access_stop,
@@ -181,8 +182,8 @@ pub fn multimodal_routing_one_to_many(
         }
     }
 
-    for (end_idx, end_point) in targets.iter().enumerate() {
-        let direct_walking = start.walking_time_to(end_point);
+    for (end_idx, end_point) in end_points.iter().enumerate() {
+        let direct_walking = start_point.walking_time_to(end_point);
         let mut best_candidate: Option<CandidateJourney> = None;
 
         for (_access_stop, (access_time, transit_times)) in &transit_results {

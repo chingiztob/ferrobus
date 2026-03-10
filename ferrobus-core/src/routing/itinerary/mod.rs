@@ -18,17 +18,18 @@ use crate::{
 #[allow(clippy::missing_panics_doc)]
 pub fn traced_multimodal_routing(
     transit_model: &TransitModel,
-    start: &TransitPoint,
-    end: &TransitPoint,
+    start_point: &TransitPoint,
+    end_point: &TransitPoint,
     departure_time: Time,
     max_transfers: usize,
 ) -> Result<Option<DetailedJourney>, Error> {
     let transit_data = &transit_model.transit_data;
-    let direct_walking = start.walking_time_to(end);
+    let direct_walking = start_point.walking_time_to(end_point);
     let mut best_candidate: Option<(CandidateJourney, Journey, RaptorStopId, RaptorStopId)> = None;
 
-    for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
-        for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
+    for &(access_stop, access_time) in start_point.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
+        for &(egress_stop, egress_time) in end_point.nearest_stops.iter().take(MAX_CANDIDATE_STOPS)
+        {
             if let Some(walk_time) = direct_walking
                 && access_time + egress_time >= walk_time
             {
@@ -69,28 +70,28 @@ pub fn traced_multimodal_routing(
             .is_none_or(|c| walk_time <= c.0.total_time)
     {
         return Ok(Some(DetailedJourney::walking_only(
-            start,
-            end,
+            start_point,
+            end_point,
             departure_time,
             walk_time,
         )));
     }
 
     if let Some((_, journey, access_stop, egress_stop)) = best_candidate {
-        let access_time = start
+        let access_time = start_point
             .nearest_stops
             .iter()
             .find(|(s, _)| *s == access_stop)
             .map_or(0, |(_, t)| *t);
-        let egress_time = end
+        let egress_time = end_point
             .nearest_stops
             .iter()
             .find(|(s, _)| *s == egress_stop)
             .map_or(0, |(_, t)| *t);
 
         return Ok(Some(DetailedJourney::with_transit(
-            start,
-            end,
+            start_point,
+            end_point,
             transit_data,
             access_stop,
             egress_stop,
@@ -103,8 +104,8 @@ pub fn traced_multimodal_routing(
 
     if let Some(walk_time) = direct_walking {
         return Ok(Some(DetailedJourney::walking_only(
-            start,
-            end,
+            start_point,
+            end_point,
             departure_time,
             walk_time,
         )));

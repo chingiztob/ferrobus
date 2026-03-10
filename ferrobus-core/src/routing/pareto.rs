@@ -145,14 +145,14 @@ fn apply_pareto_filtering(journeys: RangeRoutingResult) -> RangeRoutingResult {
 
 /// Multimodal routing with a departure time range, returning all journeys without filtering
 pub fn range_multimodal_routing(
-    transit_data: &TransitModel,
-    start: &TransitPoint,
-    end: &TransitPoint,
+    transit_model: &TransitModel,
+    start_point: &TransitPoint,
+    end_point: &TransitPoint,
     departure_range: (Time, Time),
     max_transfers: usize,
 ) -> Result<RangeRoutingResult, Error> {
-    let transit_data = &transit_data.transit_data;
-    let direct_walking = start.walking_time_to(end);
+    let transit_data = &transit_model.transit_data;
+    let direct_walking = start_point.walking_time_to(end_point);
     let mut all_journeys: Vec<RangeJourney> = Vec::new();
 
     // Add direct walking option if available
@@ -165,8 +165,9 @@ pub fn range_multimodal_routing(
     }
 
     // Find all transit options
-    for &(access_stop, access_time) in start.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
-        for &(egress_stop, egress_time) in end.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
+    for &(access_stop, access_time) in start_point.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
+        for &(egress_stop, egress_time) in end_point.nearest_stops.iter().take(MAX_CANDIDATE_STOPS)
+        {
             // Skip if path is dominated by direct walking
             if let Some(walking_time) = direct_walking
                 && access_time + egress_time >= walking_time
@@ -208,15 +209,20 @@ pub fn range_multimodal_routing(
 
 /// Multimodal routing with a departure time range, returning Pareto-optimal front
 pub fn pareto_range_multimodal_routing(
-    transit_data: &TransitModel,
-    start: &TransitPoint,
-    end: &TransitPoint,
+    transit_model: &TransitModel,
+    start_point: &TransitPoint,
+    end_point: &TransitPoint,
     departure_range: (Time, Time),
     max_transfers: usize,
 ) -> Result<RangeRoutingResult, Error> {
     // Get all journeys
-    let all_journeys =
-        range_multimodal_routing(transit_data, start, end, departure_range, max_transfers)?;
+    let all_journeys = range_multimodal_routing(
+        transit_model,
+        start_point,
+        end_point,
+        departure_range,
+        max_transfers,
+    )?;
 
     // Apply Pareto filtering
     let pareto_front = apply_pareto_filtering(all_journeys);

@@ -21,14 +21,14 @@ pub struct DetailedJourney {
 impl DetailedJourney {
     /// Creates a walking-only journey.
     pub fn walking_only(
-        start: &TransitPoint,
-        end: &TransitPoint,
+        start_point: &TransitPoint,
+        end_point: &TransitPoint,
         departure_time: Time,
         walking_time: Time,
     ) -> Self {
         let walk_leg = WalkingLeg::new(
-            start.geometry,
-            end.geometry,
+            start_point.geometry,
+            end_point.geometry,
             // Empty strings, because there are no transit stops in a walking-only journey
             String::new(),
             String::new(),
@@ -51,8 +51,8 @@ impl DetailedJourney {
     /// Creates a multimodal journey with transit.
     #[allow(clippy::too_many_arguments)]
     pub fn with_transit(
-        start: &TransitPoint,
-        end: &TransitPoint,
+        start_point: &TransitPoint,
+        end_point: &TransitPoint,
         transit_data: &PublicTransitData,
         access_stop: RaptorStopId,
         egress_stop: RaptorStopId,
@@ -69,7 +69,7 @@ impl DetailedJourney {
         let egress_stop_info = &transit_data.stops[egress_stop];
 
         let access_leg = WalkingLeg::new(
-            start.geometry,
+            start_point.geometry,
             access_stop_info.geometry,
             String::new(),
             access_stop_info.stop_id.clone(),
@@ -78,7 +78,7 @@ impl DetailedJourney {
         );
         let egress_leg = WalkingLeg::new(
             egress_stop_info.geometry,
-            end.geometry,
+            end_point.geometry,
             egress_stop_info.stop_id.clone(),
             String::new(),
             transit_arrival,

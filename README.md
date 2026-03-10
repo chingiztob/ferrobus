@@ -119,11 +119,11 @@ index = ferrobus.create_isochrone_index(model, area_wkt, 8)
 # Calculate isochrone (areas reachable within 30 minutes)
 isochrone = ferrobus.calculate_isochrone(
     transit_model=model,
-    origin=origin,
+    start_point=origin,
     departure_time=departure_time,
     max_transfers=2,
-    max_travel_time=1800,  # 30 minutes in seconds
-    isochrone_index=index
+    cutoff=1800,  # 30 minutes in seconds
+    index=index
 )
 ```
 

@@ -41,7 +41,7 @@ impl IsochroneIndex {
 
 impl IsochroneIndex {
     pub fn new(
-        transit_data: &TransitModel,
+        transit_model: &TransitModel,
         area: &Polygon,
         cell_resolution: u8,
         max_walking_time: Time,
@@ -56,7 +56,7 @@ impl IsochroneIndex {
             .map(|(i, point)| {
                 (
                     i,
-                    TransitPoint::new(*point, transit_data, max_walking_time, 3),
+                    TransitPoint::new(*point, transit_model, max_walking_time, 3),
                 )
             })
             .collect();
@@ -87,16 +87,16 @@ impl IsochroneIndex {
 }
 
 pub fn calculate_isochrone(
-    transit_data: &TransitModel,
-    start: &TransitPoint,
+    transit_model: &TransitModel,
+    start_point: &TransitPoint,
     departure_time: Time,
     max_transfers: usize,
     cutoff: Time,
     index: &IsochroneIndex,
 ) -> Result<MultiPolygon, Error> {
     let reached_cells = compute_reachable_cells(
-        transit_data,
-        start,
+        transit_model,
+        start_point,
         departure_time,
         max_transfers,
         cutoff,
@@ -110,19 +110,19 @@ pub fn calculate_isochrone(
 }
 
 pub fn bulk_isochrones(
-    transit_data: &TransitModel,
-    starts: &[&TransitPoint],
+    transit_model: &TransitModel,
+    start_points: &[&TransitPoint],
     departure_time: Time,
     max_transfers: usize,
     cutoff: Time,
     index: &IsochroneIndex,
 ) -> Result<Vec<MultiPolygon>, Error> {
-    let result: Result<Vec<MultiPolygon>, Error> = starts
+    let result: Result<Vec<MultiPolygon>, Error> = start_points
         .par_iter()
-        .map(|start| {
+        .map(|start_point| {
             calculate_isochrone(
-                transit_data,
-                start,
+                transit_model,
+                start_point,
                 departure_time,
                 max_transfers,
                 cutoff,
@@ -136,8 +136,8 @@ pub fn bulk_isochrones(
 
 #[allow(clippy::cast_precision_loss)]
 pub fn calculate_percent_access_isochrone(
-    transit_data: &TransitModel,
-    start: &TransitPoint,
+    transit_model: &TransitModel,
+    start_point: &TransitPoint,
     departure_range: (Time, Time),
     sample_interval: Time,
     max_transfers: usize,
@@ -159,8 +159,8 @@ pub fn calculate_percent_access_isochrone(
         .par_iter()
         .map(|&departure_time| {
             compute_reachable_cells(
-                transit_data,
-                start,
+                transit_model,
+                start_point,
                 departure_time,
                 max_transfers,
                 cutoff,
@@ -211,8 +211,8 @@ fn get_grid_centroids(grid: &[CellIndex]) -> Vec<Point<f64>> {
 }
 
 fn compute_reachable_cells(
-    transit_data: &TransitModel,
-    start: &TransitPoint,
+    transit_model: &TransitModel,
+    start_point: &TransitPoint,
     departure_time: u32,
     max_transfers: usize,
     cutoff: u32,
@@ -221,8 +221,8 @@ fn compute_reachable_cells(
     let snapped_centroids = &index.transit_points;
     let grid = &index.grid;
     let routing_results = multimodal_routing_one_to_many(
-        transit_data,
-        start,
+        transit_model,
+        start_point,
         snapped_centroids,
         departure_time,
         max_transfers,

@@ -20,9 +20,16 @@ def test_calculate_isochrone(model):
     lat, lon = 56.25788847445582, 93.53960625054688
     point = ferrobus.create_transit_point(lat, lon, model)
     area_wkt = "POLYGON ((93.57274857628481 56.18357044999381, 93.57274857628481 56.30437667924404, 93.39795011002934 56.30437667924404, 93.39795011002934 56.18357044999381, 93.57274857628481 56.18357044999381))"  # noqa: E501
-    index = ferrobus.create_isochrone_index(model, area_wkt, 10)
+    index = ferrobus.create_isochrone_index(
+        transit_model=model, area=area_wkt, cell_resolution=10
+    )
     isochrone = ferrobus.calculate_isochrone(
-        model, point, departure_time=43200, max_transfers=3, cutoff=1200, index=index
+        transit_model=model,
+        start_point=point,
+        departure_time=43200,
+        max_transfers=3,
+        cutoff=1200,
+        index=index,
     )
 
     assert isinstance(isochrone, str)
@@ -44,26 +51,34 @@ def test_travel_time_matrix(model):
 
 
 def test_find_route(model):
-    start = ferrobus.create_transit_point(56.256657, 93.533561, model)
-    end = ferrobus.create_transit_point(56.242574, 93.499159, model)
+    start_point = ferrobus.create_transit_point(56.256657, 93.533561, model)
+    end_point = ferrobus.create_transit_point(56.242574, 93.499159, model)
     result = ferrobus.find_route(
-        model, start, end, departure_time=43200, max_transfers=2
+        transit_model=model,
+        start_point=start_point,
+        end_point=end_point,
+        departure_time=43200,
+        max_transfers=2,
     )
     assert isinstance(result, dict)
     assert result["travel_time_seconds"] == 1566
 
 
 def test_find_routes_one_to_many(model):
-    start = ferrobus.create_transit_point(56.256657, 93.533561, model)
-    ends = [
+    start_point = ferrobus.create_transit_point(56.256657, 93.533561, model)
+    end_points = [
         ferrobus.create_transit_point(56.242574, 93.499159, model),
         ferrobus.create_transit_point(56.231878, 93.552460, model),
     ]
     results = ferrobus.find_routes_one_to_many(
-        model, start, ends, departure_time=43200, max_transfers=2
+        transit_model=model,
+        start_point=start_point,
+        end_points=end_points,
+        departure_time=43200,
+        max_transfers=2,
     )
     assert isinstance(results, list)
-    assert len(results) == len(ends)
+    assert len(results) == len(end_points)
     for res in results:
         assert res is None or isinstance(res, dict)
 
@@ -83,10 +98,14 @@ def test_transit_point_properties(model):
 
 
 def test_range_multimodal_routing(model):
-    start = ferrobus.create_transit_point(56.256657, 93.533561, model)
-    end = ferrobus.create_transit_point(56.242574, 93.499159, model)
+    start_point = ferrobus.create_transit_point(56.256657, 93.533561, model)
+    end_point = ferrobus.create_transit_point(56.242574, 93.499159, model)
     result = ferrobus.range_multimodal_routing(
-        model, start, end, (43200, 44000), max_transfers=2
+        transit_model=model,
+        start_point=start_point,
+        end_point=end_point,
+        departure_range=(43200, 44000),
+        max_transfers=2,
     )
 
     assert eval(result.__str__()) == {
@@ -117,10 +136,14 @@ def test_range_multimodal_routing(model):
 
 
 def test_pareto_range_multimodal_routing(model):
-    start = ferrobus.create_transit_point(56.256657, 93.533561, model)
-    end = ferrobus.create_transit_point(56.242574, 93.499159, model)
+    start_point = ferrobus.create_transit_point(56.256657, 93.533561, model)
+    end_point = ferrobus.create_transit_point(56.242574, 93.499159, model)
     result = ferrobus.pareto_range_multimodal_routing(
-        model, start, end, (43200, 44000), max_transfers=2
+        transit_model=model,
+        start_point=start_point,
+        end_point=end_point,
+        departure_range=(43200, 44000),
+        max_transfers=2,
     )
 
     assert eval(result.__str__()) == {

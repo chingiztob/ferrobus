@@ -124,7 +124,7 @@ impl PyIsochroneIndex {
 ///
 /// Parameters
 /// ----------
-/// `transit_data` : `TransitModel`
+/// `transit_model` : `TransitModel`
 ///     The transportation model containing transit network information.
 /// area : str
 ///     Geographic area over which to build the isochrone, as a WKT string.
@@ -153,9 +153,9 @@ impl PyIsochroneIndex {
 /// or batch processing multiple isochrones from different starting points.
 #[stubgen]
 #[pyfunction]
-#[pyo3(signature = (transit_data, area, cell_resolution, max_walking_time=1200))]
+#[pyo3(signature = (transit_model, area, cell_resolution, max_walking_time=1200))]
 pub fn create_isochrone_index(
-    transit_data: &PyTransitModel,
+    transit_model: &PyTransitModel,
     area: &str,
     cell_resolution: u8,
     max_walking_time: Time,
@@ -165,7 +165,7 @@ pub fn create_isochrone_index(
     })?;
 
     let index = IsochroneIndex::new(
-        &transit_data.model,
+        &transit_model.model,
         &area,
         cell_resolution,
         max_walking_time,
@@ -186,9 +186,9 @@ pub fn create_isochrone_index(
 ///
 /// Parameters
 /// ----------
-/// `transit_data` : `TransitModel`
+/// `transit_model` : `TransitModel`
 ///     The transit model to use for routing.
-/// start : `TransitPoint`
+/// `start_point` : `TransitPoint`
 ///     Starting location for the isochrone.
 /// `departure_time` : int
 ///     Time of departure in seconds since midnight.
@@ -210,10 +210,11 @@ pub fn create_isochrone_index(
 ///     If the isochrone calculation fails.
 #[pyfunction]
 #[stubgen]
+#[pyo3(signature = (transit_model, start_point, departure_time, max_transfers, cutoff, index))]
 pub fn calculate_isochrone(
     py: Python<'_>,
-    transit_data: &PyTransitModel,
-    start: &PyTransitPoint,
+    transit_model: &PyTransitModel,
+    start_point: &PyTransitPoint,
     departure_time: Time,
     max_transfers: usize,
     cutoff: Time,
@@ -221,8 +222,8 @@ pub fn calculate_isochrone(
 ) -> PyResult<String> {
     py.detach(|| {
         let isochrone = ferrobus_core::algo::calculate_isochrone(
-            &transit_data.model,
-            &start.inner,
+            &transit_model.model,
+            &start_point.inner,
             departure_time,
             max_transfers,
             cutoff,
@@ -246,9 +247,9 @@ pub fn calculate_isochrone(
 ///
 /// Parameters
 /// ----------
-/// `transit_data` : `TransitModel`
+/// `transit_model` : `TransitModel`
 ///     The transit model to use for routing.
-/// starts : list[`TransitPoint`]
+/// `start_points` : list[`TransitPoint`]
 ///     List of starting locations for isochrone calculations.
 /// `departure_time` : int
 ///     Time of departure in seconds since midnight.
@@ -272,19 +273,20 @@ pub fn calculate_isochrone(
 #[pyfunction]
 #[stubgen]
 #[allow(clippy::needless_pass_by_value)]
+#[pyo3(signature = (transit_model, start_points, departure_time, max_transfers, cutoff, index))]
 pub fn calculate_bulk_isochrones(
     py: Python<'_>,
-    transit_data: &PyTransitModel,
-    starts: Vec<PyTransitPoint>,
+    transit_model: &PyTransitModel,
+    start_points: Vec<PyTransitPoint>,
     departure_time: Time,
     max_transfers: usize,
     cutoff: Time,
     index: &PyIsochroneIndex,
 ) -> PyResult<Vec<String>> {
     py.detach(|| {
-        let inners = starts.iter().map(|p| &p.inner).collect::<Vec<_>>();
+        let inners = start_points.iter().map(|p| &p.inner).collect::<Vec<_>>();
         let isochrones = ferrobus_core::algo::bulk_isochrones(
-            &transit_data.model,
+            &transit_model.model,
             inners.as_slice(),
             departure_time,
             max_transfers,
@@ -310,9 +312,9 @@ pub fn calculate_bulk_isochrones(
 ///
 /// Parameters
 /// ----------
-/// `transit_data` : `TransitModel`
+/// `transit_model` : `TransitModel`
 ///     The transit model to use for routing.
-/// start : `TransitPoint`
+/// `start_point` : `TransitPoint`
 ///     Starting location for the isochrone.
 /// `departure_range` : tuple(int, int)
 ///     Range of departure times to sample (`start_time`, `end_time`) in seconds.
@@ -344,10 +346,11 @@ pub fn calculate_bulk_isochrones(
 #[pyfunction]
 #[stubgen]
 #[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (transit_model, start_point, departure_range, sample_interval, max_transfers, cutoff, index))]
 pub fn calculate_percent_access_isochrone(
     py: Python<'_>,
-    transit_data: &PyTransitModel,
-    start: &PyTransitPoint,
+    transit_model: &PyTransitModel,
+    start_point: &PyTransitPoint,
     departure_range: (Time, Time),
     sample_interval: Time,
     max_transfers: usize,
@@ -356,8 +359,8 @@ pub fn calculate_percent_access_isochrone(
 ) -> PyResult<String> {
     py.detach(|| {
         let percent_access = ferrobus_core::algo::calculate_percent_access_isochrone(
-            &transit_data.model,
-            &start.inner,
+            &transit_model.model,
+            &start_point.inner,
             departure_range,
             sample_interval,
             max_transfers,
