@@ -17,6 +17,17 @@ pub(crate) fn calculate_transfers(graph: &mut TransitModel) {
     let stop_nodes = snap_stops_to_network(graph);
     // Calculate transfers for all stops that could be snapped
     let computed_transfers = calculate_stop_transfers(graph, &stop_nodes, max_transfer_time);
+    // Add zero-time links for stops snapped to the same node, so routing can
+    // still use co-located stops.
+    let synthetic_colocated_transfers = create_colocated_stop_transfers(&stop_nodes);
+
+    if !synthetic_colocated_transfers.is_empty() {
+        let synthetic_count: usize = synthetic_colocated_transfers
+            .iter()
+            .map(|(_, t)| t.len())
+            .sum();
+        info!("Generated {synthetic_count} synthetic co-located transfers");
+    }
 
     let gtfs_transfers_raw = std::mem::take(&mut graph.transit_data.gtfs_transfers);
 
@@ -37,8 +48,13 @@ pub(crate) fn calculate_transfers(graph: &mut TransitModel) {
         info!("Loaded {gtfs_count} GTFS-defined transfers");
     }
 
-    // GTFS overrides computed
-    let merged_transfers = merge_transfers(computed_transfers, gtfs_transfers);
+    // Merge order:
+    // 1. computed street transfers
+    // 2. synthetic co-located transfers
+    // 3. GTFS transfers (highest precedence)
+    let computed_with_colocated =
+        merge_transfers(computed_transfers, synthetic_colocated_transfers);
+    let merged_transfers = merge_transfers(computed_with_colocated, gtfs_transfers);
 
     update_transit_model_with_transfers(graph, merged_transfers, &stop_nodes);
 }
@@ -187,6 +203,50 @@ fn calculate_stop_transfers(
         .collect()
 }
 
+fn group_stops_by_node(stop_nodes: &[Option<NodeIndex>]) -> HashMap<NodeIndex, Vec<RaptorStopId>> {
+    // Build a temporary reverse index so we can detect multiple GTFS stops snapped
+    // to the same street node.
+    let mut grouped: HashMap<NodeIndex, Vec<RaptorStopId>> = HashMap::new();
+
+    for (stop_idx, node_opt) in stop_nodes.iter().enumerate() {
+        if let Some(node) = node_opt {
+            grouped.entry(*node).or_default().push(stop_idx);
+        }
+    }
+
+    grouped
+}
+
+fn create_colocated_stop_transfers(
+    stop_nodes: &[Option<NodeIndex>],
+) -> Vec<(RaptorStopId, Vec<Transfer>)> {
+    // `node_to_stop` keeps one canonical stop per node for fast lookup; these
+    // synthetic zero-cost links preserve reachability to other co-located stops.
+    let grouped = group_stops_by_node(stop_nodes);
+    let mut transfers_by_stop: HashMap<RaptorStopId, Vec<Transfer>> = HashMap::new();
+
+    for stops in grouped.into_values() {
+        if stops.len() < 2 {
+            continue;
+        }
+
+        for &from_stop in &stops {
+            let entry = transfers_by_stop.entry(from_stop).or_default();
+            entry.reserve(stops.len().saturating_sub(1));
+            for &to_stop in &stops {
+                if to_stop != from_stop {
+                    entry.push(Transfer {
+                        target_stop: to_stop,
+                        duration: 0,
+                    });
+                }
+            }
+        }
+    }
+
+    transfers_by_stop.into_iter().collect()
+}
+
 /// Find all valid transfers from a single stop
 fn find_transfers_from_stop(
     graph: &TransitModel,
@@ -261,4 +321,79 @@ fn update_transit_model_with_transfers(
 
     // Store all transfers
     graph.transit_data.transfers = all_transfers;
+}
+
+#[cfg(test)]
+mod tests {
+    use petgraph::graph::NodeIndex;
+
+    use super::*;
+
+    fn to_sorted_targets(
+        transfers: Vec<(RaptorStopId, Vec<Transfer>)>,
+    ) -> HashMap<RaptorStopId, Vec<(RaptorStopId, Time)>> {
+        let mut map: HashMap<RaptorStopId, Vec<(RaptorStopId, Time)>> = HashMap::new();
+        for (from, ts) in transfers {
+            let mut vals = ts
+                .into_iter()
+                .map(|t| (t.target_stop, t.duration))
+                .collect::<Vec<_>>();
+            vals.sort_unstable();
+            map.insert(from, vals);
+        }
+        map
+    }
+
+    #[test]
+    fn creates_pairwise_synthetic_transfers_for_colocated_stops() {
+        let n0 = NodeIndex::new(0);
+        let n1 = NodeIndex::new(1);
+        let stop_nodes = vec![Some(n0), Some(n0), Some(n1), Some(n0), None];
+
+        let grouped = create_colocated_stop_transfers(&stop_nodes);
+        let as_map = to_sorted_targets(grouped);
+
+        assert_eq!(as_map.get(&0), Some(&vec![(1, 0), (3, 0)]));
+        assert_eq!(as_map.get(&1), Some(&vec![(0, 0), (3, 0)]));
+        assert_eq!(as_map.get(&3), Some(&vec![(0, 0), (1, 0)]));
+        assert!(!as_map.contains_key(&2));
+        assert!(!as_map.contains_key(&4));
+    }
+
+    #[test]
+    fn gtfs_overrides_synthetic_for_same_pair() {
+        let computed = vec![(
+            0,
+            vec![Transfer {
+                target_stop: 1,
+                duration: 120,
+            }],
+        )];
+        let synthetic = vec![(
+            0,
+            vec![
+                Transfer {
+                    target_stop: 1,
+                    duration: 0,
+                },
+                Transfer {
+                    target_stop: 2,
+                    duration: 0,
+                },
+            ],
+        )];
+        let gtfs = vec![(
+            0,
+            vec![Transfer {
+                target_stop: 1,
+                duration: 42,
+            }],
+        )];
+
+        let with_synthetic = merge_transfers(computed, synthetic);
+        let merged = merge_transfers(with_synthetic, gtfs);
+        let as_map = to_sorted_targets(merged);
+
+        assert_eq!(as_map.get(&0), Some(&vec![(1, 42), (2, 0)]));
+    }
 }

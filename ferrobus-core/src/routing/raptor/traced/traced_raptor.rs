@@ -48,6 +48,12 @@ pub enum TracedRaptorResult {
     AllTargets(Vec<Option<Journey>>),
 }
 
+fn strip_zero_duration_transfer_legs(legs: Vec<JourneyLeg>) -> Vec<JourneyLeg> {
+    legs.into_iter()
+        .filter(|leg| !matches!(leg, JourneyLeg::Transfer { duration: 0, .. }))
+        .collect()
+}
+
 #[allow(clippy::too_many_lines)]
 pub fn traced_raptor(
     data: &PublicTransitData,
@@ -421,6 +427,7 @@ fn reconstruct_journey(
         result.push(last.clone());
     }
 
+    let result = strip_zero_duration_transfer_legs(result);
     let transfers_count = result
         .iter()
         .filter(|leg| matches!(leg, JourneyLeg::Transfer { .. }))
@@ -432,4 +439,107 @@ fn reconstruct_journey(
         arrival_time,
         transfers_count,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use geo::Point;
+    use hashbrown::HashMap;
+
+    use super::{JourneyLeg, TracedRaptorResult, traced_raptor};
+    use crate::model::{FeedMeta, PublicTransitData, Route, Stop, StopTime, Transfer, Trip};
+
+    fn build_test_data_with_colocated_transfer() -> PublicTransitData {
+        // Stops:
+        // 0 and 1 are co-located conceptually (synthetic transfer 0->1),
+        // route goes 1 -> 2.
+        let stops = vec![
+            Stop {
+                stop_id: "S0".to_string(),
+                geometry: Point::new(0.0, 0.0),
+                routes_start: 0,
+                routes_len: 0,
+                transfers_start: 0,
+                transfers_len: 1,
+            },
+            Stop {
+                stop_id: "S1".to_string(),
+                geometry: Point::new(0.0, 0.0),
+                routes_start: 0,
+                routes_len: 1,
+                transfers_start: 1,
+                transfers_len: 0,
+            },
+            Stop {
+                stop_id: "S2".to_string(),
+                geometry: Point::new(1.0, 1.0),
+                routes_start: 1,
+                routes_len: 1,
+                transfers_start: 1,
+                transfers_len: 0,
+            },
+        ];
+
+        PublicTransitData {
+            routes: vec![Route {
+                num_trips: 1,
+                num_stops: 2,
+                stops_start: 0,
+                trips_start: 0,
+                route_id: "R0".to_string(),
+            }],
+            route_stops: vec![1, 2],
+            stop_times: vec![
+                StopTime {
+                    arrival: 100,
+                    departure: 100,
+                },
+                StopTime {
+                    arrival: 200,
+                    departure: 200,
+                },
+            ],
+            stops,
+            // Route R0 serves stops 1 and 2
+            stop_routes: vec![0, 0],
+            // Synthetic co-located transfer 0 -> 1
+            transfers: vec![Transfer {
+                target_stop: 1,
+                duration: 0,
+            }],
+            node_to_stop: HashMap::new(),
+            feeds_meta: Vec::<FeedMeta>::new(),
+            trips: vec![vec![Trip {
+                trip_id: "T0".to_string(),
+            }]],
+            gtfs_transfers: vec![],
+        }
+    }
+
+    #[test]
+    fn traced_journey_hides_zero_duration_transfer_legs() {
+        let data = build_test_data_with_colocated_transfer();
+
+        let result = traced_raptor(&data, 0, Some(2), 50, 1).expect("traced raptor should succeed");
+        let TracedRaptorResult::SingleTarget(Some(journey)) = result else {
+            panic!("expected a single target journey")
+        };
+
+        assert!(
+            journey
+                .legs
+                .iter()
+                .all(|leg| !matches!(leg, JourneyLeg::Transfer { duration: 0, .. })),
+            "zero-duration synthetic transfer legs must be hidden in output"
+        );
+        assert_eq!(journey.transfers_count, 0);
+        assert!(journey.legs.iter().any(|leg| matches!(
+            leg,
+            JourneyLeg::Transit {
+                from_stop: 1,
+                to_stop: 2,
+                ..
+            }
+        )));
+    }
 }

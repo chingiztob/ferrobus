@@ -240,3 +240,159 @@ pub fn multimodal_routing_one_to_many(
 
     Ok(results)
 }
+
+#[cfg(test)]
+mod tests {
+    use geo::Point;
+    use hashbrown::HashMap;
+    use osm4routing::NodeId;
+    use petgraph::graph::UnGraph;
+
+    use super::{multimodal_routing, multimodal_routing_one_to_many};
+    use crate::loading::build_rtree;
+    use crate::model::{
+        FeedMeta, PublicTransitData, Route, Stop, StopTime, StreetGraph, StreetNode, Transfer,
+        TransitModel, TransitModelMeta, TransitPoint, Trip,
+    };
+
+    fn build_model(with_colocated_transfer: bool) -> TransitModel {
+        let mut graph = UnGraph::new_undirected();
+        let n0 = graph.add_node(StreetNode {
+            id: NodeId(1),
+            geometry: Point::new(0.0, 0.0),
+        });
+        let n1 = graph.add_node(StreetNode {
+            id: NodeId(2),
+            geometry: Point::new(1.0, 1.0),
+        });
+        let street_graph = StreetGraph {
+            rtree: build_rtree(&graph),
+            graph,
+        };
+
+        // Stops:
+        // - 0: canonical stop at n0 used by TransitPoint
+        // - 1: hidden co-located stop at n0 used by route
+        // - 2: destination stop at n1
+        let transfers = if with_colocated_transfer {
+            vec![Transfer {
+                target_stop: 1,
+                duration: 0,
+            }]
+        } else {
+            vec![]
+        };
+
+        let transit_data = PublicTransitData {
+            routes: vec![Route {
+                num_trips: 1,
+                num_stops: 2,
+                stops_start: 0,
+                trips_start: 0,
+                route_id: "R0".to_string(),
+            }],
+            route_stops: vec![1, 2],
+            stop_times: vec![
+                StopTime {
+                    arrival: 100,
+                    departure: 100,
+                },
+                StopTime {
+                    arrival: 200,
+                    departure: 200,
+                },
+            ],
+            stops: vec![
+                Stop {
+                    stop_id: "S0".to_string(),
+                    geometry: Point::new(0.0, 0.0),
+                    routes_start: 0,
+                    routes_len: 0,
+                    transfers_start: 0,
+                    transfers_len: usize::from(with_colocated_transfer),
+                },
+                Stop {
+                    stop_id: "S1".to_string(),
+                    geometry: Point::new(0.0, 0.0),
+                    routes_start: 0,
+                    routes_len: 1,
+                    transfers_start: transfers.len(),
+                    transfers_len: 0,
+                },
+                Stop {
+                    stop_id: "S2".to_string(),
+                    geometry: Point::new(1.0, 1.0),
+                    routes_start: 1,
+                    routes_len: 1,
+                    transfers_start: transfers.len(),
+                    transfers_len: 0,
+                },
+            ],
+            // Route R0 serves stops 1 and 2.
+            stop_routes: vec![0, 0],
+            transfers,
+            // Canonical one-stop-per-node mapping.
+            node_to_stop: HashMap::from([(n0, 0usize), (n1, 2usize)]),
+            feeds_meta: Vec::<FeedMeta>::new(),
+            trips: vec![vec![Trip {
+                trip_id: "T0".to_string(),
+            }]],
+            gtfs_transfers: vec![],
+        };
+
+        TransitModel {
+            transit_data,
+            street_graph,
+            meta: TransitModelMeta {
+                max_transfer_time: 600,
+            },
+        }
+    }
+
+    fn make_points(model: &TransitModel) -> (TransitPoint, TransitPoint) {
+        let start = TransitPoint::new(Point::new(0.0, 0.0), model, 600, 5)
+            .expect("start point should be valid");
+        let end = TransitPoint::new(Point::new(1.0, 1.0), model, 600, 5)
+            .expect("end point should be valid");
+        (start, end)
+    }
+
+    #[test]
+    fn colocated_transfer_restores_single_routing_reachability() {
+        let model_without = build_model(false);
+        let (start_without, end_without) = make_points(&model_without);
+        let without = multimodal_routing(&model_without, &start_without, &end_without, 50, 1)
+            .expect("routing should not fail");
+        assert!(
+            without.is_none(),
+            "without co-located transfer route should be unreachable"
+        );
+
+        let model_with = build_model(true);
+        let (start_with, end_with) = make_points(&model_with);
+        let with = multimodal_routing(&model_with, &start_with, &end_with, 50, 1)
+            .expect("routing should not fail")
+            .expect("route should become reachable with co-located transfer");
+
+        assert_eq!(with.travel_time, 150);
+        assert_eq!(with.transit_time, Some(150));
+        assert_eq!(with.walking_time, 0);
+    }
+
+    #[test]
+    fn colocated_transfer_restores_one_to_many_reachability() {
+        let model = build_model(true);
+        let (start, end) = make_points(&model);
+
+        let results = multimodal_routing_one_to_many(&model, &start, &[end], 50, 1)
+            .expect("one-to-many routing should not fail");
+        assert_eq!(results.len(), 1);
+
+        let route = results[0]
+            .as_ref()
+            .expect("route should be reachable with co-located transfer");
+        assert_eq!(route.travel_time, 150);
+        assert_eq!(route.transit_time, Some(150));
+        assert_eq!(route.walking_time, 0);
+    }
+}
