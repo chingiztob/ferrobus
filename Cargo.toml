@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["ferrobus-core", "ferrobus-macros"]
+members = ["ferrobus-core", "ferrobus-macros", "ferrobus-server"]
 
 [package]
 name = "ferrobus"

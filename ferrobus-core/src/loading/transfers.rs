@@ -217,11 +217,11 @@ fn group_stops_by_node(stop_nodes: &[Option<NodeIndex>]) -> HashMap<NodeIndex, V
     grouped
 }
 
+/// `node_to_stop` keeps one canonical stop per node for fast lookup; these
+/// synthetic zero-cost links preserve reachability to other co-located stops.
 fn create_colocated_stop_transfers(
     stop_nodes: &[Option<NodeIndex>],
 ) -> Vec<(RaptorStopId, Vec<Transfer>)> {
-    // `node_to_stop` keeps one canonical stop per node for fast lookup; these
-    // synthetic zero-cost links preserve reachability to other co-located stops.
     let grouped = group_stops_by_node(stop_nodes);
     let mut transfers_by_stop: HashMap<RaptorStopId, Vec<Transfer>> = HashMap::new();
 
