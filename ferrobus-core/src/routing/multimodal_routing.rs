@@ -3,7 +3,7 @@ use hashbrown::HashMap;
 use crate::{
     Error, MAX_CANDIDATE_STOPS, Time, TransitModel,
     model::TransitPoint,
-    routing::raptor::{RaptorResult, raptor},
+    routing::raptor::{RaptorError, RaptorResult, raptor},
 };
 
 /// Combined multimodal route result
@@ -59,6 +59,11 @@ pub(crate) fn create_transit_result(candidate: &CandidateJourney) -> MultiModalR
         walking_time,
         transfers: candidate.transfers_used,
     }
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn map_raptor_error(err: RaptorError) -> Error {
+    Error::InvalidData(format!("RAPTOR error: {err}"))
 }
 
 ///Combined multimodal routing function
@@ -171,14 +176,21 @@ pub fn multimodal_routing_one_to_many(
     let mut transit_results = HashMap::new();
 
     for &(access_stop, access_time) in start_point.nearest_stops.iter().take(MAX_CANDIDATE_STOPS) {
-        if let Ok(RaptorResult::AllTargets(times)) = raptor(
+        match raptor(
             transit_data,
             access_stop,
             None,
             departure_time + access_time,
             max_transfers,
-        ) {
-            transit_results.insert(access_stop, (access_time, times));
+        )
+        .map_err(map_raptor_error)?
+        {
+            RaptorResult::AllTargets(times) => {
+                transit_results.insert(access_stop, (access_time, times));
+            }
+            RaptorResult::SingleTarget(_) => {
+                unreachable!("Unexpected SingleTarget result");
+            }
         }
     }
 
@@ -246,14 +258,14 @@ mod tests {
     use geo::Point;
     use hashbrown::HashMap;
     use osm4routing::NodeId;
-    use petgraph::graph::UnGraph;
+    use petgraph::graph::{NodeIndex, UnGraph};
 
     use super::{multimodal_routing, multimodal_routing_one_to_many};
-    use crate::loading::build_rtree;
     use crate::model::{
         FeedMeta, PublicTransitData, Route, Stop, StopTime, StreetGraph, StreetNode, Transfer,
         TransitModel, TransitModelMeta, TransitPoint, Trip,
     };
+    use crate::{Error, loading::build_rtree};
 
     fn build_model(with_colocated_transfer: bool) -> TransitModel {
         let mut graph = UnGraph::new_undirected();
@@ -394,5 +406,25 @@ mod tests {
         assert_eq!(route.travel_time, 150);
         assert_eq!(route.transit_time, Some(150));
         assert_eq!(route.walking_time, 0);
+    }
+
+    #[test]
+    fn one_to_many_propagates_raptor_errors() {
+        let model = build_model(true);
+        let invalid_start = TransitPoint {
+            geometry: Point::new(0.0, 0.0),
+            node_id: NodeIndex::new(0),
+            nearest_stops: vec![(usize::MAX, 0)],
+            walking_paths: HashMap::new(),
+        };
+        let end = TransitPoint {
+            geometry: Point::new(1.0, 1.0),
+            node_id: NodeIndex::new(1),
+            nearest_stops: vec![(2, 0)],
+            walking_paths: HashMap::new(),
+        };
+
+        let result = multimodal_routing_one_to_many(&model, &invalid_start, &[end], 50, 1);
+        assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 }

@@ -111,6 +111,7 @@ pub async fn run_server(cli: ServerCli) -> Result<(), Box<dyn std::error::Error>
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
+    info!("ferrobus server has stopped");
     Ok(())
 }
 
@@ -130,4 +131,5 @@ async fn shutdown_signal() {
         let _ = tokio::signal::ctrl_c().await;
     };
     ctrl_c.await;
+    info!("shutdown signal received");
 }
