@@ -26,6 +26,8 @@ impl DetailedJourney {
         departure_time: Time,
         walking_time: Time,
     ) -> Self {
+        let arrival_time = departure_time + walking_time;
+
         let walk_leg = WalkingLeg::new(
             start_point.geometry,
             end_point.geometry,
@@ -35,6 +37,7 @@ impl DetailedJourney {
             departure_time,
             walking_time,
         );
+
         Self {
             access_leg: Some(walk_leg),
             transit_journey: None,
@@ -44,7 +47,7 @@ impl DetailedJourney {
             transit_time: None,
             transfers: 0,
             departure_time,
-            arrival_time: departure_time + walking_time,
+            arrival_time,
         }
     }
 
@@ -61,9 +64,13 @@ impl DetailedJourney {
         transit_journey: Journey,
         departure_time: Time,
     ) -> Self {
-        let transit_departure = departure_time + access_time;
+        let transit_departure = transit_journey.departure_time;
         let transit_arrival = transit_journey.arrival_time;
-        let final_arrival = transit_arrival + egress_time;
+        let transit_time = transit_arrival - transit_departure;
+        let walking_time = access_time + egress_time;
+        let total_time = walking_time + transit_time;
+        let transfers = transit_journey.transfers_count;
+        let arrival_time = departure_time + total_time;
 
         let access_stop_info = &transit_data.stops[access_stop];
         let egress_stop_info = &transit_data.stops[egress_stop];
@@ -85,18 +92,16 @@ impl DetailedJourney {
             egress_time,
         );
 
-        let transfer_count = transit_journey.transfers_count;
-
         Self {
             access_leg: Some(access_leg),
             transit_journey: Some(transit_journey),
             egress_leg: Some(egress_leg),
-            total_time: final_arrival - departure_time,
-            walking_time: access_time + egress_time,
-            transit_time: Some(transit_arrival - transit_departure),
-            transfers: transfer_count,
+            total_time,
+            walking_time,
+            transit_time: Some(transit_time),
+            transfers,
             departure_time,
-            arrival_time: final_arrival,
+            arrival_time,
         }
     }
 }

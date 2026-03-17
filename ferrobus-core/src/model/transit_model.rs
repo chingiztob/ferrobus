@@ -194,9 +194,9 @@ pub struct TransitPoint {
     /// Nearest street network node
     pub node_id: NodeIndex,
     /// Nearest stops (stop id, walking time)
-    pub nearest_stops: Vec<(RaptorStopId, Time)>,
+    pub(crate) nearest_stops: Vec<(RaptorStopId, Time)>,
     /// Walking routes to other nodes
-    pub walking_paths: HashMap<NodeIndex, Time>,
+    pub(crate) walking_paths: HashMap<NodeIndex, Time>,
 }
 
 impl TransitPoint {
@@ -267,6 +267,10 @@ impl TransitPoint {
         stop_id: RaptorStopId,
     ) -> Option<String> {
         transit_data.transit_stop_name(stop_id)
+    }
+
+    pub fn nearest_stops(&self) -> Vec<usize> {
+        self.nearest_stops.iter().map(|stop| stop.0).collect()
     }
 }
 
