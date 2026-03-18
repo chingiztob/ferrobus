@@ -1,17 +1,17 @@
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 use criterion::{Criterion, criterion_group, criterion_main};
+use dotenvy::dotenv;
 use ferrobus_core::{TransitModel, model::TransitPoint, multimodal_routing};
 
 static TRANSIT_DATA: std::sync::LazyLock<(TransitModel, TransitPoint, TransitPoint, u32, usize)> =
     std::sync::LazyLock::new(|| {
+        dotenv().ok();
+
         let config = ferrobus_core::TransitModelConfig {
             max_transfer_time: 1200, // 20 minutes max transfer time
-            osm_path: PathBuf::from("/home/chingiz/Rust/osm/roads_SZ.pbf"),
-            gtfs_dirs: vec![
-                PathBuf::from("/home/chingiz/Rust/py_rust/cascade/scripts/files/SPB2"),
-                PathBuf::from("/home/chingiz/Rust/py_rust/cascade/scripts/files/spb-metro"),
-            ],
+            osm_path: required_env_path("FERROBUS_BENCH_OSM_PATH"),
+            gtfs_dirs: required_env_paths("FERROBUS_BENCH_GTFS_DIRS"),
             date: chrono::NaiveDate::from_ymd_opt(2025, 4, 10),
         };
 
@@ -45,6 +45,22 @@ static TRANSIT_DATA: std::sync::LazyLock<(TransitModel, TransitPoint, TransitPoi
             max_transfers,
         )
     });
+
+fn required_env_path(name: &str) -> PathBuf {
+    PathBuf::from(env::var(name).unwrap_or_else(|_| panic!("missing required env var: {name}")))
+}
+
+fn required_env_paths(name: &str) -> Vec<PathBuf> {
+    let paths: Vec<_> = env::var(name)
+        .unwrap_or_else(|_| panic!("missing required env var: {name}"))
+        .split(':')
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .collect();
+
+    assert!(!paths.is_empty(), "env var {name} must not be empty");
+    paths
+}
 
 fn raptor_routing(c: &mut Criterion) {
     let (transit_graph, start_point, end_point, departure_time, max_transfers) = &*TRANSIT_DATA;
