@@ -172,8 +172,7 @@ pub fn rraptor(
                 }
             }
 
-            let new_marks = process_foot_paths(data, target, num_stops, &mut state, round)?;
-            state.marked_stops.union_with(&new_marks);
+            process_foot_paths(data, target, num_stops, &mut state, round)?;
 
             // Check if we should continue with this round
             if let Some(target_stop) = target {

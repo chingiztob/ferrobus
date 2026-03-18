@@ -66,13 +66,11 @@ pub(crate) fn process_foot_paths(
     num_stops: usize,
     state: &mut RaptorState,
     round: usize,
-) -> Result<FixedBitSet, RaptorError> {
-    let mut current_marks = Vec::with_capacity(state.marked_stops.count_ones(..));
-    for stop in state.marked_stops.ones() {
-        current_marks.push(stop);
-    }
-
-    let mut new_marks = FixedBitSet::with_capacity(num_stops);
+) -> Result<(), RaptorError> {
+    let current_marks = std::mem::replace(
+        &mut state.marked_stops,
+        FixedBitSet::with_capacity(num_stops),
+    );
 
     let target_bound = if let Some(ts) = target {
         state.best_arrival[ts]
@@ -80,7 +78,7 @@ pub(crate) fn process_foot_paths(
         Time::MAX
     };
 
-    for stop in current_marks {
+    for stop in current_marks.ones() {
         let current_board = state.curr_board_times[stop];
         let transfers = data.get_stop_transfers(stop)?;
         for tr in transfers {
@@ -94,12 +92,13 @@ pub(crate) fn process_foot_paths(
 
             // Note: still using the current round number from the caller
             if state.update(round, target_stop, new_time, new_time)? {
-                new_marks.set(target_stop, true);
+                state.marked_stops.set(target_stop, true);
             }
         }
     }
 
-    Ok(new_marks)
+    state.marked_stops.union_with(&current_marks);
+    Ok(())
 }
 
 pub(crate) fn create_route_queue(

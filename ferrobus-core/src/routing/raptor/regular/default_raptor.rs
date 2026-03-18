@@ -108,8 +108,7 @@ pub fn raptor(
             }
         }
 
-        let new_marks = process_foot_paths(data, target, num_stops, &mut state, round)?;
-        state.marked_stops.union_with(&new_marks);
+        process_foot_paths(data, target, num_stops, &mut state, round)?;
 
         // If a target is given, check if we can prune the search.
         if let Some(target_stop) = target {
