@@ -7,5 +7,5 @@ pub use state::{
 };
 
 pub(crate) use raptor_utils::{
-    create_route_queue, find_earliest_trip, find_earliest_trip_at_stop, process_foot_paths,
+    fill_route_queue, find_earliest_trip, find_earliest_trip_at_stop, process_foot_paths,
 };

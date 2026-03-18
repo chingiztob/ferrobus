@@ -1,6 +1,7 @@
 use std::mem;
 
 use fixedbitset::FixedBitSet;
+use std::collections::VecDeque;
 use thiserror::Error;
 
 use crate::PublicTransitData;
@@ -13,18 +14,24 @@ pub struct RaptorState {
     pub curr_arrival_times: Vec<Time>,
     pub curr_board_times: Vec<Time>,
     pub marked_stops: FixedBitSet,
+    pub footpath_marks_scratch: FixedBitSet,
+    pub route_seen: FixedBitSet,
+    pub route_queue: VecDeque<(usize, usize)>,
     pub best_arrival: Vec<Time>,
     pub best_transfer_count: Vec<usize>,
 }
 
 impl RaptorState {
-    pub fn new(num_stops: usize, _max_rounds: usize) -> Self {
+    pub fn new(num_stops: usize, num_routes: usize, _max_rounds: usize) -> Self {
         RaptorState {
             prev_arrival_times: vec![Time::MAX; num_stops],
             prev_board_times: vec![Time::MAX; num_stops],
             curr_arrival_times: vec![Time::MAX; num_stops],
             curr_board_times: vec![Time::MAX; num_stops],
             marked_stops: FixedBitSet::with_capacity(num_stops),
+            footpath_marks_scratch: FixedBitSet::with_capacity(num_stops),
+            route_seen: FixedBitSet::with_capacity(num_routes),
+            route_queue: VecDeque::new(),
             best_arrival: vec![Time::MAX; num_stops],
             best_transfer_count: vec![0; num_stops],
         }

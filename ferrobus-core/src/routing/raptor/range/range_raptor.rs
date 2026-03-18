@@ -2,7 +2,7 @@ use log::warn;
 
 use crate::model::Transfer;
 use crate::routing::raptor::common::{
-    RaptorError, RaptorState, create_route_queue, find_earliest_trip, find_earliest_trip_at_stop,
+    RaptorError, RaptorState, fill_route_queue, find_earliest_trip, find_earliest_trip_at_stop,
     get_target_bound, process_foot_paths, validate_raptor_inputs,
 };
 use crate::{PublicTransitData, RaptorStopId, Time};
@@ -59,6 +59,7 @@ pub fn rraptor(
     // For the range, we assume departure_range = (min_departure, max_departure)
     // and that max_departure is within allowed limits.
     let num_stops = data.stops.len();
+    let num_routes = data.routes.len();
     let max_rounds = max_transfers + 1;
 
     // Retrieve all departure times from the source within the given range.
@@ -67,7 +68,7 @@ pub fn rraptor(
     // Process departures from latest to earliest.
     departures.sort_by(|a, b| b.cmp(a));
 
-    let mut state = RaptorState::new(num_stops, max_rounds);
+    let mut state = RaptorState::new(num_stops, num_routes, max_rounds);
     let mut journeys = Vec::with_capacity(departures.len());
 
     // For each departure time, update state and run RAPTOR rounds.
@@ -104,7 +105,12 @@ pub fn rraptor(
             state.advance_round();
 
             // Create queue from original marked stops (from previous operations)
-            let mut queue = create_route_queue(data, &state.marked_stops)?;
+            fill_route_queue(
+                data,
+                &state.marked_stops,
+                &mut state.route_seen,
+                &mut state.route_queue,
+            )?;
 
             // Clear marked stops first
             state.marked_stops.clear();
@@ -117,13 +123,13 @@ pub fn rraptor(
             }
 
             // If no stops were marked from carry-over AND no stops were in the queue, we can break early
-            if queue.is_empty() && state.marked_stops.is_clear() {
+            if state.route_queue.is_empty() && state.marked_stops.is_clear() {
                 break;
             }
 
             let target_bound = get_target_bound(&state, target);
 
-            while let Some((route_id, start_pos)) = queue.pop_front() {
+            while let Some((route_id, start_pos)) = state.route_queue.pop_front() {
                 let stops = data.get_route_stops(route_id)?;
 
                 if let Some((mut trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
@@ -172,7 +178,7 @@ pub fn rraptor(
                 }
             }
 
-            process_foot_paths(data, target, num_stops, &mut state, round)?;
+            process_foot_paths(data, target, &mut state, round)?;
 
             // Check if we should continue with this round
             if let Some(target_stop) = target {

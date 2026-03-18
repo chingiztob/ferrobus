@@ -1,11 +1,12 @@
 use fixedbitset::FixedBitSet;
+use std::collections::VecDeque;
 
 use super::state::{TraceRecord, TracedRaptorState};
 use crate::PublicTransitData;
 use crate::model::Transfer;
-use crate::routing::raptor::common::create_route_queue;
 use crate::routing::raptor::common::{
-    RaptorError, find_earliest_trip, find_earliest_trip_at_stop, validate_raptor_inputs,
+    RaptorError, fill_route_queue, find_earliest_trip, find_earliest_trip_at_stop,
+    validate_raptor_inputs,
 };
 use crate::types::{Duration, RaptorStopId, RouteId, Time};
 
@@ -65,11 +66,20 @@ pub fn traced_raptor(
     let num_stops = data.stops.len();
     let max_rounds = max_transfers + 1;
     let mut state = TracedRaptorState::new(num_stops, max_rounds);
+    let mut route_seen = FixedBitSet::with_capacity(data.routes.len());
+    let mut route_queue = VecDeque::new();
 
     initialize_source_round(data, &mut state, source, departure_time)?;
 
     for round in 1..max_rounds {
-        scan_routes_for_round(data, target, &mut state, round)?;
+        scan_routes_for_round(
+            data,
+            target,
+            &mut state,
+            round,
+            &mut route_seen,
+            &mut route_queue,
+        )?;
         process_detailed_foot_paths(data, target, &mut state, round)?;
 
         if let Some(target_stop) = target {
@@ -145,13 +155,20 @@ fn scan_routes_for_round(
     target: Option<RaptorStopId>,
     state: &mut TracedRaptorState,
     round: usize,
+    route_seen: &mut FixedBitSet,
+    route_queue: &mut VecDeque<(usize, usize)>,
 ) -> Result<(), RaptorError> {
     let prev_round = round - 1;
-    let mut queue = create_route_queue(data, &state.rounds[prev_round].marked_stops)?;
+    fill_route_queue(
+        data,
+        &state.rounds[prev_round].marked_stops,
+        route_seen,
+        route_queue,
+    )?;
     state.rounds[prev_round].marked_stops.clear();
 
     let target_bound = state.get_target_bound(target);
-    while let Some((route_id, start_pos)) = queue.pop_front() {
+    while let Some((route_id, start_pos)) = route_queue.pop_front() {
         let stops = data.get_route_stops(route_id)?;
         if let Some((trip_idx, current_board_pos)) = find_earliest_trip_at_stop(
             data,
