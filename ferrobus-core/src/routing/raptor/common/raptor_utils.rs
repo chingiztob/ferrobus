@@ -63,14 +63,14 @@ pub fn find_earliest_trip_at_stop(
 pub(crate) fn process_foot_paths(
     data: &PublicTransitData,
     target: Option<usize>,
+    num_stops: usize,
     state: &mut RaptorState,
     round: usize,
 ) -> Result<(), RaptorError> {
-    let mut current_marks = std::mem::replace(
+    let current_marks = std::mem::replace(
         &mut state.marked_stops,
-        std::mem::take(&mut state.footpath_marks_scratch),
+        FixedBitSet::with_capacity(num_stops),
     );
-    state.marked_stops.clear();
 
     let target_bound = if let Some(ts) = target {
         state.best_arrival[ts]
@@ -98,32 +98,21 @@ pub(crate) fn process_foot_paths(
     }
 
     state.marked_stops.union_with(&current_marks);
-    current_marks.clear();
-    state.footpath_marks_scratch = current_marks;
     Ok(())
 }
 
-pub(crate) fn fill_route_queue(
+pub(crate) fn create_route_queue(
     data: &PublicTransitData,
     marked_stops: &FixedBitSet,
-    route_seen: &mut FixedBitSet,
-    queue: &mut VecDeque<(usize, usize)>,
-) -> Result<(), RaptorError> {
-    route_seen.clear();
-    queue.clear();
+) -> Result<VecDeque<(usize, usize)>, RaptorError> {
+    let mut queue = VecDeque::new();
 
-    for stop in marked_stops.ones() {
-        for &route_id in data.routes_for_stop(stop) {
-            route_seen.set(route_id, true);
-        }
-    }
-
-    for route_id in route_seen.ones() {
+    for route_id in 0..data.routes.len() {
         let stops = data.get_route_stops(route_id)?;
         if let Some(pos) = stops.iter().position(|&stop| marked_stops.contains(stop)) {
             queue.push_back((route_id, pos));
         }
     }
 
-    Ok(())
+    Ok(queue)
 }

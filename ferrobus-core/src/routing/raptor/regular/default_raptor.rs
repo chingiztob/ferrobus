@@ -1,6 +1,6 @@
 use crate::model::Transfer;
 use crate::routing::raptor::common::{
-    RaptorError, RaptorResult, RaptorState, TargetResult, fill_route_queue, find_earliest_trip,
+    RaptorError, RaptorResult, RaptorState, TargetResult, create_route_queue, find_earliest_trip,
     find_earliest_trip_at_stop, get_target_bound, process_foot_paths, validate_raptor_inputs,
 };
 use crate::{PublicTransitData, RaptorStopId, Time};
@@ -16,9 +16,8 @@ pub fn raptor(
     validate_raptor_inputs(data, source, target, departure_time)?;
 
     let num_stops = data.stops.len();
-    let num_routes = data.routes.len();
     let max_rounds = max_transfers + 1;
-    let mut state = RaptorState::new(num_stops, num_routes, max_rounds);
+    let mut state = RaptorState::new(num_stops, max_rounds);
 
     // Initialize round 0.
     // At the source, both the arrival time and the boarding time are the departure_time.
@@ -47,18 +46,13 @@ pub fn raptor(
         // Advance to next round - swap current and previous, reset current
         state.advance_round();
 
-        fill_route_queue(
-            data,
-            &state.marked_stops,
-            &mut state.route_seen,
-            &mut state.route_queue,
-        )?;
+        let mut queue = create_route_queue(data, &state.marked_stops)?;
         state.marked_stops.clear();
 
         // When a target is given, use its best known arrival time for pruning.
         let target_bound = get_target_bound(&state, target);
 
-        while let Some((route_id, start_pos)) = state.route_queue.pop_front() {
+        while let Some((route_id, start_pos)) = queue.pop_front() {
             let stops = data.get_route_stops(route_id)?;
 
             // find earliest possible "hop" on the route
@@ -114,7 +108,7 @@ pub fn raptor(
             }
         }
 
-        process_foot_paths(data, target, &mut state, round)?;
+        process_foot_paths(data, target, num_stops, &mut state, round)?;
 
         // If a target is given, check if we can prune the search.
         if let Some(target_stop) = target {
