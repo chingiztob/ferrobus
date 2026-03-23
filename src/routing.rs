@@ -85,7 +85,7 @@ impl PyTransitPoint {
     }
 
     fn nearest_stops(&self) -> Vec<usize> {
-        self.inner.nearest_stops.iter().map(|stop| stop.0).collect()
+        self.inner.nearest_stops()
     }
 }
 

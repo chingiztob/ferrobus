@@ -3,77 +3,94 @@ use fixedbitset::FixedBitSet;
 use crate::routing::raptor::common::RaptorError;
 use crate::types::{Duration, RaptorStopId, RouteId, Time, TripId};
 
-/// Records how we arrived at a particular stop in a particular round
+/// Records the concrete segment used to reach a stop in a round.
 #[derive(Debug, Clone)]
-pub enum Predecessor {
+pub(crate) enum TraceRecord {
     None,
     Source,
-    Transit {
+    TransitSegment {
         route_id: RouteId,
         trip_id: TripId,
         from_stop: RaptorStopId,
-        from_idx: usize,
-        to_idx: usize,
+        departure_time: Time,
+        arrival_time: Time,
     },
-    Transfer {
+    TransferSegment {
         from_stop: RaptorStopId,
         departure_time: Time,
+        arrival_time: Time,
         duration: Duration,
     },
 }
 
+pub(crate) struct TracedRoundState {
+    pub arrival_times: Vec<Time>,
+    pub board_times: Vec<Time>,
+    pub predecessors: Vec<TraceRecord>,
+    pub marked_stops: FixedBitSet,
+}
+
+impl TracedRoundState {
+    fn new(num_stops: usize) -> Self {
+        Self {
+            arrival_times: vec![Time::MAX; num_stops],
+            board_times: vec![Time::MAX; num_stops],
+            predecessors: vec![TraceRecord::None; num_stops],
+            marked_stops: FixedBitSet::with_capacity(num_stops),
+        }
+    }
+}
+
 pub struct TracedRaptorState {
-    pub arrival_times: Vec<Vec<Time>>,
-    pub board_times: Vec<Vec<Time>>,
+    pub rounds: Vec<TracedRoundState>,
     pub best_arrival: Vec<Time>,
-    pub marked_stops: Vec<FixedBitSet>,
-    pub predecessors: Vec<Vec<Predecessor>>,
 }
 
 impl TracedRaptorState {
-    pub fn new(num_stops: usize, max_rounds: usize) -> Self {
-        let arrival_times = vec![vec![Time::MAX; num_stops]; max_rounds + 1];
-        let board_times = vec![vec![Time::MAX; num_stops]; max_rounds + 1];
-        let marked_stops = vec![FixedBitSet::with_capacity(num_stops); max_rounds + 1];
-        let predecessors = vec![vec![Predecessor::None; num_stops]; max_rounds + 1];
-
+    /// Allocates per-round traced state for one RAPTOR search.
+    pub fn new(num_stops: usize, num_rounds: usize) -> Self {
         Self {
-            arrival_times,
-            board_times,
+            rounds: (0..num_rounds)
+                .map(|_| TracedRoundState::new(num_stops))
+                .collect(),
             best_arrival: vec![Time::MAX; num_stops],
-            marked_stops,
-            predecessors,
         }
     }
 
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn update(
+    /// Applies a candidate update for one stop in one round.
+    /// `predecessor` is lazy because most candidates lose, so we avoid building
+    /// a `TraceRecord` unless the arrival actually improves the stop.
+    pub fn update<F>(
         &mut self,
         round: usize,
         stop: RaptorStopId,
         arrival: Time,
         board: Time,
-        predecessor: Predecessor,
-    ) -> Result<bool, RaptorError> {
-        if stop >= self.arrival_times[round].len() {
+        predecessor: F,
+    ) -> Result<bool, RaptorError>
+    where
+        F: FnOnce() -> TraceRecord,
+    {
+        let Some(round_state) = self.rounds.get_mut(round) else {
+            return Err(RaptorError::InvalidJourney);
+        };
+
+        if stop >= round_state.arrival_times.len() {
             return Err(RaptorError::InvalidStop);
         }
 
         let mut updated = false;
 
-        // Update arrival time if better
-        if arrival < self.arrival_times[round][stop] {
-            self.arrival_times[round][stop] = arrival;
-            self.predecessors[round][stop] = predecessor;
+        if arrival < round_state.arrival_times[stop] {
+            round_state.arrival_times[stop] = arrival;
+            round_state.predecessors[stop] = predecessor();
             updated = true;
         }
 
-        // Update boarding time if better
-        if board < self.board_times[round][stop] {
-            self.board_times[round][stop] = board;
+        if board < round_state.board_times[stop] {
+            round_state.board_times[stop] = board;
         }
 
-        // Update best known arrival time
         if arrival < self.best_arrival[stop] {
             self.best_arrival[stop] = arrival;
         }
@@ -81,12 +98,24 @@ impl TracedRaptorState {
         Ok(updated)
     }
 
-    /// Get the target bound for pruning
+    /// Returns the best known target arrival used to prune route scans.
     pub fn get_target_bound(&self, target: Option<usize>) -> Time {
         if let Some(target_stop) = target {
             self.best_arrival[target_stop]
         } else {
             Time::MAX
         }
+    }
+
+    /// Finds the first round that produced the final best arrival for `target`.
+    pub fn best_round_for(&self, target: RaptorStopId) -> Option<usize> {
+        let best_arrival = *self.best_arrival.get(target)?;
+        if best_arrival == Time::MAX {
+            return None;
+        }
+
+        self.rounds
+            .iter()
+            .position(|round| round.arrival_times[target] == best_arrival)
     }
 }
