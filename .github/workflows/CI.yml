@@ -170,6 +170,47 @@ jobs:
           find ./wheels -type f -name "*.whl" -exec cp {} ./dist/ \;
           find ./wheels -type f -name "*.tar.gz" -exec cp {} ./dist/ \;
 
+      - name: Group artifacts into release archives
+        run: |
+          set -euxo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          mkdir -p release-assets
+          mkdir -p grouped/linux grouped/musllinux grouped/windows grouped/macos grouped/sdist
+
+          find ./dist -maxdepth 1 -type f -name "*.whl" -name "*manylinux*" -exec cp {} grouped/linux/ \;
+          find ./dist -maxdepth 1 -type f -name "*.whl" -name "*musllinux*" -exec cp {} grouped/musllinux/ \;
+          find ./dist -maxdepth 1 -type f -name "*.whl" -name "*win*" -exec cp {} grouped/windows/ \;
+          find ./dist -maxdepth 1 -type f -name "*.whl" -name "*macosx*" -exec cp {} grouped/macos/ \;
+          find ./dist -maxdepth 1 -type f -name "*.tar.gz" -exec cp {} grouped/sdist/ \;
+
+          [ "$(find grouped/linux -type f | wc -l)" -gt 0 ]
+          [ "$(find grouped/musllinux -type f | wc -l)" -gt 0 ]
+          [ "$(find grouped/windows -type f | wc -l)" -gt 0 ]
+          [ "$(find grouped/macos -type f | wc -l)" -gt 0 ]
+          [ "$(find grouped/sdist -type f | wc -l)" -gt 0 ]
+
+          (
+            cd grouped/linux
+            zip -r "../../release-assets/ferrobus-${VERSION}-linux.zip" .
+          )
+          (
+            cd grouped/musllinux
+            zip -r "../../release-assets/ferrobus-${VERSION}-musllinux.zip" .
+          )
+          (
+            cd grouped/windows
+            zip -r "../../release-assets/ferrobus-${VERSION}-windows.zip" .
+          )
+          (
+            cd grouped/macos
+            zip -r "../../release-assets/ferrobus-${VERSION}-macos.zip" .
+          )
+          (
+            cd grouped/sdist
+            zip -r "../../release-assets/ferrobus-${VERSION}-sdist.zip" .
+          )
+
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
@@ -186,4 +227,4 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'alpha') }}
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: release-assets/*

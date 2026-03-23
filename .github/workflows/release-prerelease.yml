@@ -214,7 +214,7 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: 'release-assets/*'
+          subject-path: 'dist/*'
 
       - name: Upload grouped assets to GitHub Prerelease
         uses: softprops/action-gh-release@v2
