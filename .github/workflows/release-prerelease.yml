@@ -145,8 +145,12 @@ jobs:
       id-token: write
       contents: read
     outputs:
-      version: ${{ steps.derive_version.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
@@ -157,39 +161,6 @@ jobs:
           mkdir -p ./dist
           find ./wheels -type f -name "*.whl" -exec cp {} ./dist/ \;
           find ./wheels -type f -name "*.tar.gz" -exec cp {} ./dist/ \;
-
-      - name: Derive package version from wheel
-        id: derive_version
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import glob
-          import os
-          import sys
-
-          wheels = glob.glob("dist/*.whl")
-          if not wheels:
-            print("No wheels found in dist/", file=sys.stderr)
-            sys.exit(1)
-
-          versions = set()
-          for wheel in wheels:
-            name = os.path.basename(wheel)
-            parts = name.split("-")
-            if len(parts) < 2:
-              print(f"Unexpected wheel filename: {name}", file=sys.stderr)
-              sys.exit(1)
-            versions.add(parts[1])
-
-          if len(versions) != 1:
-            print(f"Expected exactly one package version across wheels, got: {sorted(versions)}", file=sys.stderr)
-            sys.exit(1)
-
-          version = next(iter(versions))
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-            fh.write(f"version={version}\n")
-          print(f"Derived wheel version: {version}")
-          PY
 
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
