@@ -3,9 +3,9 @@ name: Release Prerelease
 on:
   push:
     tags:
-      - 'v*rc*'
-      - 'v*beta*'
-      - 'v*alpha*'
+      - 'v*-rc*'
+      - 'v*-beta*'
+      - 'v*-alpha*'
 
 permissions:
   contents: read
