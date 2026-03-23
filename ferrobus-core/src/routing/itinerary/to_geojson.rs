@@ -1,5 +1,5 @@
 use geo::{Coord, LineString, line_string};
-use geojson::{Feature, FeatureCollection, Geometry, Value as GeoJsonValue};
+use geojson::{Feature, FeatureCollection, Geometry, GeometryValue};
 use serde_json::json;
 
 use crate::{
@@ -157,7 +157,7 @@ fn create_waiting_feature(
     duration: Time,
 ) -> Result<Feature, Error> {
     let geom = transit_data.transit_stop_location(at_stop);
-    let geometry = Geometry::new(GeoJsonValue::from(&geom));
+    let geometry = Geometry::new(GeometryValue::from(&geom));
 
     feature_from_json(json!({
         "type": "Feature",
@@ -200,7 +200,7 @@ fn transit_geometry(
     }
 
     coords.push(to_loc.into());
-    Geometry::new(GeoJsonValue::from(&LineString::new(coords)))
+    Geometry::new(GeometryValue::from(&LineString::new(coords)))
 }
 
 fn transfer_geometry_with_fallback(
@@ -219,7 +219,7 @@ fn transfer_geometry_with_fallback(
             (x: source_loc.x(), y: source_loc.y()),
             (x: target_loc.x(), y: target_loc.y())
         ];
-        Geometry::new(GeoJsonValue::from(&direct_line))
+        Geometry::new(GeometryValue::from(&direct_line))
     };
 
     let source_node = transit_model
@@ -255,7 +255,7 @@ fn transfer_geometry_with_fallback(
             }
 
             if nodes.iter().all(|n| n.x.is_finite() && n.y.is_finite()) {
-                return Geometry::new(GeoJsonValue::from(&LineString::new(nodes)));
+                return Geometry::new(GeometryValue::from(&LineString::new(nodes)));
             }
         }
     }
@@ -264,5 +264,5 @@ fn transfer_geometry_with_fallback(
 }
 
 fn feature_from_json(value: serde_json::Value) -> Result<Feature, Error> {
-    Feature::from_json_value(value).map_err(|e| Error::GeoJsonError(e.to_string()))
+    serde_json::from_value::<Feature>(value).map_err(|e| Error::GeoJsonError(e.to_string()))
 }

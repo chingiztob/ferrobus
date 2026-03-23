@@ -28,7 +28,7 @@ rayon.workspace = true
 libc = "0.2"
 
 [dev-dependencies]
-criterion = "0.8.1"
+criterion = "0.8"
 dotenvy = "0.15"
 
 [[bench]]
