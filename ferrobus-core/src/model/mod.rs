@@ -10,6 +10,7 @@ mod transit_model;
 pub(crate) use streets::{IndexedPoint, StreetEdge, StreetNode};
 
 // Re-export of the main model structure
+pub(crate) use transit_model::audit_transit_model;
 pub use transit_model::{TransitModel, TransitModelMeta, TransitPoint};
 
 // Re-export of basic types for convenience

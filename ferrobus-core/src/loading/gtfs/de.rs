@@ -5,20 +5,55 @@ use crate::Error;
 
 use serde::Deserialize;
 
-pub fn deserialize_gtfs_file<T>(path: &Path) -> Result<Vec<T>, std::io::Error>
+fn format_csv_error(path: &Path, err: &csv::Error) -> Error {
+    let position = err.position().map_or_else(
+        || "position unknown".to_string(),
+        |pos| {
+            let line = pos.line();
+            let record = pos.record();
+            format!("line {line}, record {record}")
+        },
+    );
+
+    Error::InvalidData(format!(
+        "Failed to deserialize GTFS file '{}' at {position}: {err}",
+        path.display()
+    ))
+}
+
+pub fn deserialize_gtfs_file<T>(path: &Path) -> Result<Vec<T>, Error>
 where
     T: for<'de> serde::Deserialize<'de>,
 {
     let file = File::open(path).map_err(|e| {
-        std::io::Error::new(
+        Error::IoError(std::io::Error::new(
             e.kind(),
             format!("Failed to open file '{}': {}", path.display(), e),
-        )
+        ))
     })?;
-    Ok(csv::Reader::from_reader(file)
-        .deserialize()
-        .filter_map(Result::ok)
-        .collect::<Vec<T>>())
+
+    let mut rows = Vec::new();
+    let mut reader = csv::Reader::from_reader(file);
+    for record in reader.deserialize() {
+        let row = record.map_err(|err| format_csv_error(path, &err))?;
+        rows.push(row);
+    }
+
+    Ok(rows)
+}
+
+pub fn deserialize_optional_gtfs_file<T>(path: &Path) -> Result<Vec<T>, Error>
+where
+    T: for<'de> serde::Deserialize<'de>,
+{
+    match deserialize_gtfs_file(path) {
+        Ok(rows) => Ok(rows),
+        Err(Error::IoError(err)) if err.kind() == std::io::ErrorKind::NotFound => {
+            log::warn!("Skipping optional GTFS file '{}': {err}", path.display());
+            Ok(Vec::new())
+        }
+        Err(err) => Err(err),
+    }
 }
 
 /// Parse time string in HH:MM:SS format to seconds since midnight

@@ -47,6 +47,14 @@ pub fn create_transit_model(config: &TransitModelConfig) -> Result<TransitModel,
         &graph.transit_data.transfers.len()
     );
 
+    match crate::model::audit_transit_model(&graph) {
+        Ok(()) => info!("Transit model audit passed"),
+        Err(err) => {
+            log::error!("Transit model audit failed: {err}");
+            return Err(err);
+        }
+    }
+
     info!("Transit model created successfully");
     // While processing OSM protobuf data, and during CSV deserialization
     // large amounts of memory are allocated. This memory is not always

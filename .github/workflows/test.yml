@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Fetch Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install stable toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Fetch Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install stable toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -43,6 +43,27 @@ jobs:
 
       - name: Clippy Check
         run: cargo clippy --workspace --all-targets --all-features -- -Dwarnings
+
+  wheel-smoke:
+    name: Wheel smoke build (PR)
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Build wheel (smoke check only)
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist --find-interpreter
+          manylinux: off
 
   build-and-pytest:
     name: Build & Test
@@ -53,7 +74,7 @@ jobs:
 
     steps:
       - name: Fetch Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup mold linker
         uses: rui314/setup-mold@v1

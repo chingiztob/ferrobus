@@ -1,8 +1,6 @@
-use geo::{Point, line_string};
-use geojson::{Feature, Geometry};
-use serde_json::json;
-
 use crate::{Error, Time};
+use geo::{Point, line_string};
+use geojson::{Feature, Geometry, JsonObject, JsonValue};
 
 /// Represents a walking leg outside the transit network.
 #[derive(Debug, Clone)]
@@ -37,24 +35,38 @@ impl WalkingLeg {
         }
     }
 
-    /// Convert the walking leg to a `GeoJSON` Feature using the `json!` macro.
+    /// Convert the walking leg to a GeoJSON Feature.
     pub fn to_feature(&self, leg_type: &str) -> Result<Feature, Error> {
         let coordinates = line_string![
             (x: self.from_location.x(), y: self.from_location.y()),
             (x: self.to_location.x(), y: self.to_location.y()),
         ];
-        let value = json!({
-            "type": "Feature",
-            "geometry": Geometry::new((&coordinates).into()),
-            "properties": {
-                "leg_type": leg_type,
-                "from_name": self.from_name,
-                "to_name": self.to_name,
-                "departure_time": self.departure_time,
-                "arrival_time": self.arrival_time,
-                "duration": self.duration,
-            }
-        });
-        Feature::from_json_value(value).map_err(|e| Error::GeoJsonError(e.to_string()))
+
+        let geometry = Geometry::new((&coordinates).into());
+
+        let mut properties = JsonObject::new();
+        properties.insert("leg_type".to_string(), JsonValue::from(leg_type));
+        properties.insert(
+            "from_name".to_string(),
+            JsonValue::from(self.from_name.clone()),
+        );
+        properties.insert("to_name".to_string(), JsonValue::from(self.to_name.clone()));
+        properties.insert(
+            "departure_time".to_string(),
+            JsonValue::from(self.departure_time),
+        );
+        properties.insert(
+            "arrival_time".to_string(),
+            JsonValue::from(self.arrival_time),
+        );
+        properties.insert("duration".to_string(), JsonValue::from(self.duration));
+
+        Ok(Feature {
+            bbox: None,
+            geometry: Some(geometry),
+            id: None,
+            properties: Some(properties),
+            foreign_members: None,
+        })
     }
 }

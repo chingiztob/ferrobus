@@ -1,8 +1,36 @@
 use ferrobus_core::{Error, TransitModel, TransitModelConfig, create_transit_model};
-use std::path::PathBuf;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 fn get_test_data_dir() -> PathBuf {
     PathBuf::from("..").join("tests").join("test-data")
+}
+
+fn temp_dir(name: &str) -> PathBuf {
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("time should be valid")
+        .as_nanos();
+    std::env::temp_dir().join(format!("ferrobus_core_{name}_{}_{}", process::id(), ts))
+}
+
+fn copy_dir_all(src: &Path, dst: &Path) {
+    fs::create_dir_all(dst).expect("destination directory should be created");
+    for entry in fs::read_dir(src).expect("source directory should be readable") {
+        let entry = entry.expect("directory entry should be readable");
+        let file_type = entry.file_type().expect("file type should be readable");
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_all(&from, &to);
+        } else {
+            fs::copy(&from, &to).expect("file should be copied");
+        }
+    }
 }
 
 fn create_valid_config() -> TransitModelConfig {
@@ -114,4 +142,39 @@ fn test_model_creation_with_empty_gtfs_dirs() {
 
     let model_result = try_create_model(&config);
     assert!(model_result.is_err());
+}
+
+#[test]
+fn test_model_creation_fails_on_malformed_required_gtfs_row() {
+    let test_data_dir = get_test_data_dir();
+    let working_dir = temp_dir("malformed_gtfs");
+    let gtfs_dir = working_dir.join("zhelez");
+
+    fs::create_dir_all(&working_dir).expect("working directory should be created");
+    fs::copy(
+        test_data_dir.join("roads_zhelez.pbf"),
+        working_dir.join("roads_zhelez.pbf"),
+    )
+    .expect("osm file should be copied");
+    copy_dir_all(&test_data_dir.join("zhelez"), &gtfs_dir);
+
+    let stops_path = gtfs_dir.join("stops.txt");
+    let mut stops_contents = fs::read_to_string(&stops_path).expect("stops.txt should be readable");
+    stops_contents.push_str("\nBROKEN,,,,not_a_float,93.0,,,,,\n");
+    fs::write(&stops_path, stops_contents).expect("broken stops.txt should be written");
+
+    let config = TransitModelConfig {
+        osm_path: working_dir.join("roads_zhelez.pbf"),
+        gtfs_dirs: vec![gtfs_dir],
+        date: None,
+        max_transfer_time: 1200,
+    };
+
+    let result = create_transit_model(&config);
+    assert!(matches!(result, Err(Error::InvalidData(_))));
+    if let Err(Error::InvalidData(message)) = result {
+        assert!(message.contains("stops.txt"));
+    }
+
+    let _ = fs::remove_dir_all(working_dir);
 }

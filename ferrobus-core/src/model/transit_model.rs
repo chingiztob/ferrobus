@@ -23,6 +23,127 @@ pub struct TransitModelMeta {
     pub max_transfer_time: Time,
 }
 
+fn checked_end(start: usize, len: usize, field: &str) -> Result<usize, Error> {
+    start.checked_add(len).ok_or_else(|| {
+        Error::InvalidData(format!("{field} range overflows: start={start}, len={len}"))
+    })
+}
+
+/// Audits the built transit model for compact structural consistency.
+///
+/// This check is limited to in-memory indexing/layout invariants
+/// such as flattened slice bounds and referenced stop/route indices.
+pub(crate) fn audit_transit_model(model: &TransitModel) -> Result<(), Error> {
+    let transit = &model.transit_data;
+    let stop_count = transit.stops.len();
+    let route_count = transit.routes.len();
+
+    for (stop_idx, stop) in transit.stops.iter().enumerate() {
+        let routes_end = checked_end(stop.routes_start, stop.routes_len, "stop_routes")?;
+        if routes_end > transit.stop_routes.len() {
+            return Err(Error::InvalidData(format!(
+                "stop {stop_idx} has invalid stop_routes slice: {}..{} exceeds {}",
+                stop.routes_start,
+                routes_end,
+                transit.stop_routes.len()
+            )));
+        }
+
+        let transfers_end =
+            checked_end(stop.transfers_start, stop.transfers_len, "stop_transfers")?;
+        if transfers_end > transit.transfers.len() {
+            return Err(Error::InvalidData(format!(
+                "stop {stop_idx} has invalid transfers slice: {}..{} exceeds {}",
+                stop.transfers_start,
+                transfers_end,
+                transit.transfers.len()
+            )));
+        }
+    }
+
+    for (stop_idx, &route_id) in transit.stop_routes.iter().enumerate() {
+        if route_id >= route_count {
+            return Err(Error::InvalidData(format!(
+                "stop_routes[{stop_idx}] references invalid route {route_id}"
+            )));
+        }
+    }
+
+    for (transfer_idx, transfer) in transit.transfers.iter().enumerate() {
+        if transfer.target_stop >= stop_count {
+            return Err(Error::InvalidData(format!(
+                "transfer {transfer_idx} references invalid target stop {}",
+                transfer.target_stop
+            )));
+        }
+    }
+
+    for (node, &stop_id) in &transit.node_to_stop {
+        if stop_id >= stop_count {
+            return Err(Error::InvalidData(format!(
+                "node_to_stop entry for node {node:?} references invalid stop {stop_id}"
+            )));
+        }
+    }
+
+    for (route_idx, route) in transit.routes.iter().enumerate() {
+        let stops_end = checked_end(route.stops_start, route.num_stops, "route_stops")?;
+        if stops_end > transit.route_stops.len() {
+            return Err(Error::InvalidData(format!(
+                "route {route_idx} has invalid route_stops slice: {}..{} exceeds {}",
+                route.stops_start,
+                stops_end,
+                transit.route_stops.len()
+            )));
+        }
+
+        let stop_times_len = route
+            .num_trips
+            .checked_mul(route.num_stops)
+            .ok_or_else(|| {
+                Error::InvalidData(format!(
+                    "route {route_idx} trip stop-time layout overflows: num_trips={}, num_stops={}",
+                    route.num_trips, route.num_stops
+                ))
+            })?;
+        let stop_times_end = checked_end(route.trips_start, stop_times_len, "route_stop_times")?;
+        if stop_times_end > transit.stop_times.len() {
+            return Err(Error::InvalidData(format!(
+                "route {route_idx} has invalid stop_times slice: {}..{} exceeds {}",
+                route.trips_start,
+                stop_times_end,
+                transit.stop_times.len()
+            )));
+        }
+
+        let Some(route_trips) = transit.trips.get(route_idx) else {
+            return Err(Error::InvalidData(format!(
+                "route {route_idx} is missing trip metadata"
+            )));
+        };
+        if route_trips.len() != route.num_trips {
+            return Err(Error::InvalidData(format!(
+                "route {route_idx} trip metadata length mismatch: expected {}, got {}",
+                route.num_trips,
+                route_trips.len()
+            )));
+        }
+
+        for (offset, &stop_id) in transit.route_stops[route.stops_start..stops_end]
+            .iter()
+            .enumerate()
+        {
+            if stop_id >= stop_count {
+                return Err(Error::InvalidData(format!(
+                    "route {route_idx} stop offset {offset} references invalid stop {stop_id}"
+                )));
+            }
+        }
+    }
+
+    Ok(())
+}
+
 impl TransitModel {
     /// Creates a new model from street network and transit data
     pub(crate) fn with_transit(
@@ -73,9 +194,9 @@ pub struct TransitPoint {
     /// Nearest street network node
     pub node_id: NodeIndex,
     /// Nearest stops (stop id, walking time)
-    pub nearest_stops: Vec<(RaptorStopId, Time)>,
+    pub(crate) nearest_stops: Vec<(RaptorStopId, Time)>,
     /// Walking routes to other nodes
-    pub walking_paths: HashMap<NodeIndex, Time>,
+    pub(crate) walking_paths: HashMap<NodeIndex, Time>,
 }
 
 impl TransitPoint {
@@ -146,6 +267,10 @@ impl TransitPoint {
         stop_id: RaptorStopId,
     ) -> Option<String> {
         transit_data.transit_stop_name(stop_id)
+    }
+
+    pub fn nearest_stops(&self) -> Vec<usize> {
+        self.nearest_stops.iter().map(|stop| stop.0).collect()
     }
 }
 
@@ -229,6 +354,29 @@ mod tests {
                 max_transfer_time: 1800, // 30 minutes
             },
         }
+    }
+
+    fn create_valid_structural_model() -> TransitModel {
+        let mut graph = create_test_graph();
+        graph.transit_data.stops = vec![
+            Stop {
+                stop_id: "S0".to_string(),
+                geometry: Point::new(0.0, 0.01),
+                routes_start: 0,
+                routes_len: 0,
+                transfers_start: 0,
+                transfers_len: 0,
+            },
+            Stop {
+                stop_id: "S1".to_string(),
+                geometry: Point::new(0.01, 0.0),
+                routes_start: 0,
+                routes_len: 0,
+                transfers_start: 0,
+                transfers_len: 0,
+            },
+        ];
+        graph
     }
 
     #[test]
@@ -376,5 +524,27 @@ mod tests {
             // Either path should be around 1586 seconds (2 * 793)
             assert!(t > 1500 && t < 1700);
         }
+    }
+
+    #[test]
+    fn audit_accepts_structurally_valid_model() {
+        let graph = create_valid_structural_model();
+        assert!(audit_transit_model(&graph).is_ok());
+    }
+
+    #[test]
+    fn audit_rejects_invalid_transfer_slice() {
+        let mut graph = create_test_graph();
+        graph.transit_data.stops.push(Stop {
+            stop_id: "S-invalid".to_string(),
+            geometry: Point::new(0.0, 0.0),
+            routes_start: 0,
+            routes_len: 0,
+            transfers_start: 1,
+            transfers_len: 1,
+        });
+
+        let result = audit_transit_model(&graph);
+        assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 }
