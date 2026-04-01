@@ -236,9 +236,16 @@ fn build_public_transit_data(processed_data: ProcessedTransitData) -> PublicTran
         }
     }
 
-    for (stop_idx, routes) in stop_to_routes {
-        stops_vec[stop_idx].routes_start = stop_routes.len();
-        stops_vec[stop_idx].routes_len = routes.len();
+    for (stop_idx, stop) in stops_vec.iter_mut().enumerate() {
+        let mut routes: Vec<RouteId> = stop_to_routes
+            .remove(&stop_idx)
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
+        routes.sort_unstable();
+
+        stop.routes_start = stop_routes.len();
+        stop.routes_len = routes.len();
         stop_routes.extend(routes);
     }
 
@@ -340,8 +347,18 @@ fn process_route_variants<'a>(
         }
     }
 
-    for (pattern, mut group) in groups_by_pattern {
-        group.sort_by_key(|ts| &ts[0].departure_time);
+    let mut grouped_variants: Vec<(Vec<usize>, Vec<&'a [FeedStopTime]>)> =
+        groups_by_pattern.into_iter().collect();
+    grouped_variants
+        .sort_by(|(left_pattern, _), (right_pattern, _)| left_pattern.cmp(right_pattern));
+
+    for (pattern, mut group) in grouped_variants {
+        group.sort_by(|left, right| {
+            left[0]
+                .departure_time
+                .cmp(&right[0].departure_time)
+                .then_with(|| left[0].trip_id.cmp(&right[0].trip_id))
+        });
 
         let stops_start = builder.route_stops.len();
         builder.route_stops.extend(pattern.iter().copied());
@@ -386,7 +403,11 @@ fn process_trip_stop_times<'a>(
     let mut routes_vec = Vec::new();
     let mut trips_vec = Vec::new();
 
-    for (route_id, trips_data) in routes_map {
+    let mut sorted_routes: Vec<(&str, Vec<&[FeedStopTime]>)> = routes_map.into_iter().collect();
+    sorted_routes
+        .sort_by(|(left_route_id, _), (right_route_id, _)| left_route_id.cmp(right_route_id));
+
+    for (route_id, trips_data) in sorted_routes {
         let mut builder = RouteBuilder {
             stop_times_vec: &mut stop_times_vec,
             route_stops: &mut route_stops,
