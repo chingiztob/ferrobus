@@ -42,16 +42,17 @@ where
     Ok(rows)
 }
 
-pub fn deserialize_optional_gtfs_file<T>(path: &Path) -> Vec<T>
+pub fn deserialize_optional_gtfs_file<T>(path: &Path) -> Result<Vec<T>, Error>
 where
     T: for<'de> serde::Deserialize<'de>,
 {
     match deserialize_gtfs_file(path) {
-        Ok(rows) => rows,
-        Err(err) => {
+        Ok(rows) => Ok(rows),
+        Err(Error::IoError(err)) if err.kind() == std::io::ErrorKind::NotFound => {
             log::warn!("Skipping optional GTFS file '{}': {err}", path.display());
-            Vec::new()
+            Ok(Vec::new())
         }
+        Err(err) => Err(err),
     }
 }
 

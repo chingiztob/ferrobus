@@ -45,11 +45,11 @@ fn load_raw_feed(config: &TransitModelConfig) -> Result<RawGTFSData, Error> {
         trips.extend(deserialize_gtfs_file(&dir.join("trips.txt"))?);
         stop_times.extend(deserialize_gtfs_file(&dir.join("stop_times.txt"))?);
         services.extend(deserialize_gtfs_file(&dir.join("calendar.txt"))?);
-        feed_info.extend(deserialize_optional_gtfs_file(&dir.join("feed_info.txt")));
+        feed_info.extend(deserialize_optional_gtfs_file(&dir.join("feed_info.txt"))?);
         calendar_dates.extend(deserialize_optional_gtfs_file(
             &dir.join("calendar_dates.txt"),
-        ));
-        transfers.extend(deserialize_optional_gtfs_file(&dir.join("transfers.txt")));
+        )?);
+        transfers.extend(deserialize_optional_gtfs_file(&dir.join("transfers.txt"))?);
     }
 
     stops.shrink_to_fit();

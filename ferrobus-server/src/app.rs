@@ -14,7 +14,7 @@ use tower_http::{
     cors::{Any, CorsLayer},
     trace::{DefaultOnResponse, TraceLayer},
 };
-use tracing::{Level, info};
+use tracing::{Level, info, warn};
 
 use crate::{
     config::{ServerCli, ServerConfig},
@@ -128,8 +128,32 @@ pub fn init_tracing() {
 
 async fn shutdown_signal() {
     let ctrl_c = async {
-        let _ = tokio::signal::ctrl_c().await;
+        match tokio::signal::ctrl_c().await {
+            Ok(()) => info!("shutdown signal received: ctrl_c"),
+            Err(err) => warn!(%err, "failed to install ctrl_c handler"),
+        }
     };
-    ctrl_c.await;
-    info!("shutdown signal received");
+
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+
+        match signal(SignalKind::terminate()) {
+            Ok(mut sigterm) => {
+                tokio::select! {
+                    _ = ctrl_c => {}
+                    _ = sigterm.recv() => info!("shutdown signal received: sigterm"),
+                }
+            }
+            Err(err) => {
+                warn!(%err, "failed to install SIGTERM handler, falling back to ctrl_c only");
+                ctrl_c.await;
+            }
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        ctrl_c.await;
+    }
 }
