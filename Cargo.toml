@@ -32,6 +32,7 @@ rayon.workspace = true
 chrono.workspace = true
 serde_json.workspace = true
 wkt = "0.14.0"
+zarrs = { version = "0.23", optional = true }
 
 [workspace.dependencies]
 geo = "0.32.0"
@@ -50,6 +51,7 @@ optional = true
 [features]
 stubgen = ["pyo3-stub-gen"]
 extension-module = ["pyo3/extension-module"]
+matrix-zarr = ["dep:zarrs"]
 default = ["extension-module"]
 
 [profile.release]
