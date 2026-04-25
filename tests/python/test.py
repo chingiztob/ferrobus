@@ -1,4 +1,5 @@
 import json
+import math
 
 import pytest
 
@@ -50,6 +51,69 @@ def test_travel_time_matrix(model):
     assert len(matrix) == len(points)
     assert matrix[0] == [0, 1044]
     assert matrix[1] == [1253, 0]
+
+
+def test_travel_time_accessibility_levels(model):
+    points = [
+        ferrobus.create_transit_point(56.252619, 93.532134, model),
+        ferrobus.create_transit_point(56.242574, 93.499159, model),
+    ]
+
+    result = ferrobus.travel_time_accessibility_levels(
+        transit_model=model,
+        points=points,
+        departure_time=8 * 3600,
+        max_transfers=2,
+        lau_idx=[1, 2],
+        nuts3_idx=[10, 10],
+        lau_neighbors={},
+        nuts3_neighbors={},
+        cutoff_local=0,
+        cutoff_regional=1200,
+        cutoff_global=1100,
+    )
+
+    expected_keys = {
+        "accessible_count_local",
+        "accessible_count_regional",
+        "accessible_count_global",
+        "target_count_local",
+        "target_count_regional",
+        "target_count_global",
+        "share_local",
+        "share_regional",
+        "share_global",
+    }
+    assert set(result.keys()) == expected_keys
+
+    for key in expected_keys:
+        assert isinstance(result[key], list)
+        assert len(result[key]) == len(points)
+
+    assert result["target_count_global"] == [2, 2]
+    assert result["target_count_local"] == [1, 1]
+    assert result["target_count_regional"] == [2, 2]
+
+    assert result["accessible_count_local"] == [1, 1]
+    assert result["accessible_count_regional"] == [2, 1]
+    assert result["accessible_count_global"] == [2, 1]
+
+    assert result["share_local"] == [1.0, 1.0]
+    assert result["share_regional"] == [1.0, 0.5]
+    assert result["share_global"] == [1.0, 0.5]
+
+    for acc_key, tgt_key in [
+        ("accessible_count_local", "target_count_local"),
+        ("accessible_count_regional", "target_count_regional"),
+        ("accessible_count_global", "target_count_global"),
+    ]:
+        share_key = f"share_{acc_key.split('_')[-1]}"
+        for idx, (acc, tgt) in enumerate(
+            zip(result[acc_key], result[tgt_key], strict=True)
+        ):
+            assert acc <= tgt
+            if tgt == 0:
+                assert math.isnan(result[share_key][idx])
 
 
 def test_find_route(model):

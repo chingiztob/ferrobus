@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
 
+use accessibility::travel_time_accessibility_levels;
+use efficiency::travel_time_relative_efficiency_levels;
 use isochrone::{
     PyIsochroneIndex, calculate_bulk_isochrones, calculate_isochrone,
     calculate_percent_access_isochrone, create_isochrone_index,
@@ -14,6 +16,8 @@ use routing::{
     parallel_detailed_journeys,
 };
 
+pub mod accessibility;
+pub mod efficiency;
 pub mod isochrone;
 pub mod matrix;
 pub mod model;
@@ -103,6 +107,8 @@ fn ferrobus(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(travel_time_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(travel_time_statistics, m)?)?;
+    m.add_function(wrap_pyfunction!(travel_time_accessibility_levels, m)?)?;
+    m.add_function(wrap_pyfunction!(travel_time_relative_efficiency_levels, m)?)?;
 
     m.add_class::<PyIsochroneIndex>()?;
     m.add_function(wrap_pyfunction!(create_isochrone_index, m)?)?;

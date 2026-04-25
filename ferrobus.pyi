@@ -21,6 +21,8 @@ __all__ = [
     "parallel_detailed_journeys",
     "pareto_range_multimodal_routing",
     "range_multimodal_routing",
+    "travel_time_accessibility_levels",
+    "travel_time_relative_efficiency_levels",
     "travel_time_matrix",
     "travel_time_statistics",
 ]
@@ -702,6 +704,72 @@ def travel_time_matrix(transit_model: TransitModel, points: typing.Sequence[Tran
     list[list[Optional[int]]]
         A 2D matrix where each cell [i][j] contains the travel time in seconds
         from point i to point j, or None if the point is unreachable.
+    """
+
+def travel_time_accessibility_levels(transit_model: TransitModel, points: typing.Sequence[TransitPoint], departure_time: builtins.int, max_transfers: builtins.int, lau_idx: typing.Sequence[builtins.int], nuts3_idx: typing.Sequence[builtins.int], lau_neighbors: dict[builtins.int, builtins.list[builtins.int]], nuts3_neighbors: dict[builtins.int, builtins.list[builtins.int]], cutoff_local: builtins.int, cutoff_regional: builtins.int, cutoff_global: builtins.int) -> typing.Any:
+    r"""
+    Compute per-origin accessibility counters and shares for local, regional, and global levels.
+
+    Parameters
+    ----------
+    `transit_model` : `TransitModel`
+        The transit model to use for routing.
+    points : list[`TransitPoint`]
+        Origins and destinations (same set).
+    `departure_time` : int
+        Time of departure in seconds since midnight.
+    `max_transfers` : int
+        Maximum number of transfers allowed in route planning.
+    lau_idx : list[int]
+        LAU group id for each point.
+    nuts3_idx : list[int]
+        NUTS3 group id for each point.
+    `lau_neighbors` : dict[int, list[int]]
+        Neighbor LAU groups for each LAU id.
+    `nuts3_neighbors` : dict[int, list[int]]
+        Neighbor NUTS3 groups for each NUTS3 id.
+    cutoff_local, cutoff_regional, cutoff_global : int
+        Inclusive travel-time cutoffs in seconds for each level.
+
+    Returns
+    -------
+    dict
+        A dictionary with per-origin vectors for:
+        `accessible_count_local`, `accessible_count_regional`, `accessible_count_global`,
+        `target_count_local`, `target_count_regional`, `target_count_global`,
+        `share_local`, `share_regional`, `share_global`.
+    """
+
+def travel_time_relative_efficiency_levels(transit_model: TransitModel, points: typing.Sequence[TransitPoint], departure_time: builtins.int, max_transfers: builtins.int, lau_idx: typing.Sequence[builtins.int], nuts3_idx: typing.Sequence[builtins.int], lau_neighbors: dict[builtins.int, builtins.list[builtins.int]], nuts3_neighbors: dict[builtins.int, builtins.list[builtins.int]], local_ref_speed_kmh: builtins.float, regional_ref_speed_kmh: builtins.float, global_ref_speed_kmh: builtins.float) -> typing.Any:
+    r"""
+    Compute per-origin relative travel-time efficiency (ΔA) for local, regional, and global levels.
+
+    Parameters
+    ----------
+    `transit_model` : `TransitModel`
+        The transit model to use for routing.
+    points : list[`TransitPoint`]
+        Origins and destinations (same set).
+    `departure_time` : int
+        Time of departure in seconds since midnight.
+    `max_transfers` : int
+        Maximum number of transfers allowed in route planning.
+    lau_idx : list[int]
+        LAU group id for each point.
+    nuts3_idx : list[int]
+        NUTS3 group id for each point.
+    `lau_neighbors` : dict[int, list[int]]
+        Neighbor LAU groups for each LAU id.
+    `nuts3_neighbors` : dict[int, list[int]]
+        Neighbor NUTS3 groups for each NUTS3 id.
+    `local_ref_speed_kmh`, `regional_ref_speed_kmh`, `global_ref_speed_kmh` : float
+        Reference speeds in km/h for each level.
+
+    Returns
+    -------
+    dict
+        A dictionary with per-origin vectors:
+        `delta_a_local_sec`, `delta_a_regional_sec`, `delta_a_global_sec`.
     """
 
 def travel_time_statistics(transit_model: TransitModel, points: typing.Sequence[TransitPoint], departure_time: builtins.int, max_transfers: builtins.int, threshold: builtins.float = 0.75, stat: builtins.str = 'mean', filter_cutoff: typing.Optional[builtins.int] = None) -> builtins.list[typing.Optional[builtins.float]]:
